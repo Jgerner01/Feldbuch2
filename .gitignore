@@ -7,3 +7,5 @@ obj/
 *.sln.docstates
 packages/
 *.nupkg
+CLAUDE.md
+**/Backup/
