@@ -23,6 +23,12 @@ partial class Form1
         btnProjektdaten          = new Button();
         btnTachymeterKommunikation = new Button();
         btnInfo                    = new Button();
+        grpOptionen                = new GroupBox();
+        chkProtokoll               = new CheckBox();
+        chkAutoBackup              = new CheckBox();
+        chkKoordTooltip            = new CheckBox();
+        chkTon                     = new CheckBox();
+        chkErwProto                = new CheckBox();
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
@@ -102,6 +108,45 @@ partial class Form1
         btnTachymeterKommunikation.FlatAppearance.BorderColor = Color.FromArgb(20, 80, 50);
         btnTachymeterKommunikation.Click    += btnTachymeterKommunikation_Click;
 
+        // ── GroupBox: Optionen ────────────────────────────────────────────────────
+        grpOptionen.Text     = "Optionen";
+        grpOptionen.Location = new Point(20, 694);
+        grpOptionen.Size     = new Size(560, 80);
+        grpOptionen.Font     = new Font("Segoe UI", 9F);
+
+        // Linke Spalte
+        chkProtokoll.Text     = "Protokoll";
+        chkProtokoll.Location = new Point(10, 17);
+        chkProtokoll.AutoSize = true;
+        chkProtokoll.CheckedChanged += chkProtokoll_CheckedChanged;
+
+        chkAutoBackup.Text     = "Autom. Backup";
+        chkAutoBackup.Location = new Point(10, 37);
+        chkAutoBackup.AutoSize = true;
+        chkAutoBackup.CheckedChanged += chkOption_CheckedChanged;
+
+        chkKoordTooltip.Text     = "Koordinaten-Tooltip";
+        chkKoordTooltip.Location = new Point(10, 57);
+        chkKoordTooltip.AutoSize = true;
+        chkKoordTooltip.CheckedChanged += chkOption_CheckedChanged;
+
+        // Rechte Spalte
+        chkTon.Text     = "Ton bei Berechnung";
+        chkTon.Location = new Point(290, 17);
+        chkTon.AutoSize = true;
+        chkTon.CheckedChanged += chkOption_CheckedChanged;
+
+        chkErwProto.Text     = "Erw. Protokollierung";
+        chkErwProto.Location = new Point(290, 37);
+        chkErwProto.AutoSize = true;
+        chkErwProto.CheckedChanged += chkOption_CheckedChanged;
+
+        grpOptionen.Controls.Add(chkProtokoll);
+        grpOptionen.Controls.Add(chkAutoBackup);
+        grpOptionen.Controls.Add(chkKoordTooltip);
+        grpOptionen.Controls.Add(chkTon);
+        grpOptionen.Controls.Add(chkErwProto);
+
         Controls.Add(lblProjektInfo);
         Controls.Add(btnProjekt);
         Controls.Add(lblTrennlinie);
@@ -111,6 +156,7 @@ partial class Form1
         Controls.Add(btnDxfViewer);
         Controls.Add(btnProjektdaten);
         Controls.Add(btnTachymeterKommunikation);
+        Controls.Add(grpOptionen);
 
         // ── Button: Info / Hilfe (links unten) ────────────────────────────────
         btnInfo.Text      = "?";
@@ -135,5 +181,11 @@ partial class Form1
     private Button btnDxfViewer               = null!;
     private Button btnProjektdaten            = null!;
     private Button btnTachymeterKommunikation = null!;
-    private Button btnInfo                    = null!;
+    private Button    btnInfo                    = null!;
+    private GroupBox  grpOptionen               = null!;
+    private CheckBox  chkProtokoll              = null!;
+    private CheckBox  chkAutoBackup             = null!;
+    private CheckBox  chkKoordTooltip           = null!;
+    private CheckBox  chkTon                    = null!;
+    private CheckBox  chkErwProto               = null!;
 }

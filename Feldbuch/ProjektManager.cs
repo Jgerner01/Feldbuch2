@@ -11,13 +11,25 @@ using System.Xml;
 public static class ProjektManager
 {
     private static readonly string EinstellungenPfad =
-        Path.Combine(AppContext.BaseDirectory, "Einstellungen.xml");
+        AppPfade.Get("Einstellungen.xml");
 
     // ── Eigenschaften ─────────────────────────────────────────────────────────
     public static string ProjektName        { get; private set; } = "";
-    public static string ProjektVerzeichnis { get; private set; } = AppContext.BaseDirectory;
+    public static string ProjektVerzeichnis { get; private set; } = AppPfade.Basis;
 
     public static bool IstGeladen => !string.IsNullOrEmpty(ProjektName);
+
+    // ── Optionen (5 Checkboxen im Hauptfenster) ───────────────────────────────
+    /// <summary>Protokollierung in Protokoll_YYYY-MM-DD.txt aktivieren.</summary>
+    public static bool ProtokollAktiv          { get; set; } = true;
+    /// <summary>Vor dem Speichern eine Sicherungskopie anlegen (Platzhalter).</summary>
+    public static bool AutoBackup              { get; set; } = false;
+    /// <summary>Koordinaten-Tooltip im DXF-Viewer anzeigen (Platzhalter).</summary>
+    public static bool KoordinatenTooltip      { get; set; } = true;
+    /// <summary>Systemton nach abgeschlossener Berechnung ausgeben (Platzhalter).</summary>
+    public static bool TonBeiBerechnung        { get; set; } = false;
+    /// <summary>Erweiterte Protokollierung (Eingabedaten, Rohmessungen) (Platzhalter).</summary>
+    public static bool ErweiterteProtokollierung { get; set; } = false;
 
     // ── Gespeicherter DXF-Zoom ────────────────────────────────────────────────
     // Zoom wird pro DXF-Dateipfad gespeichert, sodass er nach erneutem Öffnen
@@ -89,6 +101,12 @@ public static class ProjektManager
                 ProjektVerzeichnis = verz;
             }
 
+            ProtokollAktiv            = LadeBool(root, "ProtokollAktiv",           defaultVal: true);
+            AutoBackup                = LadeBool(root, "AutoBackup",               defaultVal: false);
+            KoordinatenTooltip        = LadeBool(root, "KoordinatenTooltip",       defaultVal: true);
+            TonBeiBerechnung          = LadeBool(root, "TonBeiBerechnung",         defaultVal: false);
+            ErweiterteProtokollierung = LadeBool(root, "ErweiterteProtokollierung",defaultVal: false);
+
             _zoomDatei = root.SelectSingleNode("DxfZoomDatei")?.InnerText?.Trim() ?? "";
             double.TryParse(root.SelectSingleNode("DxfZoomScale")?.InnerText,
                 System.Globalization.NumberStyles.Any,
@@ -103,6 +121,10 @@ public static class ProjektManager
         catch { /* ungültige Datei – ignorieren */ }
     }
 
+    // ── Nur Optionen speichern (ohne Projektpfad zu ändern) ──────────────────
+    /// <summary>Speichert die 5 Checkbox-Optionen sofort in Einstellungen.xml.</summary>
+    public static void SpeichereOptionen() => Speichern();
+
     // ── Einstellungen speichern ───────────────────────────────────────────────
     private static void Speichern()
     {
@@ -115,8 +137,13 @@ public static class ProjektManager
             var root = doc.CreateElement("FeldbuchEinstellungen");
             doc.AppendChild(root);
 
-            Append(doc, root, "LetztesProjektName",         ProjektName);
+            Append(doc, root, "LetztesProjektName",          ProjektName);
             Append(doc, root, "LetztesProjektVerzeichnis",  ProjektVerzeichnis);
+            Append(doc, root, "ProtokollAktiv",             ProtokollAktiv.ToString().ToLower());
+            Append(doc, root, "AutoBackup",                 AutoBackup.ToString().ToLower());
+            Append(doc, root, "KoordinatenTooltip",         KoordinatenTooltip.ToString().ToLower());
+            Append(doc, root, "TonBeiBerechnung",           TonBeiBerechnung.ToString().ToLower());
+            Append(doc, root, "ErweiterteProtokollierung",  ErweiterteProtokollierung.ToString().ToLower());
             Append(doc, root, "DxfZoomDatei",  _zoomDatei);
             Append(doc, root, "DxfZoomScale",  _zoomScale.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             Append(doc, root, "DxfZoomPanX",   _zoomPanX .ToString("R", System.Globalization.CultureInfo.InvariantCulture));
@@ -132,5 +159,12 @@ public static class ProjektManager
         var elem = doc.CreateElement(tag);
         elem.InnerText = value;
         parent.AppendChild(elem);
+    }
+
+    static bool LadeBool(XmlElement root, string tag, bool defaultVal)
+    {
+        string? text = root.SelectSingleNode(tag)?.InnerText?.Trim().ToLower();
+        if (text == null) return defaultVal;
+        return text is "true" or "1" or "yes";
     }
 }

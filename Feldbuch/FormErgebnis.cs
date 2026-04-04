@@ -5,7 +5,9 @@ public partial class FormErgebnis : Form
     private readonly string                    _standpunkt;
     private readonly double                    _iH;
     private readonly List<StationierungsPunkt> _allePunkte;
-    private bool _initializingGrid;
+    private bool                               _initializingGrid;
+    private StationierungsErgebnis?            _letzteErgebnis;
+    private bool                               _protokollGeschrieben;
 
     public FormErgebnis(string standpunkt, double iH,
                         StationierungsErgebnis erg,
@@ -27,10 +29,44 @@ public partial class FormErgebnis : Form
         _initializingGrid = false;
 
         AktualisiereAnzeige(erg);
+        _letzteErgebnis = erg;
 
         // Falls Höhenpunkte automatisch deaktiviert wurden: Neuberechnung mit korrekter Aktivierung
         if (RechenparameterManager.Params.Berechnung3D && _allePunkte.Any(p => p.Hoehe == 0.0))
             Neuberechnen();
+    }
+
+    // ── Protokoll schreiben ───────────────────────────────────────────────────
+    private void SchreibeProtokoll()
+    {
+        if (_letzteErgebnis == null || _protokollGeschrieben) return;
+        _protokollGeschrieben = true;
+        var (aktHz, aktStr, aktHoe) = LesAktivierung();
+        FreieStationierungProtokoll.Schreiben(
+            _letzteErgebnis, _allePunkte,
+            aktHz, aktStr, aktHoe,
+            _standpunkt, _iH);
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        base.OnFormClosing(e);
+        SchreibeProtokoll();
+    }
+
+    private (bool[] aktHz, bool[] aktStr, bool[] aktHoe) LesAktivierung()
+    {
+        int    n      = _allePunkte.Count;
+        bool[] aktHz  = new bool[n];
+        bool[] aktStr = new bool[n];
+        bool[] aktHoe = new bool[n];
+        for (int i = 0; i < n; i++)
+        {
+            aktHz[i]  = (bool)(dgvResiduen.Rows[i].Cells["colAktivHz"].Value    ?? true);
+            aktStr[i] = (bool)(dgvResiduen.Rows[i].Cells["colAktivStr"].Value   ?? true);
+            aktHoe[i] = (bool)(dgvResiduen.Rows[i].Cells["colAktivHoehe"].Value ?? true);
+        }
+        return (aktHz, aktStr, aktHoe);
     }
 
     // ── Ergebnisanzeige aktualisieren ─────────────────────────────────────────
@@ -179,6 +215,7 @@ public partial class FormErgebnis : Form
             });
 
             AktualisiereAnzeige(erg);
+            _letzteErgebnis = erg;   // für Protokoll beim Schließen
 
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             ProjektdatenManager.SetValue("Freie Stationierung", "Standpunkt",         _standpunkt);

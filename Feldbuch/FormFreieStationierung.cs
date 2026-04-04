@@ -80,7 +80,7 @@ public partial class FormFreieStationierung : Form
 
     private void btnTestdatenLaden_Click(object? sender, EventArgs e)
     {
-        string pfad = Path.Combine(AppContext.BaseDirectory, "Muster.csv");
+        string pfad = AppPfade.Get("Muster.csv");
         if (!File.Exists(pfad))
         {
             MessageBox.Show("Muster.csv nicht gefunden.\nErwartet in: " + pfad,
@@ -105,7 +105,7 @@ public partial class FormFreieStationierung : Form
 
     private void btnSpeichern_Click(object? sender, EventArgs e)
     {
-        string pfad = Path.Combine(AppContext.BaseDirectory, "Muster.csv");
+        string pfad = AppPfade.Get("Muster.csv");
 
         var zeilen = new List<string>
         {

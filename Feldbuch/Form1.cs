@@ -19,9 +19,61 @@ public partial class Form1 : Form
 
         // Rechenparameter bleiben global (Geräteeinstellungen)
         RechenparameterManager.Initialize(
-            Path.Combine(AppContext.BaseDirectory, "Freie-Stationierung.xml"));
+            AppPfade.Get("Freie-Stationierung.xml"));
+
+        // Checkboxen aus Einstellungen befüllen (nach ProjektManager.Laden())
+        LadeOptionen();
 
         AktualisiereAnzeige();
+
+        ProtokollManager.Log("START", $"Programm gestartet" +
+            (ProjektManager.IstGeladen ? $" | Projekt: {ProjektManager.ProjektName}" : ""));
+    }
+
+    // ── Optionen laden / Handler ──────────────────────────────────────────────
+    private void LadeOptionen()
+    {
+        // CheckedChanged-Handler kurz deaktivieren, um Cascaden zu vermeiden
+        chkProtokoll.CheckedChanged    -= chkProtokoll_CheckedChanged;
+        chkAutoBackup.CheckedChanged   -= chkOption_CheckedChanged;
+        chkKoordTooltip.CheckedChanged -= chkOption_CheckedChanged;
+        chkTon.CheckedChanged          -= chkOption_CheckedChanged;
+        chkErwProto.CheckedChanged     -= chkOption_CheckedChanged;
+
+        chkProtokoll.Checked    = ProjektManager.ProtokollAktiv;
+        chkAutoBackup.Checked   = ProjektManager.AutoBackup;
+        chkKoordTooltip.Checked = ProjektManager.KoordinatenTooltip;
+        chkTon.Checked          = ProjektManager.TonBeiBerechnung;
+        chkErwProto.Checked     = ProjektManager.ErweiterteProtokollierung;
+
+        chkProtokoll.CheckedChanged    += chkProtokoll_CheckedChanged;
+        chkAutoBackup.CheckedChanged   += chkOption_CheckedChanged;
+        chkKoordTooltip.CheckedChanged += chkOption_CheckedChanged;
+        chkTon.CheckedChanged          += chkOption_CheckedChanged;
+        chkErwProto.CheckedChanged     += chkOption_CheckedChanged;
+    }
+
+    private void chkProtokoll_CheckedChanged(object? sender, EventArgs e)
+    {
+        ProjektManager.ProtokollAktiv = chkProtokoll.Checked;
+        ProjektManager.SpeichereOptionen();
+        if (ProjektManager.ProtokollAktiv)
+            ProtokollManager.Log("EINST", "Protokollierung aktiviert");
+    }
+
+    private void chkOption_CheckedChanged(object? sender, EventArgs e)
+    {
+        ProjektManager.AutoBackup                = chkAutoBackup.Checked;
+        ProjektManager.KoordinatenTooltip        = chkKoordTooltip.Checked;
+        ProjektManager.TonBeiBerechnung          = chkTon.Checked;
+        ProjektManager.ErweiterteProtokollierung = chkErwProto.Checked;
+        ProjektManager.SpeichereOptionen();
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        base.OnFormClosing(e);
+        ProtokollManager.Log("ENDE", "Programm beendet");
     }
 
     // ── Projekt ───────────────────────────────────────────────────────────────
@@ -36,6 +88,7 @@ public partial class Form1 : Form
         FeldbuchpunkteManager.Initialize(
             ProjektManager.GetPfad("Feldbuchpunkte.json"));
 
+        ProtokollManager.Log("PROJEKT", $"Projekt gewechselt: {ProjektManager.ProjektName}");
         AktualisiereAnzeige();
     }
 

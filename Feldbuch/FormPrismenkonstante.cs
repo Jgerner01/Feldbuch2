@@ -35,7 +35,7 @@ public partial class FormPrismenkonstante : Form
     private List<PrismenEintrag> LeseCSV()
     {
         var liste = new List<PrismenEintrag>();
-        string pfad = Path.Combine(AppContext.BaseDirectory, "prismenkonstanten.csv");
+        string pfad = AppPfade.Get("prismenkonstanten.csv");
 
         if (!File.Exists(pfad))
             return liste;

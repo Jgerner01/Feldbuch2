@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Protokollsteuerdatei: Freie Stationierung
+  Wird vom RtfProtokollGenerator gelesen.
+
+  Abschnitt-Typen:  Titel | Zeile | Tabelle | Leerzeile | Trennlinie
+  Schrift:          0 = Arial Narrow  1 = Courier New
+  Groesse:          Schriftgröße in Punkt
+  Fett/Kursiv:      true | false
+  Unterlinie:       true  →  Paragraph-Unterstrich (Linie unter dem Abschnitt)
+  AbstandNach:      Abstand nach dem Abschnitt in Twips (1 mm ≈ 57 Twips)
+
+  Feld-Attribute:
+    text="..."    Fester Text
+    var="..."     Schlüssel aus dem Felder-Dictionary (vorformatierter Wert)
+    label="..."   Vorangestellter Text vor var-Wert
+    einheit="..." Nachgestellter Text nach var-Wert
+
+  Spalte-Attribute (nur in Tabelle):
+    var="..."           Schlüssel aus den Tabellenzeilen
+    header="..."        Spaltenüberschrift
+    breite="..."        Spaltenbreite in Zeichen
+    ausrichtung="L|R"   L=linksbündig  R=rechtsbündig
+-->
+<Protokoll modul="FreieStationierung">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow"       typ="swiss"/>
+    <Schrift id="1" name="Courier New" typ="modern"/>
+  </Schriften>
+
+  <Inhalt>
+
+    <!-- ── Titelzeile ─────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Freie Stationierung"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <!-- ── Standpunkt + Instrumentenhöhe ──────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Standpunktnr" label="Standpunktnr.:  "/>
+      <Feld text="     Instrumentenhoehe:  "/>
+      <Feld var="IH" einheit=" m"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="8"/>
+
+    <!-- ── Beobachtungstabelle ─────────────────────────────────────────────── -->
+    <!-- Spalten: Punktnr | Koordinaten | Messwerte | Residuen               -->
+    <!-- Breiten so gewählt, dass alles in eine Zeile bei 8pt Courier passt  -->
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true">
+      <Spalte var="PunktNr"   header="Punkt"    breite="7"  ausrichtung="L"/>
+      <Spalte var="R"         header="R [m]"    breite="12" ausrichtung="R"/>
+      <Spalte var="H"         header="H [m]"    breite="12" ausrichtung="R"/>
+      <Spalte var="Hoehe"     header="Hoehe[m]" breite="7"  ausrichtung="R"/>
+      <Spalte var="HZ"        header="HZ[gon]"  breite="9"  ausrichtung="R"/>
+      <Spalte var="V"         header="V[gon]"   breite="9"  ausrichtung="R"/>
+      <Spalte var="Strecke"   header="S[m]"     breite="8"  ausrichtung="R"/>
+      <Spalte var="Zielhoehe" header="ZH[m]"    breite="6"  ausrichtung="R"/>
+      <Spalte var="vQuer"     header="vQ[mm]"   breite="7"  ausrichtung="R"/>
+      <Spalte var="vLaengs"   header="vL[mm]"   breite="7"  ausrichtung="R"/>
+      <Spalte var="vHoehe"    header="vH[mm]"   breite="6"  ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <!-- ── Ergebnisse: Koordinaten fett ───────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" fett="true" abstandNach="40">
+      <Feld var="R"     label="Rechtswert:  " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="H"     label="Hochwert:    " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="Hoehe" label="Hoehe: "       einheit=" m"/>
+    </Abschnitt>
+
+    <!-- ── Orientierung + Maßstab ─────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Orientierung" label="Orientierungsunbekannte:  " einheit=" gon"/>
+      <Feld text="     "/>
+      <Feld var="Massstab"     label="Massstab (Helmert):  "/>
+    </Abschnitt>
+
+    <!-- ── s0 / Redundanz / Iterationen – mit Unterlinie ─────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" unterlinie="true" abstandNach="80">
+      <Feld var="S0Info"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>
