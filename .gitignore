@@ -9,3 +9,4 @@ packages/
 *.nupkg
 CLAUDE.md
 **/Backup/
+**/publish/
