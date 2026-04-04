@@ -12,6 +12,35 @@ public partial class FormFreieStationierung : Form
         InitializeComponent();
         InitGrid();
         LadeAnschlusspunkte();   // automatisch aus DXF-Viewer-Picks
+        AktualisiereNeuerStandpunktButton();
+    }
+
+    // ── Button "Neuer Standpunkt" – Sichtbarkeit und Aktion ──────────────────
+    private void AktualisiereNeuerStandpunktButton()
+    {
+        // Sichtbar, wenn Anschlusspunkte.csv existiert
+        btnNeuerStandpunkt.Visible = File.Exists(FormDxfViewer.AnschlusspunktePfad);
+    }
+
+    private void btnNeuerStandpunkt_Click(object? sender, EventArgs e)
+    {
+        string pfad = FormDxfViewer.AnschlusspunktePfad;
+
+        // Bestehende Datei umbenennen (Datum + Uhrzeit im Dateinamen)
+        if (File.Exists(pfad))
+        {
+            string zeitstempel = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+            string dir         = Path.GetDirectoryName(pfad)!;
+            string archivPfad  = Path.Combine(dir, $"Anschlusspunkte_{zeitstempel}.csv");
+            File.Move(pfad, archivPfad);
+        }
+
+        // Alle Grid-Zellen leeren
+        foreach (DataGridViewRow row in dgvPunkte.Rows)
+            foreach (DataGridViewCell cell in row.Cells)
+                cell.Value = null;
+
+        AktualisiereNeuerStandpunktButton();
     }
 
     // ── Anschlusspunkte aus DXF-Viewer automatisch laden ─────────────────────

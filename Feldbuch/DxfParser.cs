@@ -324,7 +324,7 @@ public class DxfInsert : DxfEntity
     {
         using var pen   = new Pen(Color.FromArgb(170, 30, 30), 1.5f);
         using var brush = new SolidBrush(Color.FromArgb(170, 30, 30));
-        const float outer = 8f, inner = 2.5f;
+        const float outer = 4f, inner = 1.25f;
         g.DrawEllipse(pen, c.X - outer, c.Y - outer, outer * 2, outer * 2);
         g.FillEllipse(brush, c.X - inner, c.Y - inner, inner * 2, inner * 2);
     }
@@ -335,25 +335,25 @@ public class DxfInsert : DxfEntity
         using var pen = new Pen(Color.FromArgb(140, 90, 20), 1.5f)
             { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
         using var brush = new SolidBrush(Color.FromArgb(140, 90, 20));
-        const float r = 7f;
+        const float r = 3.5f;
         g.DrawEllipse(pen, c.X - r, c.Y - r, r * 2, r * 2);
-        g.FillEllipse(brush, c.X - 2f, c.Y - 2f, 4f, 4f);
+        g.FillEllipse(brush, c.X - 1f, c.Y - 1f, 2f, 2f);
     }
 
     // Katasterfestpunkt: Kreis mit durchgehendem Kreuz (blau, wie Aufnahmepunkt)
     static void DrawKatasterfestpunkt(Graphics g, PointF c)
     {
         using var pen = new Pen(Color.FromArgb(20, 60, 170), 1.8f);
-        const float r = 8f;
+        const float r = 4f;
         g.DrawEllipse(pen, c.X - r, c.Y - r, r * 2, r * 2);
-        g.DrawLine(pen, c.X, c.Y - r - 4, c.X, c.Y + r + 4);
-        g.DrawLine(pen, c.X - r - 4, c.Y, c.X + r + 4, c.Y);
+        g.DrawLine(pen, c.X, c.Y - r - 2, c.X, c.Y + r + 2);
+        g.DrawLine(pen, c.X - r - 2, c.Y, c.X + r + 2, c.Y);
     }
 
     // Sonstige INSERT-Entities: kleine Raute
     static void DrawSonstig(Graphics g, PointF c, Pen pen)
     {
-        const float h = 4f;
+        const float h = 2f;
         g.DrawLine(pen, c.X, c.Y - h, c.X + h, c.Y);
         g.DrawLine(pen, c.X + h, c.Y, c.X, c.Y + h);
         g.DrawLine(pen, c.X, c.Y + h, c.X - h, c.Y);

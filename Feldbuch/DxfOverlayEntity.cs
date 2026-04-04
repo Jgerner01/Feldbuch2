@@ -66,7 +66,7 @@ public abstract class FeldbuchOverlayEntity : DxfEntity
 public class OverlayStandpunkt : FeldbuchOverlayEntity
 {
     private static readonly Color Farbe = Color.FromArgb(200, 30, 30);
-    const float R = 8f;   // Kreisradius [px]
+    const float R = 4f;   // Kreisradius [px]
 
     public OverlayStandpunkt(FeldbuchPunkt p) : base(p) { }
 
@@ -81,14 +81,14 @@ public class OverlayStandpunkt : FeldbuchOverlayEntity
         g.DrawEllipse(pen, c.X - R, c.Y - R, R * 2, R * 2);
 
         // Kreuzlinien außerhalb des Kreises (wie DIN-Symbol Festpunkt)
-        float arm = R + 5f;
+        float arm = R + 2.5f;
         g.DrawLine(pen, c.X - arm, c.Y - arm, c.X - R * 0.6f, c.Y - R * 0.6f);
         g.DrawLine(pen, c.X + R * 0.6f, c.Y + R * 0.6f, c.X + arm, c.Y + arm);
         g.DrawLine(pen, c.X + arm, c.Y - arm, c.X + R * 0.6f, c.Y - R * 0.6f);
         g.DrawLine(pen, c.X - R * 0.6f, c.Y + R * 0.6f, c.X - arm, c.Y + arm);
 
         // gefüllter Mittelpunkt
-        g.FillEllipse(brush, c.X - 2.5f, c.Y - 2.5f, 5f, 5f);
+        g.FillEllipse(brush, c.X - 1.25f, c.Y - 1.25f, 2.5f, 2.5f);
 
         DrawLabel(g, c, Punkt.PunktNr, Punkt, Farbe, R);
     }
@@ -99,7 +99,7 @@ public class OverlayStandpunkt : FeldbuchOverlayEntity
 public class OverlayNeupunkt : FeldbuchOverlayEntity
 {
     private static readonly Color Farbe = Color.FromArgb(20, 150, 40);
-    const float H = 10f;  // Dreieckshöhe [px]
+    const float H = 5f;   // Dreieckshöhe [px]
 
     public OverlayNeupunkt(FeldbuchPunkt p) : base(p) { }
 
