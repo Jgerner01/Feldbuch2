@@ -40,6 +40,14 @@ public class DxfCanvas : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public List<DxfEntity> OverlayEntities { get; set; } = new();
 
+    // Import-Layer (KOR / CSV / JSON – je Datei ein Layer mit Sichtbarkeits-Flag)
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<ImportLayer> ImportLayers { get; set; } = new();
+
+    // Hilfsmethode: alle sichtbaren Import-Entities flach
+    IEnumerable<DxfEntity> SichtbareImports()
+        => ImportLayers.Where(l => l.Visible).SelectMany(l => l.Entities);
+
     public event Action<double, double, DxfEntity?>? PointPicked;
 
     // ── Erscheinungsbild ──────────────────────────────────────────────────────
@@ -147,8 +155,8 @@ public class DxfCanvas : Panel
     {
         // Bei ausgeblendetem DXF: nur Overlay; sonst beides
         IEnumerable<DxfEntity> src = DxfVisible
-            ? Entities.Concat(OverlayEntities)
-            : (IEnumerable<DxfEntity>)OverlayEntities;
+            ? Entities.Concat(OverlayEntities).Concat(SichtbareImports())
+            : OverlayEntities.Concat(SichtbareImports());
         if (!src.Any()) return;
         BoundingBox? bb = null;
         foreach (var e in src)
@@ -178,6 +186,11 @@ public class DxfCanvas : Panel
 
         // Overlay zuerst (Vorrang, immer sichtbar)
         foreach (var e in OverlayEntities)
+        {
+            double d = e.DistanceTo(wx, wy);
+            if (d < bestD) { bestD = d; best = e; }
+        }
+        foreach (var e in SichtbareImports())
         {
             double d = e.DistanceTo(wx, wy);
             if (d < bestD) { bestD = d; best = e; }
@@ -343,7 +356,7 @@ public class DxfCanvas : Panel
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-        bool hatDaten = (DxfVisible && Entities.Count > 0) || OverlayEntities.Count > 0;
+        bool hatDaten = (DxfVisible && Entities.Count > 0) || OverlayEntities.Count > 0 || ImportLayers.Count > 0;
         if (!hatDaten)
         {
             using var f = new Font("Segoe UI", 14);
@@ -394,6 +407,15 @@ public class DxfCanvas : Panel
         }
 
         DrawOverlay:
+        // Import-Layer (KOR/CSV/JSON – rote Punkte, nur sichtbare Layer)
+        foreach (var entity in SichtbareImports())
+        {
+            bool isSel = entity == Selected;
+            Pen  pen   = isSel ? selPen : defPen;
+            try { entity.Draw(g, pen, ToScreen, Scale); }
+            catch { }
+        }
+
         // Feldbuch-Overlay (Standpunkte, Neupunkte) – immer ganz vorne
         foreach (var entity in OverlayEntities)
         {

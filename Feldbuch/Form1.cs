@@ -114,22 +114,6 @@ public partial class Form1 : Form
         form.ShowDialog(this);
     }
 
-    private void btnMessen_Click(object? sender, EventArgs e)
-    {
-        MessageBox.Show("Messen", "Feldbuch");
-    }
-
-    private void btnPrismenkonstante_Click(object? sender, EventArgs e)
-    {
-        using var form = new FormPrismenkonstante();
-        if (form.ShowDialog(this) == DialogResult.OK)
-        {
-            MessageBox.Show(
-                $"Prismenkonstante gesetzt: {form.GewähltePrismenkonstante:+0.0;-0.0;0.0} mm",
-                "Feldbuch");
-        }
-    }
-
     private void btnDxfViewer_Click(object? sender, EventArgs e)
     {
         using var form = new FormDxfViewer();
@@ -139,6 +123,12 @@ public partial class Form1 : Form
     private void btnProjektdaten_Click(object? sender, EventArgs e)
     {
         using var form = new FormProjektdaten();
+        form.ShowDialog(this);
+    }
+
+    private void btnKonvertierung_Click(object? sender, EventArgs e)
+    {
+        using var form = new FormKonvertierung();
         form.ShowDialog(this);
     }
 

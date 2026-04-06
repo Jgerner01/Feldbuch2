@@ -12,167 +12,285 @@ partial class FormDxfViewer
 
     private void InitializeComponent()
     {
-        canvas        = new DxfCanvas();
-        pnlSide       = new Panel();
-        btnOpen       = new Button();
-        btnZoomIn     = new Button();
-        btnZoomOut    = new Button();
-        btnFit        = new Button();
-        btnSnap       = new Button();
-        btnPunkte     = new Button();
-        btnDxfToggle  = new Button();
-        btnExportDxf  = new Button();
-        lblStatus     = new Label();
+        canvas              = new DxfCanvas();
+        pnlTop              = new Panel();
+        btnPrismenkonstante = new Button();
+        lblNr               = new Label();
+        txtPunktNr          = new TextBox();
+        lblCode             = new Label();
+        txtCode             = new TextBox();
+        pnlSide             = new Panel();
+        btnOpen             = new Button();
+        btnZoomIn           = new Button();
+        btnZoomOut          = new Button();
+        btnFit              = new Button();
+        btnSnap             = new Button();
+        btnPunkte           = new Button();
+        btnDxfToggle        = new Button();
+        btnNeu              = new Button();
+        btnExportDxf        = new Button();
+        btnImportKorCsv     = new Button();
+        btnImportJson       = new Button();
+        pnlStatus           = new Panel();
+        lblStatus           = new Label();
+        flpLayers           = new FlowLayoutPanel();
 
         SuspendLayout();
+        pnlTop.SuspendLayout();
+        pnlStatus.SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
         ClientSize    = new Size(1100, 750);
         Text          = "DXF-Viewer";
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Font;
-        BackColor     = Color.FromArgb(230, 230, 230);
+        BackColor     = Color.FromArgb(228, 230, 235);
 
-        // ── Canvas (füllt den Hauptbereich) ───────────────────────────────────
-        canvas.Location = new Point(0, 0);
-        canvas.Size     = new Size(1040, 720);
-        canvas.Anchor   = AnchorStyles.Top | AnchorStyles.Bottom |
-                          AnchorStyles.Left | AnchorStyles.Right;
+        // ══ Toolbar oben (42px) ═══════════════════════════════════════════════
+        pnlTop.Dock      = DockStyle.Top;
+        pnlTop.Height    = 42;
+        pnlTop.BackColor = Color.FromArgb(42, 72, 130);
 
-        // ── Seitenleiste rechts ───────────────────────────────────────────────
-        pnlSide.Location  = new Point(1042, 0);
-        pnlSide.Size      = new Size(58, 720);
-        pnlSide.Anchor    = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
-        pnlSide.BackColor = Color.FromArgb(210, 210, 210);
+        // ── Prismenkonstante: owner-drawn, kein Text, zentriertes GDI+-Icon ──
+        btnPrismenkonstante.Text      = "";
+        btnPrismenkonstante.Size      = new Size(36, 36);
+        btnPrismenkonstante.Location  = new Point(4, 3);
+        btnPrismenkonstante.FlatStyle = FlatStyle.Flat;
+        btnPrismenkonstante.BackColor = Color.FromArgb(60, 95, 160);
+        btnPrismenkonstante.ForeColor = Color.White;
+        btnPrismenkonstante.FlatAppearance.BorderColor = Color.FromArgb(80, 115, 185);
+        btnPrismenkonstante.FlatAppearance.BorderSize  = 1;
+        btnPrismenkonstante.Cursor    = Cursors.Hand;
+        btnPrismenkonstante.Click    += btnPrismenkonstante_Click;
+        btnPrismenkonstante.Paint    += BtnPrisma_Paint;
+        new ToolTip().SetToolTip(btnPrismenkonstante, "Prismenkonstante");
 
-        var iconFont   = new Font("Segoe UI", 16F, FontStyle.Bold);
-        var iconFontSm = new Font("Segoe UI", 9F, FontStyle.Bold);
+        // ── Trennstrich links ─────────────────────────────────────────────────
+        var sep1 = new Label
+        {
+            Location  = new Point(46, 6),
+            Size      = new Size(1, 28),
+            BackColor = Color.FromArgb(80, 110, 170)
+        };
 
-        // ── Öffnen-Button ─────────────────────────────────────────────────────
-        btnOpen.Text      = "📂";
-        btnOpen.Size      = new Size(54, 54);
-        btnOpen.Location  = new Point(2, 10);
-        btnOpen.Font      = new Font("Segoe UI", 18F);
-        btnOpen.FlatStyle = FlatStyle.Flat;
-        btnOpen.BackColor = Color.FromArgb(60, 100, 160);
-        btnOpen.ForeColor = Color.White;
-        btnOpen.FlatAppearance.BorderColor = Color.FromArgb(80, 120, 180);
-        btnOpen.Click    += btnOpen_Click;
-        ToolTip ttOpen = new(); ttOpen.SetToolTip(btnOpen, "DXF-Datei öffnen");
+        // ── Punktnummer + Code – rechts ausgerichtet, Anchor Right ───────────
+        // Abstände vom rechten Rand (bei 1100px Fensterbreite):
+        //   txtCode   rechts=8,   Breite=90  → links=1002
+        //   lblCode   rechts=108, Breite=52  → links=940  (Abstand 10px zum Feld)
+        //   txtNr     rechts=170, Breite=100 → links=830
+        //   lblNr     rechts=280, Breite=70  → links=750  (Abstand 10px zum Feld)
 
-        // ── Zoom In ───────────────────────────────────────────────────────────
-        btnZoomIn.Text      = "+";
-        btnZoomIn.Size      = new Size(54, 54);
-        btnZoomIn.Location  = new Point(2, 80);
-        btnZoomIn.Font      = iconFont;
-        btnZoomIn.FlatStyle = FlatStyle.Flat;
-        btnZoomIn.BackColor = Color.FromArgb(190, 190, 190);
-        btnZoomIn.ForeColor = Color.FromArgb(30, 30, 30);
-        btnZoomIn.FlatAppearance.BorderColor = Color.FromArgb(160, 160, 160);
-        btnZoomIn.Click    += btnZoomIn_Click;
-        ToolTip ttIn = new(); ttIn.SetToolTip(btnZoomIn, "Zoom vergrößern");
+        // Feste Schrift & Farbe
+        var lblFont  = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+        var lblColor = Color.FromArgb(185, 205, 240);
 
-        // ── Zoom Out ──────────────────────────────────────────────────────────
-        btnZoomOut.Text      = "−";
-        btnZoomOut.Size      = new Size(54, 54);
-        btnZoomOut.Location  = new Point(2, 140);
-        btnZoomOut.Font      = iconFont;
-        btnZoomOut.FlatStyle = FlatStyle.Flat;
-        btnZoomOut.BackColor = Color.FromArgb(190, 190, 190);
-        btnZoomOut.ForeColor = Color.FromArgb(30, 30, 30);
-        btnZoomOut.FlatAppearance.BorderColor = Color.FromArgb(160, 160, 160);
-        btnZoomOut.Click    += btnZoomOut_Click;
-        ToolTip ttOut = new(); ttOut.SetToolTip(btnZoomOut, "Zoom verkleinern");
+        // Code-Label
+        lblCode.Text      = "Code";
+        lblCode.Size      = new Size(52, 24);
+        lblCode.Font      = lblFont;
+        lblCode.ForeColor = lblColor;
+        lblCode.TextAlign = ContentAlignment.MiddleRight;
 
-        // ── Einpassen ─────────────────────────────────────────────────────────
-        btnFit.Text      = "⊡";
-        btnFit.Size      = new Size(54, 54);
-        btnFit.Location  = new Point(2, 200);
-        btnFit.Font      = iconFont;
-        btnFit.FlatStyle = FlatStyle.Flat;
-        btnFit.BackColor = Color.FromArgb(190, 190, 190);
-        btnFit.ForeColor = Color.FromArgb(30, 30, 30);
-        btnFit.FlatAppearance.BorderColor = Color.FromArgb(160, 160, 160);
-        btnFit.Click    += btnFit_Click;
-        ToolTip ttFit = new(); ttFit.SetToolTip(btnFit, "Gesamte Zeichnung einpassen");
+        // Code-Eingabe
+        txtCode.Size        = new Size(90, 24);
+        txtCode.Font        = new Font("Consolas", 10F);
+        txtCode.BackColor   = Color.FromArgb(55, 88, 150);
+        txtCode.ForeColor   = Color.White;
+        txtCode.BorderStyle = BorderStyle.FixedSingle;
+        new ToolTip().SetToolTip(txtCode, "Punktcode");
 
-        // ── Snap-Button (standardmäßig aktiv, hervorgehoben) ──────────────────
-        btnSnap.Text      = "⊕";
-        btnSnap.Size      = new Size(54, 54);
-        btnSnap.Location  = new Point(2, 280);
-        btnSnap.Font      = iconFont;
-        btnSnap.FlatStyle = FlatStyle.Flat;
-        btnSnap.BackColor = Color.FromArgb(200, 120, 30);   // orange = aktiv
-        btnSnap.ForeColor = Color.White;
-        btnSnap.FlatAppearance.BorderColor = Color.FromArgb(220, 140, 50);
-        btnSnap.Click    += btnSnap_Click;
-        ToolTip ttSnap = new(); ttSnap.SetToolTip(btnSnap, "Punktfang (Snap) ein/aus");
+        // PunktNr-Label
+        lblNr.Text      = "Punkt-Nr";
+        lblNr.Size      = new Size(70, 24);
+        lblNr.Font      = lblFont;
+        lblNr.ForeColor = lblColor;
+        lblNr.TextAlign = ContentAlignment.MiddleRight;
 
-        // ── Katasterpunkte ein/aus ────────────────────────────────────────────
-        btnPunkte.Text      = "⊙";
-        btnPunkte.Size      = new Size(54, 54);
-        btnPunkte.Location  = new Point(2, 340);
-        btnPunkte.Font      = iconFont;
-        btnPunkte.FlatStyle = FlatStyle.Flat;
-        btnPunkte.BackColor = Color.FromArgb(200, 120, 30);   // orange = aktiv
-        btnPunkte.ForeColor = Color.White;
-        btnPunkte.FlatAppearance.BorderColor = Color.FromArgb(220, 140, 50);
-        btnPunkte.Click    += btnPunkte_Click;
-        ToolTip ttPunkte = new(); ttPunkte.SetToolTip(btnPunkte, "Katasterpunkte ein/aus");
+        // PunktNr-Eingabe
+        txtPunktNr.Size        = new Size(100, 24);
+        txtPunktNr.Font        = new Font("Consolas", 10F);
+        txtPunktNr.BackColor   = Color.FromArgb(55, 88, 150);
+        txtPunktNr.ForeColor   = Color.White;
+        txtPunktNr.BorderStyle = BorderStyle.FixedSingle;
+        new ToolTip().SetToolTip(txtPunktNr, "Punktnummer");
 
-        // ── DXF-Darstellung ein/aus ───────────────────────────────────────────
-        btnDxfToggle.Text      = "DXF";
-        btnDxfToggle.Size      = new Size(54, 54);
-        btnDxfToggle.Location  = new Point(2, 410);
-        btnDxfToggle.Font      = iconFontSm;
-        btnDxfToggle.FlatStyle = FlatStyle.Flat;
-        btnDxfToggle.BackColor = Color.FromArgb(60, 100, 160);   // blau = aktiv
-        btnDxfToggle.ForeColor = Color.White;
-        btnDxfToggle.FlatAppearance.BorderColor = Color.FromArgb(40, 80, 140);
-        btnDxfToggle.Click    += btnDxfToggle_Click;
-        ToolTip ttDxf = new(); ttDxf.SetToolTip(btnDxfToggle, "DXF-Darstellung ein/aus");
+        pnlTop.Controls.AddRange(new Control[]
+            { btnPrismenkonstante, sep1, lblNr, txtPunktNr, lblCode, txtCode });
 
-        // ── DXF-Export ────────────────────────────────────────────────────────
-        btnExportDxf.Text      = "↗DXF";
-        btnExportDxf.Size      = new Size(54, 54);
-        btnExportDxf.Location  = new Point(2, 470);
-        btnExportDxf.Font      = iconFontSm;
-        btnExportDxf.FlatStyle = FlatStyle.Flat;
-        btnExportDxf.BackColor = Color.FromArgb(190, 190, 190);
-        btnExportDxf.ForeColor = Color.FromArgb(30, 30, 30);
-        btnExportDxf.FlatAppearance.BorderColor = Color.FromArgb(160, 160, 160);
-        btnExportDxf.Click    += btnExportDxf_Click;
-        ToolTip ttExp = new(); ttExp.SetToolTip(btnExportDxf, "Feldbuchpunkte als DXF exportieren");
+        // Rechtsbündige Positionierung – beim Laden und bei jedem Resize
+        pnlTop.Resize += (s, e) => PositioniereToolbarFelder();
+        Load          += (s, e) => PositioniereToolbarFelder();
 
-        pnlSide.Controls.AddRange(new Control[]
-            { btnOpen, btnZoomIn, btnZoomOut, btnFit, btnSnap, btnPunkte,
-              btnDxfToggle, btnExportDxf });
+        // ══ Statusleiste unten (28px) ═════════════════════════════════════════
+        pnlStatus.Dock      = DockStyle.Bottom;
+        pnlStatus.Height    = 28;
+        pnlStatus.BackColor = Color.FromArgb(210, 213, 222);
 
-        // ── Statusleiste unten ────────────────────────────────────────────────
         lblStatus.Text      = "DXF-Datei öffnen …";
-        lblStatus.Location  = new Point(0, 722);
-        lblStatus.Size      = new Size(1100, 28);
-        lblStatus.Anchor    = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-        lblStatus.Font      = new Font("Courier New", 10F);
-        lblStatus.ForeColor = Color.FromArgb(40, 40, 40);
-        lblStatus.BackColor = Color.FromArgb(210, 210, 210);
+        lblStatus.Dock      = DockStyle.Left;
+        lblStatus.Width     = 430;
+        lblStatus.Font      = new Font("Consolas", 9F);
+        lblStatus.ForeColor = Color.FromArgb(40, 45, 70);
         lblStatus.TextAlign = ContentAlignment.MiddleLeft;
         lblStatus.Padding   = new Padding(6, 0, 0, 0);
 
-        Controls.AddRange(new Control[] { canvas, pnlSide, lblStatus });
+        flpLayers.Dock          = DockStyle.Fill;
+        flpLayers.AutoScroll    = false;
+        flpLayers.WrapContents  = false;
+        flpLayers.FlowDirection = FlowDirection.LeftToRight;
+        flpLayers.Padding       = new Padding(4, 5, 0, 0);
+        flpLayers.BackColor     = Color.FromArgb(210, 213, 222);
 
+        pnlStatus.Controls.Add(flpLayers);
+        pnlStatus.Controls.Add(lblStatus);
+
+        // ══ Seitenleiste rechts (42px, Buttons 36×36) ════════════════════════
+        pnlSide.Dock      = DockStyle.Right;
+        pnlSide.Width     = 42;
+        pnlSide.BackColor = Color.FromArgb(52, 56, 70);
+
+        // Icon-Schriften
+        var fntIco  = new Font("Segoe UI", 12F, FontStyle.Bold);
+        var fntSm   = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+
+        // Farben
+        var colBase    = Color.FromArgb(68, 74, 92);
+        var colActive  = Color.FromArgb(52, 110, 190);
+        var colGreen   = Color.FromArgb(36, 108, 68);
+        var colRed     = Color.FromArgb(150, 38, 38);
+        var colBorder  = Color.FromArgb(85, 92, 115);
+
+        int sy = 6, ss = 36, sp = 6;   // start-y, size, spacing
+
+        // ── Öffnen ────────────────────────────────────────────────────────────
+        SideBtn(btnOpen, "▤", fntIco, sy, ss, colActive, Color.White,
+                Color.FromArgb(40, 90, 165));
+        btnOpen.Click += btnOpen_Click;
+        new ToolTip().SetToolTip(btnOpen, "DXF-Datei öffnen");
+        sy += ss + sp;
+
+        // ── Zoom + ────────────────────────────────────────────────────────────
+        SideBtn(btnZoomIn, "⊕", fntIco, sy, ss, colBase, Color.FromArgb(210, 215, 230), colBorder);
+        btnZoomIn.Click += btnZoomIn_Click;
+        new ToolTip().SetToolTip(btnZoomIn, "Zoom +");
+        sy += ss + 2;
+
+        // ── Zoom − ────────────────────────────────────────────────────────────
+        SideBtn(btnZoomOut, "⊖", fntIco, sy, ss, colBase, Color.FromArgb(210, 215, 230), colBorder);
+        btnZoomOut.Click += btnZoomOut_Click;
+        new ToolTip().SetToolTip(btnZoomOut, "Zoom −");
+        sy += ss + 2;
+
+        // ── Einpassen ─────────────────────────────────────────────────────────
+        SideBtn(btnFit, "⊡", fntIco, sy, ss, colBase, Color.FromArgb(210, 215, 230), colBorder);
+        btnFit.Click += btnFit_Click;
+        new ToolTip().SetToolTip(btnFit, "Einpassen");
+        sy += ss + sp;
+
+        // ── Snap ──────────────────────────────────────────────────────────────
+        SideBtn(btnSnap, "◎", fntIco, sy, ss, colActive, Color.White,
+                Color.FromArgb(40, 90, 165));
+        btnSnap.Click += btnSnap_Click;
+        new ToolTip().SetToolTip(btnSnap, "Punktfang (Snap)");
+        sy += ss + 2;
+
+        // ── Katasterpunkte ────────────────────────────────────────────────────
+        SideBtn(btnPunkte, "◉", fntIco, sy, ss, colActive, Color.White,
+                Color.FromArgb(40, 90, 165));
+        btnPunkte.Click += btnPunkte_Click;
+        new ToolTip().SetToolTip(btnPunkte, "Katasterpunkte ein/aus");
+        sy += ss + sp;
+
+        // ── DXF ein/aus ───────────────────────────────────────────────────────
+        SideBtn(btnDxfToggle, "DXF", fntSm, sy, ss, colActive, Color.White,
+                Color.FromArgb(40, 90, 165));
+        btnDxfToggle.Click += btnDxfToggle_Click;
+        new ToolTip().SetToolTip(btnDxfToggle, "DXF-Darstellung ein/aus");
+        sy += ss + sp;
+
+        // ── DXF-Export ────────────────────────────────────────────────────────
+        SideBtn(btnExportDxf, "↑DXF", fntSm, sy, ss, colBase, Color.FromArgb(200, 205, 225), colBorder);
+        btnExportDxf.Click += btnExportDxf_Click;
+        new ToolTip().SetToolTip(btnExportDxf, "Als DXF exportieren");
+        sy += ss + sp;
+
+        // ── NEU ───────────────────────────────────────────────────────────────
+        SideBtn(btnNeu, "⊠", fntIco, sy, ss, colBase, Color.FromArgb(200, 205, 225), colBorder);
+        btnNeu.Click += btnNeu_Click;
+        new ToolTip().SetToolTip(btnNeu, "DXF leeren");
+        sy += ss + sp;
+
+        // ── KOR/CSV Import ────────────────────────────────────────────────────
+        SideBtn(btnImportKorCsv, "↓KOR", fntSm, sy, ss, colRed, Color.White,
+                Color.FromArgb(120, 28, 28));
+        btnImportKorCsv.Click += btnImportKorCsv_Click;
+        new ToolTip().SetToolTip(btnImportKorCsv, "KOR / CSV importieren");
+        sy += ss + 2;
+
+        // ── JSON Import ───────────────────────────────────────────────────────
+        SideBtn(btnImportJson, "↓JSON", fntSm, sy, ss, colRed, Color.White,
+                Color.FromArgb(120, 28, 28));
+        btnImportJson.Click += btnImportJson_Click;
+        new ToolTip().SetToolTip(btnImportJson, "JSON importieren");
+
+        pnlSide.Controls.AddRange(new Control[]
+        {
+            btnOpen, btnZoomIn, btnZoomOut, btnFit,
+            btnSnap, btnPunkte, btnDxfToggle, btnExportDxf,
+            btnNeu, btnImportKorCsv, btnImportJson
+        });
+
+        // ══ Canvas ════════════════════════════════════════════════════════════
+        canvas.Dock = DockStyle.Fill;
+
+        // ── Zusammenbau (Reihenfolge wichtig für Dock-Layout) ─────────────────
+        Controls.Add(canvas);       // Fill
+        Controls.Add(pnlSide);      // Right
+        Controls.Add(pnlStatus);    // Bottom
+        Controls.Add(pnlTop);       // Top
+
+        pnlTop.ResumeLayout(false);
+        pnlStatus.ResumeLayout(false);
         ResumeLayout(false);
     }
 
-    private DxfCanvas canvas    = null!;
-    private Panel     pnlSide   = null!;
-    private Button    btnOpen   = null!;
-    private Button    btnZoomIn = null!;
-    private Button    btnZoomOut= null!;
-    private Button    btnFit    = null!;
-    private Button    btnSnap      = null!;
-    private Button    btnPunkte    = null!;
-    private Button    btnDxfToggle = null!;
-    private Button    btnExportDxf = null!;
-    private Label     lblStatus    = null!;
+    // ── Hilfsmethode: Seitenleisten-Button ───────────────────────────────────
+    private static void SideBtn(Button b, string text, Font font,
+        int y, int size, Color back, Color fore, Color border)
+    {
+        b.Text      = text;
+        b.Size      = new Size(size, size);
+        b.Location  = new Point(3, y);
+        b.Font      = font;
+        b.FlatStyle = FlatStyle.Flat;
+        b.BackColor = back;
+        b.ForeColor = fore;
+        b.FlatAppearance.BorderColor = border;
+        b.Cursor    = Cursors.Hand;
+        b.Padding   = new Padding(0);
+    }
+
+    // ── Felder ────────────────────────────────────────────────────────────────
+    private DxfCanvas          canvas              = null!;
+    private Panel              pnlTop              = null!;
+    private Button             btnPrismenkonstante = null!;
+    private Label              lblNr               = null!;
+    private TextBox            txtPunktNr          = null!;
+    private Label              lblCode             = null!;
+    private TextBox            txtCode             = null!;
+    private Panel              pnlSide             = null!;
+    private Button             btnOpen             = null!;
+    private Button             btnZoomIn           = null!;
+    private Button             btnZoomOut          = null!;
+    private Button             btnFit              = null!;
+    private Button             btnSnap             = null!;
+    private Button             btnPunkte           = null!;
+    private Button             btnDxfToggle        = null!;
+    private Button             btnNeu              = null!;
+    private Button             btnExportDxf        = null!;
+    private Button             btnImportKorCsv     = null!;
+    private Button             btnImportJson       = null!;
+    private Panel              pnlStatus           = null!;
+    private Label              lblStatus           = null!;
+    private FlowLayoutPanel    flpLayers           = null!;
 }

@@ -6,186 +6,270 @@ partial class Form1
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && (components != null))
-            components.Dispose();
+        if (disposing && components != null) components.Dispose();
         base.Dispose(disposing);
     }
 
     private void InitializeComponent()
     {
+        pnlHeader             = new Panel();
+        lblTitel              = new Label();
         lblProjektInfo        = new Label();
+        pnlBody               = new Panel();
+        lblSekProjekt         = new Label();
         btnProjekt            = new Button();
-        lblTrennlinie         = new Label();
-        btnFreieStationierung = new Button();
-        btnMessen             = new Button();
-        btnPrismenkonstante   = new Button();
+        btnProjektdaten       = new Button();
+        lblSekFeldarbeit      = new Label();
         btnDxfViewer          = new Button();
-        btnProjektdaten          = new Button();
+        btnFreieStationierung = new Button();
         btnTachymeterKommunikation = new Button();
-        btnInfo                    = new Button();
-        grpOptionen                = new GroupBox();
-        chkProtokoll               = new CheckBox();
-        chkAutoBackup              = new CheckBox();
-        chkKoordTooltip            = new CheckBox();
-        chkTon                     = new CheckBox();
-        chkErwProto                = new CheckBox();
+        lblSekDaten           = new Label();
+        btnKonvertierung      = new Button();
+        grpOptionen           = new GroupBox();
+        chkProtokoll          = new CheckBox();
+        chkAutoBackup         = new CheckBox();
+        chkKoordTooltip       = new CheckBox();
+        chkTon                = new CheckBox();
+        chkErwProto           = new CheckBox();
+        btnInfo               = new Button();
+
         SuspendLayout();
+        pnlBody.SuspendLayout();
+        grpOptionen.SuspendLayout();
+
+        // ── Farben & Schriften ────────────────────────────────────────────────
+        var bgColor    = Color.FromArgb(244, 246, 250);
+        var secColor   = Color.FromArgb(100, 120, 160);
+        var btnFont    = new Font("Segoe UI", 10F);
+        var btnFontBig = new Font("Segoe UI", 11F, FontStyle.Bold);
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize    = new Size(600, 830);
-        Text          = "Feldbuch";
-        StartPosition = FormStartPosition.CenterScreen;
+        ClientSize      = new Size(460, 530);
+        Text            = "Feldbuch";
+        StartPosition   = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox   = false;
-        AutoScaleMode = AutoScaleMode.Font;
+        MaximizeBox     = false;
+        AutoScaleMode   = AutoScaleMode.Font;
+        BackColor       = bgColor;
 
-        // ── Projektinfo-Label ─────────────────────────────────────────────────
+        // ── Header-Panel ──────────────────────────────────────────────────────
+        pnlHeader.Dock      = DockStyle.Top;
+        pnlHeader.Height    = 58;
+        pnlHeader.BackColor = Color.FromArgb(42, 72, 130);
+        pnlHeader.Padding   = new Padding(14, 6, 14, 0);
+
+        lblTitel.Text      = "Feldbuch";
+        lblTitel.Font      = new Font("Segoe UI", 15F, FontStyle.Bold);
+        lblTitel.ForeColor = Color.White;
+        lblTitel.Location  = new Point(14, 6);
+        lblTitel.AutoSize  = true;
+
         lblProjektInfo.Text      = "Kein Projekt gewählt";
-        lblProjektInfo.Location  = new Point(20, 18);
-        lblProjektInfo.Size      = new Size(560, 22);
-        lblProjektInfo.Font      = new Font("Segoe UI", 9.5F, FontStyle.Italic);
-        lblProjektInfo.ForeColor = Color.FromArgb(80, 80, 80);
+        lblProjektInfo.Font      = new Font("Segoe UI", 8F, FontStyle.Italic);
+        lblProjektInfo.ForeColor = Color.FromArgb(190, 210, 240);
+        lblProjektInfo.Location  = new Point(14, 33);
+        lblProjektInfo.Size      = new Size(432, 18);
 
-        // ── Button: Projekt ───────────────────────────────────────────────────
-        btnProjekt.Text      = "Projekt";
-        btnProjekt.Size      = new Size(300, 50);
-        btnProjekt.Location  = new Point(150, 48);
-        btnProjekt.Font      = new Font("Segoe UI", 12F, FontStyle.Bold);
-        btnProjekt.BackColor = Color.FromArgb(60, 100, 160);
-        btnProjekt.ForeColor = Color.White;
-        btnProjekt.FlatStyle = FlatStyle.Flat;
-        btnProjekt.FlatAppearance.BorderColor = Color.FromArgb(40, 80, 140);
+        pnlHeader.Controls.Add(lblTitel);
+        pnlHeader.Controls.Add(lblProjektInfo);
+
+        // ── Body-Panel ────────────────────────────────────────────────────────
+        pnlBody.Location  = new Point(0, 58);
+        pnlBody.Size      = new Size(460, 432);
+        pnlBody.BackColor = bgColor;
+        pnlBody.Padding   = new Padding(14, 10, 14, 0);
+
+        int x = 14, w = 432, bh = 42, half = 208, gap = 16;
+        int y = 10;
+
+        // ─── Sektion: PROJEKT ─────────────────────────────────────────────────
+        lblSekProjekt = BaueSektion("PROJEKT", x, y, w, secColor);
+        y += 24;
+
+        btnProjekt.Text      = "Projekt wählen";
+        btnProjekt.Size      = new Size(half, bh);
+        btnProjekt.Location  = new Point(x, y);
+        btnProjekt.Font      = btnFont;
+        BlauerButton(btnProjekt);
         btnProjekt.Click    += btnProjekt_Click;
 
-        // ── Trennlinie ────────────────────────────────────────────────────────
-        lblTrennlinie.BorderStyle = BorderStyle.Fixed3D;
-        lblTrennlinie.Location    = new Point(20, 112);
-        lblTrennlinie.Size        = new Size(560, 2);
+        btnProjektdaten.Text    = "Projektdaten";
+        btnProjektdaten.Size    = new Size(half, bh);
+        btnProjektdaten.Location= new Point(x + half + gap, y);
+        btnProjektdaten.Font    = btnFont;
+        GrauButton(btnProjektdaten);
+        btnProjektdaten.Click  += btnProjektdaten_Click;
+        y += bh + 14;
 
-        // ── Button: Freie Stationierung ───────────────────────────────────────
+        // ─── Sektion: FELDARBEIT ──────────────────────────────────────────────
+        lblSekFeldarbeit = BaueSektion("FELDARBEIT", x, y, w, secColor);
+        y += 24;
+
+        btnDxfViewer.Text      = "DXF-Viewer  /  Aufnahme";
+        btnDxfViewer.Size      = new Size(w, 50);
+        btnDxfViewer.Location  = new Point(x, y);
+        btnDxfViewer.Font      = btnFontBig;
+        BlauerButton(btnDxfViewer);
+        btnDxfViewer.BackColor = Color.FromArgb(34, 90, 160);
+        btnDxfViewer.Click    += btnDxfViewer_Click;
+        y += 50 + 8;
+
         btnFreieStationierung.Text     = "Freie Stationierung";
-        btnFreieStationierung.Size     = new Size(300, 60);
-        btnFreieStationierung.Location = new Point(150, 130);
-        btnFreieStationierung.Font     = new Font("Segoe UI", 12F);
+        btnFreieStationierung.Size     = new Size(half, bh);
+        btnFreieStationierung.Location = new Point(x, y);
+        btnFreieStationierung.Font     = btnFont;
+        GrauButton(btnFreieStationierung);
         btnFreieStationierung.Click   += btnFreieStationierung_Click;
 
-        // ── Button: Messen ────────────────────────────────────────────────────
-        btnMessen.Text     = "Messen";
-        btnMessen.Size     = new Size(300, 60);
-        btnMessen.Location = new Point(150, 230);
-        btnMessen.Font     = new Font("Segoe UI", 12F);
-        btnMessen.Click   += btnMessen_Click;
+        btnTachymeterKommunikation.Text     = "Tachymeter";
+        btnTachymeterKommunikation.Size     = new Size(half, bh);
+        btnTachymeterKommunikation.Location = new Point(x + half + gap, y);
+        btnTachymeterKommunikation.Font     = btnFont;
+        GruenerButton(btnTachymeterKommunikation);
+        btnTachymeterKommunikation.Click   += btnTachymeterKommunikation_Click;
+        y += bh + 14;
 
-        // ── Button: Prismenkonstante ──────────────────────────────────────────
-        btnPrismenkonstante.Text     = "Prismenkonstante";
-        btnPrismenkonstante.Size     = new Size(300, 60);
-        btnPrismenkonstante.Location = new Point(150, 330);
-        btnPrismenkonstante.Font     = new Font("Segoe UI", 12F);
-        btnPrismenkonstante.Click   += btnPrismenkonstante_Click;
+        // ─── Sektion: DATEN ───────────────────────────────────────────────────
+        lblSekDaten = BaueSektion("DATEN", x, y, w, secColor);
+        y += 24;
 
-        // ── Button: DXF Viewer ────────────────────────────────────────────────
-        btnDxfViewer.Text     = "DXF Viewer";
-        btnDxfViewer.Size     = new Size(300, 60);
-        btnDxfViewer.Location = new Point(150, 430);
-        btnDxfViewer.Font     = new Font("Segoe UI", 12F);
-        btnDxfViewer.Click   += btnDxfViewer_Click;
+        btnKonvertierung.Text     = "Konvertierung";
+        btnKonvertierung.Size     = new Size(w, bh);
+        btnKonvertierung.Location = new Point(x, y);
+        btnKonvertierung.Font     = btnFont;
+        GrauButton(btnKonvertierung);
+        btnKonvertierung.Click   += btnKonvertierung_Click;
+        y += bh + 14;
 
-        // ── Button: Projektdaten ──────────────────────────────────────────────
-        btnProjektdaten.Text     = "Projektdaten";
-        btnProjektdaten.Size     = new Size(300, 60);
-        btnProjektdaten.Location = new Point(150, 530);
-        btnProjektdaten.Font     = new Font("Segoe UI", 12F);
-        btnProjektdaten.Click   += btnProjektdaten_Click;
-
-        // ── Button: Tachymeter Kommunikation ──────────────────────────────────
-        btnTachymeterKommunikation.Text      = "Tachymeter Kommunikation";
-        btnTachymeterKommunikation.Size      = new Size(300, 60);
-        btnTachymeterKommunikation.Location  = new Point(150, 630);
-        btnTachymeterKommunikation.Font      = new Font("Segoe UI", 12F);
-        btnTachymeterKommunikation.BackColor = Color.FromArgb(40, 100, 70);
-        btnTachymeterKommunikation.ForeColor = Color.White;
-        btnTachymeterKommunikation.FlatStyle = FlatStyle.Flat;
-        btnTachymeterKommunikation.FlatAppearance.BorderColor = Color.FromArgb(20, 80, 50);
-        btnTachymeterKommunikation.Click    += btnTachymeterKommunikation_Click;
-
-        // ── GroupBox: Optionen ────────────────────────────────────────────────────
+        // ─── Optionen ─────────────────────────────────────────────────────────
         grpOptionen.Text     = "Optionen";
-        grpOptionen.Location = new Point(20, 694);
-        grpOptionen.Size     = new Size(560, 80);
-        grpOptionen.Font     = new Font("Segoe UI", 9F);
+        grpOptionen.Location = new Point(x, y);
+        grpOptionen.Size     = new Size(w, 68);
+        grpOptionen.Font     = new Font("Segoe UI", 8.5F);
+        grpOptionen.BackColor = bgColor;
+        grpOptionen.FlatStyle = GroupBoxStyle(grpOptionen);
 
-        // Linke Spalte
-        chkProtokoll.Text     = "Protokoll";
-        chkProtokoll.Location = new Point(10, 17);
-        chkProtokoll.AutoSize = true;
-        chkProtokoll.CheckedChanged += chkProtokoll_CheckedChanged;
+        int cx1 = 8, cx2 = 160, cx3 = 316;
+        int cy1 = 16, cy2 = 38;
 
-        chkAutoBackup.Text     = "Autom. Backup";
-        chkAutoBackup.Location = new Point(10, 37);
-        chkAutoBackup.AutoSize = true;
-        chkAutoBackup.CheckedChanged += chkOption_CheckedChanged;
+        SetChk(chkProtokoll,   "Protokoll",          cx1, cy1);
+        SetChk(chkAutoBackup,  "Auto-Backup",         cx2, cy1);
+        SetChk(chkKoordTooltip,"Koordinaten-Tooltip", cx3, cy1);
+        SetChk(chkTon,         "Ton",                 cx1, cy2);
+        SetChk(chkErwProto,    "Erw. Protokoll",      cx2, cy2);
 
-        chkKoordTooltip.Text     = "Koordinaten-Tooltip";
-        chkKoordTooltip.Location = new Point(10, 57);
-        chkKoordTooltip.AutoSize = true;
+        chkProtokoll.CheckedChanged    += chkProtokoll_CheckedChanged;
+        chkAutoBackup.CheckedChanged   += chkOption_CheckedChanged;
         chkKoordTooltip.CheckedChanged += chkOption_CheckedChanged;
+        chkTon.CheckedChanged          += chkOption_CheckedChanged;
+        chkErwProto.CheckedChanged     += chkOption_CheckedChanged;
 
-        // Rechte Spalte
-        chkTon.Text     = "Ton bei Berechnung";
-        chkTon.Location = new Point(290, 17);
-        chkTon.AutoSize = true;
-        chkTon.CheckedChanged += chkOption_CheckedChanged;
+        grpOptionen.Controls.AddRange(new Control[]
+            { chkProtokoll, chkAutoBackup, chkKoordTooltip, chkTon, chkErwProto });
 
-        chkErwProto.Text     = "Erw. Protokollierung";
-        chkErwProto.Location = new Point(290, 37);
-        chkErwProto.AutoSize = true;
-        chkErwProto.CheckedChanged += chkOption_CheckedChanged;
+        pnlBody.Controls.AddRange(new Control[]
+        {
+            lblSekProjekt, btnProjekt, btnProjektdaten,
+            lblSekFeldarbeit, btnDxfViewer, btnFreieStationierung, btnTachymeterKommunikation,
+            lblSekDaten, btnKonvertierung,
+            grpOptionen
+        });
 
-        grpOptionen.Controls.Add(chkProtokoll);
-        grpOptionen.Controls.Add(chkAutoBackup);
-        grpOptionen.Controls.Add(chkKoordTooltip);
-        grpOptionen.Controls.Add(chkTon);
-        grpOptionen.Controls.Add(chkErwProto);
-
-        Controls.Add(lblProjektInfo);
-        Controls.Add(btnProjekt);
-        Controls.Add(lblTrennlinie);
-        Controls.Add(btnFreieStationierung);
-        Controls.Add(btnMessen);
-        Controls.Add(btnPrismenkonstante);
-        Controls.Add(btnDxfViewer);
-        Controls.Add(btnProjektdaten);
-        Controls.Add(btnTachymeterKommunikation);
-        Controls.Add(grpOptionen);
-
-        // ── Button: Info / Hilfe (links unten) ────────────────────────────────
+        // ── Info-Button (unten links) ─────────────────────────────────────────
         btnInfo.Text      = "?";
-        btnInfo.Size      = new Size(36, 36);
-        btnInfo.Location  = new Point(12, 782);
-        btnInfo.Font      = new Font("Segoe UI", 12F, FontStyle.Bold);
+        btnInfo.Size      = new Size(30, 30);
+        btnInfo.Location  = new Point(10, 494);
+        btnInfo.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnInfo.FlatStyle = FlatStyle.Flat;
-        btnInfo.ForeColor = Color.FromArgb(80, 80, 80);
-        btnInfo.FlatAppearance.BorderColor = Color.FromArgb(180, 180, 180);
+        btnInfo.ForeColor = Color.FromArgb(100, 100, 120);
+        btnInfo.FlatAppearance.BorderColor = Color.FromArgb(180, 185, 200);
         btnInfo.Click    += btnInfo_Click;
+
+        Controls.Add(pnlHeader);
+        Controls.Add(pnlBody);
         Controls.Add(btnInfo);
 
+        pnlBody.ResumeLayout(false);
+        grpOptionen.ResumeLayout(false);
         ResumeLayout(false);
     }
 
-    private Label  lblProjektInfo        = null!;
-    private Button btnProjekt            = null!;
-    private Label  lblTrennlinie         = null!;
-    private Button btnFreieStationierung = null!;
-    private Button btnMessen             = null!;
-    private Button btnPrismenkonstante   = null!;
-    private Button btnDxfViewer               = null!;
-    private Button btnProjektdaten            = null!;
-    private Button btnTachymeterKommunikation = null!;
-    private Button    btnInfo                    = null!;
-    private GroupBox  grpOptionen               = null!;
-    private CheckBox  chkProtokoll              = null!;
-    private CheckBox  chkAutoBackup             = null!;
-    private CheckBox  chkKoordTooltip           = null!;
-    private CheckBox  chkTon                    = null!;
-    private CheckBox  chkErwProto               = null!;
+    // ── Hilfsmethoden ─────────────────────────────────────────────────────────
+    private static Label BaueSektion(string text, int x, int y, int w, Color col)
+    {
+        var lbl = new Label
+        {
+            Text      = text,
+            Location  = new Point(x, y),
+            Size      = new Size(w, 18),
+            Font      = new Font("Segoe UI", 7.5F, FontStyle.Bold),
+            ForeColor = col
+        };
+        return lbl;
+    }
+
+    private static void BlauerButton(Button b)
+    {
+        b.BackColor = Color.FromArgb(52, 100, 175);
+        b.ForeColor = Color.White;
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderColor = Color.FromArgb(36, 78, 150);
+        b.Cursor    = Cursors.Hand;
+    }
+
+    private static void GrauButton(Button b)
+    {
+        b.BackColor = Color.FromArgb(224, 228, 238);
+        b.ForeColor = Color.FromArgb(40, 50, 80);
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderColor = Color.FromArgb(185, 192, 210);
+        b.Cursor    = Cursors.Hand;
+    }
+
+    private static void GruenerButton(Button b)
+    {
+        b.BackColor = Color.FromArgb(38, 110, 72);
+        b.ForeColor = Color.White;
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderColor = Color.FromArgb(26, 90, 56);
+        b.Cursor    = Cursors.Hand;
+    }
+
+    private static void SetChk(CheckBox chk, string text, int x, int y)
+    {
+        chk.Text      = text;
+        chk.Location  = new Point(x, y);
+        chk.AutoSize  = true;
+        chk.Font      = new Font("Segoe UI", 8.5F);
+        chk.ForeColor = Color.FromArgb(50, 55, 80);
+    }
+
+    // Kein eigener GroupBox-FlatStyle-Rückgabewert nötig – Dummy für Lesbarkeit
+    private static FlatStyle GroupBoxStyle(GroupBox g)
+    {
+        g.FlatStyle = FlatStyle.Flat;
+        return FlatStyle.Flat;
+    }
+
+    // ── Felder ────────────────────────────────────────────────────────────────
+    private Panel     pnlHeader                   = null!;
+    private Panel     pnlBody                     = null!;
+    private Label     lblTitel                    = null!;
+    private Label     lblProjektInfo              = null!;
+    private Label     lblSekProjekt               = null!;
+    private Label     lblSekFeldarbeit            = null!;
+    private Label     lblSekDaten                 = null!;
+    private Button    btnProjekt                  = null!;
+    private Button    btnProjektdaten             = null!;
+    private Button    btnDxfViewer                = null!;
+    private Button    btnFreieStationierung        = null!;
+    private Button    btnTachymeterKommunikation   = null!;
+    private Button    btnKonvertierung             = null!;
+    private Button    btnInfo                     = null!;
+    private GroupBox  grpOptionen                 = null!;
+    private CheckBox  chkProtokoll                = null!;
+    private CheckBox  chkAutoBackup               = null!;
+    private CheckBox  chkKoordTooltip             = null!;
+    private CheckBox  chkTon                      = null!;
+    private CheckBox  chkErwProto                 = null!;
 }

@@ -94,6 +94,62 @@ public class OverlayStandpunkt : FeldbuchOverlayEntity
     }
 }
 
+// ── Import-Punkt ──────────────────────────────────────────────────────────────
+// Symbol: roter Kreis (etwas kleiner als Standpunkt), Beschriftung grün.
+// Wird für KOR/CSV/JSON-Import verwendet.
+public class OverlayImportPunkt : DxfEntity
+{
+    public string PunktNr { get; }
+    public double WX      { get; }
+    public double WY      { get; }
+    public double Hoehe   { get; }
+
+    private static readonly Color FarbeSymbol = Color.FromArgb(200, 30, 30);     // Rot
+    private static readonly Color FarbeBeschr = Color.FromArgb(0,   160, 60);    // Grün
+    const float R = 3f;   // Radius [px] – kleiner als Standpunkt (4px)
+
+    public OverlayImportPunkt(string punktNr, double wx, double wy, double hoehe)
+    {
+        PunktNr = punktNr;
+        WX      = wx;
+        WY      = wy;
+        Hoehe   = hoehe;
+        Layer   = "Import";
+    }
+
+    public override BoundingBox GetBounds() => new(WX - 1, WY - 1, WX + 1, WY + 1);
+    public override double DistanceTo(double wx, double wy) =>
+        Math.Sqrt((wx - WX) * (wx - WX) + (wy - WY) * (wy - WY));
+    public override (double x, double y) GetNearestPoint(double wx, double wy) => (WX, WY);
+    public override (double x, double y) GetSnapPoint(double wx, double wy)    => (WX, WY);
+    public override string GetInfo() =>
+        $"Import  {PunktNr}  R={WX:F3}  H={WY:F3}  Höhe={Hoehe:F3}";
+
+    public override void Draw(Graphics g, Pen _pen,
+        Func<double, double, PointF> ts, double scale)
+    {
+        var c = ts(WX, WY);
+        using var penSym   = new Pen(FarbeSymbol, 1.5f);
+        using var brushSym = new SolidBrush(FarbeSymbol);
+        using var brushLbl = new SolidBrush(FarbeBeschr);
+        using var fntNr    = new Font("Arial", 8f, FontStyle.Bold,    GraphicsUnit.Pixel);
+        using var fntH     = new Font("Arial", 7f, FontStyle.Regular, GraphicsUnit.Pixel);
+
+        // Kreis
+        g.DrawEllipse(penSym, c.X - R, c.Y - R, R * 2, R * 2);
+        // gefüllter Mittelpunkt
+        g.FillEllipse(brushSym, c.X - 1f, c.Y - 1f, 2f, 2f);
+
+        // Beschriftung grün
+        float gap = R + 2f;
+        g.DrawString(PunktNr, fntNr, brushLbl,
+            c.X + gap * 0.4f, c.Y - gap - fntNr.Size);
+        if (Hoehe != 0)
+            g.DrawString($"{Hoehe:F3}", fntH, brushLbl,
+                c.X + gap * 0.4f, c.Y + gap);
+    }
+}
+
 // ── Neupunkt ──────────────────────────────────────────────────────────────────
 // Symbol: ausgefülltes grünes Dreieck (nach oben zeigend)
 public class OverlayNeupunkt : FeldbuchOverlayEntity

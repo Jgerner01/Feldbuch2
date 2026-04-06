@@ -7,6 +7,10 @@ public partial class FormDxfViewer : Form
     // Zuletzt gepickter Punkt – für spätere Übergabe an Freie Stationierung
     public (double X, double Y)? GepickterPunkt { get; private set; }
 
+    // Aktuelle Eingabewerte aus der Toolbar
+    public string AktuellePunktNr  => txtPunktNr.Text.Trim();
+    public string AktuellerCode    => txtCode.Text.Trim();
+
     // Pfad zur CSV-Datei mit den Anschlusspunkten – immer im aktuellen Projektverzeichnis
     public static string AnschlusspunktePfad =>
         ProjektManager.GetPfad("Anschlusspunkte.csv");
@@ -31,14 +35,176 @@ public partial class FormDxfViewer : Form
         canvas.PointPicked += OnPointPicked;
         FormClosed         += OnFormClosed;
 
+        // ImportPunkteManager initialisieren
+        ImportPunkteManager.Initialize(
+            ProjektManager.GetPfad("ImportPunkte.json"));
+
         // Feldbuchpunkte-Overlay aufbauen
         BaueOverlay();
+
+        // Import-Overlay aufbauen (persistente Punkte aus letzter Session)
+        BaueImportOverlay();
 
         // DXF automatisch laden, wenn Projektverzeichnis eine passende DXF-Datei enthält
         if (ProjektManager.HatDxfDatei)
             LadeDxfDatei(ProjektManager.DxfPfad);
-        else if (canvas.OverlayEntities.Count > 0)
-            canvas.FitToView();   // Overlay auch ohne DXF zentrieren
+        else if (canvas.OverlayEntities.Count > 0 || canvas.ImportLayers.Count > 0)
+            canvas.FitToView();
+    }
+
+    // ── Import-Layer aufbauen ─────────────────────────────────────────────────
+    // Legt pro importierter Datei einen eigenen ImportLayer an und
+    // synchronisiert die Checkbox-Leiste in flpLayers.
+    private void AddImportLayer(string dateiPfad, List<ImportPunkt> punkte)
+    {
+        string name = Path.GetFileName(dateiPfad);
+
+        // Bereits vorhandenen Layer aktualisieren oder neuen anlegen
+        var layer = canvas.ImportLayers.FirstOrDefault(
+            l => l.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (layer == null)
+        {
+            layer = new ImportLayer(name);
+            canvas.ImportLayers.Add(layer);
+        }
+        else
+        {
+            layer.Entities.Clear();
+        }
+
+        foreach (var p in punkte)
+            layer.Entities.Add(new OverlayImportPunkt(p.PunktNr, p.R, p.H, p.Hoehe));
+
+        BaueCheckboxen();
+        canvas.Invalidate();
+    }
+
+    // Checkboxen in der Statusleiste neu aufbauen (eine je Layer)
+    private void BaueCheckboxen()
+    {
+        flpLayers.Controls.Clear();
+
+        foreach (var layer in canvas.ImportLayers)
+        {
+            var chk = new CheckBox
+            {
+                Text      = layer.Name,
+                Checked   = layer.Visible,
+                AutoSize  = true,
+                Font      = new Font("Segoe UI", 8.5F),
+                ForeColor = Color.FromArgb(30, 30, 30),
+                Margin    = new Padding(6, 3, 0, 0),
+                Cursor    = Cursors.Hand
+            };
+            // Closure über lokale Kopie des Layers
+            var l = layer;
+            chk.CheckedChanged += (s, e) =>
+            {
+                l.Visible = chk.Checked;
+                canvas.Invalidate();
+            };
+            // Tooltip mit vollständigem Namen
+            var tt = new ToolTip();
+            tt.SetToolTip(chk, layer.Name);
+
+            flpLayers.Controls.Add(chk);
+        }
+    }
+
+    // Initialer Aufbau beim Öffnen (persistente Punkte aus letzter Session)
+    public void BaueImportOverlay()
+    {
+        // Alle gespeicherten Punkte als einen Layer „ImportPunkte.json" laden
+        var punkte = ImportPunkteManager.Punkte.ToList();
+        if (punkte.Count == 0) return;
+
+        string name = "ImportPunkte.json";
+        var layer = canvas.ImportLayers.FirstOrDefault(
+            l => l.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            ?? new ImportLayer(name);
+
+        layer.Entities.Clear();
+        foreach (var p in punkte)
+            layer.Entities.Add(new OverlayImportPunkt(p.PunktNr, p.R, p.H, p.Hoehe));
+
+        if (!canvas.ImportLayers.Contains(layer))
+            canvas.ImportLayers.Add(layer);
+
+        BaueCheckboxen();
+        canvas.Invalidate();
+    }
+
+    // ── KOR / CSV einlesen ────────────────────────────────────────────────────
+    private void btnImportKorCsv_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new OpenFileDialog
+        {
+            Title  = "KOR- oder CSV-Datei importieren",
+            Filter = "KOR / CSV|*.kor;*.csv|KOR-Datei|*.kor|CSV-Datei|*.csv|Alle Dateien|*.*"
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        List<ImportPunkt> punkte;
+        string ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+        try
+        {
+            punkte = ext == ".csv"
+                ? ImportPunkteManager.LeseCsv(dlg.FileName)
+                : ImportPunkteManager.LeseKor(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Lesen:\n{ex.Message}", "Importfehler",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        var (added, dupl) = ImportPunkteManager.AddRange(punkte);
+        AddImportLayer(dlg.FileName, punkte);
+        canvas.FitToView();
+
+        string msg = $"{added} Punkte importiert aus {Path.GetFileName(dlg.FileName)}";
+        if (dupl > 0) msg += $"  ({dupl} Duplikat(e) übersprungen)";
+        lblStatus.Text = msg;
+    }
+
+    // ── JSON einlesen ─────────────────────────────────────────────────────────
+    private void btnImportJson_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new OpenFileDialog
+        {
+            Title  = "JSON-Datei importieren",
+            Filter = "JSON-Dateien|*.json|Alle Dateien|*.*"
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        List<ImportPunkt> punkte;
+        try
+        {
+            punkte = ImportPunkteManager.LeseJson(dlg.FileName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Fehler beim Lesen:\n{ex.Message}", "Importfehler",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        if (punkte.Count == 0)
+        {
+            MessageBox.Show("Keine Punkte in der JSON-Datei gefunden.\n" +
+                "Unterstützt werden ImportPunkte.json und Feldbuchpunkte.json.",
+                "Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var (added, dupl) = ImportPunkteManager.AddRange(punkte);
+        AddImportLayer(dlg.FileName, punkte);
+        canvas.FitToView();
+
+        string msg = $"{added} Punkte importiert aus {Path.GetFileName(dlg.FileName)}";
+        if (dupl > 0) msg += $"  ({dupl} Duplikat(e) übersprungen)";
+        lblStatus.Text = msg;
     }
 
     // ── Feldbuchpunkte-Overlay aufbauen ───────────────────────────────────────
@@ -51,6 +217,124 @@ public partial class FormDxfViewer : Form
                 ? (DxfEntity)new OverlayStandpunkt(p)
                 : new OverlayNeupunkt(p));
         }
+        canvas.Invalidate();
+    }
+
+    // ── Toolbar: rechtsbündige Positionierung ────────────────────────────────
+    private void PositioniereToolbarFelder()
+    {
+        int cy  = (pnlTop.Height - 24) / 2;   // vertikale Zentrierung
+        int r   = pnlTop.Width - 8;            // rechter Rand
+
+        // Code-Eingabe ganz rechts
+        txtCode.Location  = new Point(r - txtCode.Width, cy);
+        r -= txtCode.Width + 8;
+
+        // Code-Label
+        lblCode.Location  = new Point(r - lblCode.Width, cy);
+        r -= lblCode.Width + 16;
+
+        // PunktNr-Eingabe
+        txtPunktNr.Location = new Point(r - txtPunktNr.Width, cy);
+        r -= txtPunktNr.Width + 8;
+
+        // PunktNr-Label
+        lblNr.Location = new Point(r - lblNr.Width, cy);
+    }
+
+    // ── Prismenkonstante ──────────────────────────────────────────────────────
+    private void btnPrismenkonstante_Click(object? sender, EventArgs e)
+    {
+        using var form = new FormPrismenkonstante();
+        if (form.ShowDialog(this) == DialogResult.OK)
+            lblStatus.Text = $"Prismenkonstante: {form.GewähltePrismenkonstante:+0.0;-0.0;0.0} mm";
+    }
+
+    // ── Retroreflektor-Icon (Corner-Cube-Prisma, Draufsicht) ─────────────────
+    // Stilisierung: Außenkreis, 3 Dreiecks-Facetten treffen sich im Zentrum,
+    // Mittelpunkt ausgefüllt – klassisches technisches Prismensymbol.
+    private static void BtnPrisma_Paint(object? sender, PaintEventArgs e)
+    {
+        if (sender is not Button btn) return;
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        float cx = btn.Width  / 2f;
+        float cy = btn.Height / 2f;
+        float r  = Math.Min(btn.Width, btn.Height) / 2f - 2.5f;
+
+        // Farben
+        var colRim    = Color.White;
+        var colFacet1 = Color.FromArgb(220, 235, 255);   // hell
+        var colFacet2 = Color.FromArgb(130, 165, 215);   // mittel
+        var colFacet3 = Color.FromArgb(60,  95,  155);   // dunkel
+        var colLine   = Color.FromArgb(200, 220, 255);
+        var colDot    = Color.White;
+
+        using var penRim   = new Pen(colRim,  1.6f);
+        using var penLine  = new Pen(colLine, 1.2f);
+
+        // Die 3 Ecken des einbeschriebenen gleichseitigen Dreiecks (oben, re-unten, li-unten)
+        // Startwinkel -90° (oben), dann je +120°
+        PointF Corner(float angleDeg)
+        {
+            float rad = angleDeg * MathF.PI / 180f;
+            return new PointF(cx + r * MathF.Cos(rad), cy + r * MathF.Sin(rad));
+        }
+
+        var p0 = Corner(-90f);   // oben
+        var p1 = Corner( 30f);   // rechts unten
+        var p2 = Corner(150f);   // links unten
+        var pc = new PointF(cx, cy);
+
+        // Mitte der drei Kreissehnen (Eckpunkte des äußeren Dreiecks auf dem Kreis)
+        PointF Mid(PointF a, PointF b) => new((a.X + b.X) / 2f, (a.Y + b.Y) / 2f);
+        var m01 = Mid(p0, p1);
+        var m12 = Mid(p1, p2);
+        var m20 = Mid(p2, p0);
+
+        // 3 Facetten als gefüllte Dreiecke (Corner-Cube Draufsicht)
+        using var br1 = new SolidBrush(colFacet1);
+        using var br2 = new SolidBrush(colFacet2);
+        using var br3 = new SolidBrush(colFacet3);
+
+        g.FillPolygon(br1, new[] { pc, p0, m01 });    // oben rechts  – hell
+        g.FillPolygon(br1, new[] { pc, p0, m20 });    // oben links   – hell (spiegelgleich)
+        g.FillPolygon(br2, new[] { pc, p1, m01 });    // rechts oben  – mittel
+        g.FillPolygon(br2, new[] { pc, p1, m12 });    // rechts unten – mittel
+        g.FillPolygon(br3, new[] { pc, p2, m12 });    // links unten  – dunkel
+        g.FillPolygon(br3, new[] { pc, p2, m20 });    // links oben   – dunkel
+
+        // Außenkreis
+        g.DrawEllipse(penRim, cx - r, cy - r, r * 2, r * 2);
+
+        // Trennlinien Zentrum → Ecken
+        g.DrawLine(penLine, pc, p0);
+        g.DrawLine(penLine, pc, p1);
+        g.DrawLine(penLine, pc, p2);
+
+        // Sehnen (Dreiecksseiten)
+        g.DrawLine(penLine, p0, p1);
+        g.DrawLine(penLine, p1, p2);
+        g.DrawLine(penLine, p2, p0);
+
+        // Mittelpunkt
+        using var brDot = new SolidBrush(colDot);
+        g.FillEllipse(brDot, cx - 2.2f, cy - 2.2f, 4.4f, 4.4f);
+    }
+
+    // ── Neu: DXF-Inhalt löschen ───────────────────────────────────────────────
+    private void btnNeu_Click(object? sender, EventArgs e)
+    {
+        var res = MessageBox.Show(
+            "Die aktuelle DXF-Datei aus dem Viewer entfernen?\n(Die Datei auf der Festplatte bleibt erhalten.)",
+            "DXF leeren", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (res != DialogResult.Yes) return;
+
+        canvas.Entities.Clear();
+        _aktuellerDxfPfad = "";
+        Text           = "DXF-Viewer";
+        lblStatus.Text = "DXF-Inhalt geleert.";
         canvas.Invalidate();
     }
 
