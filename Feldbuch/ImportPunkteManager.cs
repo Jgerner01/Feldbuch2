@@ -187,7 +187,7 @@ public static class ImportPunkteManager
                 return result;
             }
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"ImportPunkteManager.LeseJson Format1: {ex.Message}"); }
 
         // Fallback: FeldbuchDaten (Feldbuchpunkte.json)
         try
@@ -208,7 +208,7 @@ public static class ImportPunkteManager
                 return result;
             }
         }
-        catch { }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"ImportPunkteManager.LeseJson Format2: {ex.Message}"); }
 
         return result;
     }
@@ -223,7 +223,7 @@ public static class ImportPunkteManager
             var data    = JsonSerializer.Deserialize<ImportPunkteDaten>(json, opts);
             _punkte     = data?.Punkte ?? new();
         }
-        catch { _punkte = new(); }
+        catch (Exception ex) { ErrorLogger.Log("ImportPunkteManager.Load", ex); _punkte = new(); }
     }
 
     public static void Save()
@@ -236,7 +236,7 @@ public static class ImportPunkteManager
                 new ImportPunkteDaten { Punkte = _punkte }, opts);
             File.WriteAllText(_pfad, json, Encoding.UTF8);
         }
-        catch { }
+        catch (Exception ex) { ErrorLogger.Log("ImportPunkteManager.Save", ex); }
     }
 
     // ── Duplikat-Prüfung ──────────────────────────────────────────────────────

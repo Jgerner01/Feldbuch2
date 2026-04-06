@@ -49,8 +49,9 @@ public static class RechenparameterManager
                 Berechnung3D            = ReadBool  (root, "Berechnung3D",            true)
             };
         }
-        catch
+        catch (Exception ex)
         {
+            ErrorLogger.Log("RechenparameterManager.Load", ex);
             _params = new Rechenparameter();   // Standardwerte bei Fehler
         }
     }

@@ -388,7 +388,7 @@ public class DxfCanvas : Panel
                 pen = defPen;
 
             try { entity.Draw(g, pen, ToScreen, Scale); }
-            catch { /* ungültige Geometrie ignorieren */ }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.Draw: {ex.Message}"); }
 
             if (ownPen) pen.Dispose();
         }
@@ -402,7 +402,7 @@ public class DxfCanvas : Panel
                 bool isSel = entity == Selected;
                 Pen  pen   = isSel ? selPen : defPen;
                 try { ins.Draw(g, pen, ToScreen, Scale); }
-                catch { /* ungültige Geometrie ignorieren */ }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawInsert: {ex.Message}"); }
             }
         }
 
@@ -413,7 +413,7 @@ public class DxfCanvas : Panel
             bool isSel = entity == Selected;
             Pen  pen   = isSel ? selPen : defPen;
             try { entity.Draw(g, pen, ToScreen, Scale); }
-            catch { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawImport: {ex.Message}"); }
         }
 
         // Feldbuch-Overlay (Standpunkte, Neupunkte) – immer ganz vorne
@@ -422,7 +422,7 @@ public class DxfCanvas : Panel
             bool isSel = entity == Selected;
             Pen  pen   = isSel ? selPen : defPen;
             try { entity.Draw(g, pen, ToScreen, Scale); }
-            catch { /* ungültige Geometrie ignorieren */ }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawOverlay: {ex.Message}"); }
         }
 
         // Fadenkreuz

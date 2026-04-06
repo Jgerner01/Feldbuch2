@@ -91,9 +91,10 @@ public partial class FormTachymeterKommunikation : Form
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // WMI nicht verfügbar – stille Fallback auf nur Port-Namen
+            // WMI nicht verfügbar – Fallback auf nur Port-Namen
+            System.Diagnostics.Debug.WriteLine($"FormTachymeterKommunikation: WMI nicht verfügbar: {ex.Message}");
         }
         return result;
     }

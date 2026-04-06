@@ -42,6 +42,6 @@ public static class ProtokollManager
             string zeile = $"{zeit}  [{kategorie,-8}]  {nachricht}";
             writer.WriteLine(zeile);
         }
-        catch { /* Schreibfehler stillschweigend ignorieren */ }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ProtokollManager] Schreibfehler: {ex.Message}"); }
     }
 }

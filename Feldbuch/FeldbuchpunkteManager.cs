@@ -70,7 +70,7 @@ public static class FeldbuchpunkteManager
                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             _punkte = data?.Punkte ?? new();
         }
-        catch { _punkte = new(); }
+        catch (Exception ex) { ErrorLogger.Log("FeldbuchpunkteManager.Load", ex); _punkte = new(); }
     }
 
     public static void Save()
@@ -82,6 +82,6 @@ public static class FeldbuchpunkteManager
             string json = JsonSerializer.Serialize(new FeldbuchDaten { Punkte = _punkte }, opts);
             File.WriteAllText(_pfad, json, Encoding.UTF8);
         }
-        catch { /* Schreibfehler ignorieren */ }
+        catch (Exception ex) { ErrorLogger.Log("FeldbuchpunkteManager.Save", ex); }
     }
 }

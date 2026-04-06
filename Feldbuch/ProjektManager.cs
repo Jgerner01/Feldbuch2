@@ -118,7 +118,7 @@ public static class ProjektManager
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out _zoomPanY);
         }
-        catch { /* ungültige Datei – ignorieren */ }
+        catch (Exception ex) { ErrorLogger.Log("ProjektManager.Laden", ex); }
     }
 
     // ── Nur Optionen speichern (ohne Projektpfad zu ändern) ──────────────────
@@ -151,7 +151,7 @@ public static class ProjektManager
 
             doc.Save(EinstellungenPfad);
         }
-        catch { /* Schreibfehler ignorieren */ }
+        catch (Exception ex) { ErrorLogger.Log("ProjektManager.Speichern", ex); }
     }
 
     static void Append(XmlDocument doc, XmlElement parent, string tag, string value)
