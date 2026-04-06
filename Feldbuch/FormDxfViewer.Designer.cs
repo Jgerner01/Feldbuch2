@@ -62,7 +62,7 @@ partial class FormDxfViewer
         btnPrismenkonstante.FlatAppearance.BorderSize  = 1;
         btnPrismenkonstante.Cursor    = Cursors.Hand;
         btnPrismenkonstante.Click    += btnPrismenkonstante_Click;
-        btnPrismenkonstante.Paint    += BtnPrisma_Paint;
+        IconLoader.Apply(btnPrismenkonstante, "toolbar_prisma.png");
         new ToolTip().SetToolTip(btnPrismenkonstante, "Prismenkonstante");
 
         // ── Trennstrich links ─────────────────────────────────────────────────
@@ -165,24 +165,28 @@ partial class FormDxfViewer
         // ── Öffnen ────────────────────────────────────────────────────────────
         SideBtn(btnOpen, "▤", fntIco, sy, ss, colActive, Color.White,
                 Color.FromArgb(40, 90, 165));
+        IconLoader.Apply(btnOpen, "sidebar_open.png");
         btnOpen.Click += btnOpen_Click;
         new ToolTip().SetToolTip(btnOpen, "DXF-Datei öffnen");
         sy += ss + sp;
 
         // ── Zoom + ────────────────────────────────────────────────────────────
         SideBtn(btnZoomIn, "⊕", fntIco, sy, ss, colBase, Color.FromArgb(210, 215, 230), colBorder);
+        IconLoader.Apply(btnZoomIn, "sidebar_zoom_in.png");
         btnZoomIn.Click += btnZoomIn_Click;
         new ToolTip().SetToolTip(btnZoomIn, "Zoom +");
         sy += ss + 2;
 
         // ── Zoom − ────────────────────────────────────────────────────────────
         SideBtn(btnZoomOut, "⊖", fntIco, sy, ss, colBase, Color.FromArgb(210, 215, 230), colBorder);
+        IconLoader.Apply(btnZoomOut, "sidebar_zoom_out.png");
         btnZoomOut.Click += btnZoomOut_Click;
         new ToolTip().SetToolTip(btnZoomOut, "Zoom −");
         sy += ss + 2;
 
         // ── Einpassen ─────────────────────────────────────────────────────────
         SideBtn(btnFit, "⊡", fntIco, sy, ss, colBase, Color.FromArgb(210, 215, 230), colBorder);
+        IconLoader.Apply(btnFit, "sidebar_fit.png");
         btnFit.Click += btnFit_Click;
         new ToolTip().SetToolTip(btnFit, "Einpassen");
         sy += ss + sp;
@@ -190,6 +194,7 @@ partial class FormDxfViewer
         // ── Snap ──────────────────────────────────────────────────────────────
         SideBtn(btnSnap, "◎", fntIco, sy, ss, colActive, Color.White,
                 Color.FromArgb(40, 90, 165));
+        IconLoader.Apply(btnSnap, "sidebar_snap.png");
         btnSnap.Click += btnSnap_Click;
         new ToolTip().SetToolTip(btnSnap, "Punktfang (Snap)");
         sy += ss + 2;
@@ -197,6 +202,7 @@ partial class FormDxfViewer
         // ── Katasterpunkte ────────────────────────────────────────────────────
         SideBtn(btnPunkte, "◉", fntIco, sy, ss, colActive, Color.White,
                 Color.FromArgb(40, 90, 165));
+        IconLoader.Apply(btnPunkte, "sidebar_points.png");
         btnPunkte.Click += btnPunkte_Click;
         new ToolTip().SetToolTip(btnPunkte, "Katasterpunkte ein/aus");
         sy += ss + sp;
@@ -204,18 +210,21 @@ partial class FormDxfViewer
         // ── DXF ein/aus ───────────────────────────────────────────────────────
         SideBtn(btnDxfToggle, "DXF", fntSm, sy, ss, colActive, Color.White,
                 Color.FromArgb(40, 90, 165));
+        IconLoader.Apply(btnDxfToggle, "sidebar_dxf_toggle.png");
         btnDxfToggle.Click += btnDxfToggle_Click;
         new ToolTip().SetToolTip(btnDxfToggle, "DXF-Darstellung ein/aus");
         sy += ss + sp;
 
         // ── DXF-Export ────────────────────────────────────────────────────────
         SideBtn(btnExportDxf, "↑DXF", fntSm, sy, ss, colBase, Color.FromArgb(200, 205, 225), colBorder);
+        IconLoader.Apply(btnExportDxf, "sidebar_dxf_export.png");
         btnExportDxf.Click += btnExportDxf_Click;
         new ToolTip().SetToolTip(btnExportDxf, "Als DXF exportieren");
         sy += ss + sp;
 
         // ── NEU ───────────────────────────────────────────────────────────────
         SideBtn(btnNeu, "⊠", fntIco, sy, ss, colBase, Color.FromArgb(200, 205, 225), colBorder);
+        IconLoader.Apply(btnNeu, "sidebar_new.png");
         btnNeu.Click += btnNeu_Click;
         new ToolTip().SetToolTip(btnNeu, "DXF leeren");
         sy += ss + sp;
@@ -223,6 +232,7 @@ partial class FormDxfViewer
         // ── KOR/CSV Import ────────────────────────────────────────────────────
         SideBtn(btnImportKorCsv, "↓KOR", fntSm, sy, ss, colRed, Color.White,
                 Color.FromArgb(120, 28, 28));
+        IconLoader.Apply(btnImportKorCsv, "sidebar_import_kor.png");
         btnImportKorCsv.Click += btnImportKorCsv_Click;
         new ToolTip().SetToolTip(btnImportKorCsv, "KOR / CSV importieren");
         sy += ss + 2;
@@ -230,6 +240,7 @@ partial class FormDxfViewer
         // ── JSON Import ───────────────────────────────────────────────────────
         SideBtn(btnImportJson, "↓JSON", fntSm, sy, ss, colRed, Color.White,
                 Color.FromArgb(120, 28, 28));
+        IconLoader.Apply(btnImportJson, "sidebar_import_json.png");
         btnImportJson.Click += btnImportJson_Click;
         new ToolTip().SetToolTip(btnImportJson, "JSON importieren");
 

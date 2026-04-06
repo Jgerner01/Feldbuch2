@@ -115,6 +115,7 @@ partial class FormKonvertierung
 
         // CSV-Button (grün, Icon-Style)
         btnCsv.Text      = "⬇ CSV";
+        IconLoader.Apply(btnCsv, "btn_csv.png");
         btnCsv.Size      = new Size(80, 30);
         btnCsv.Anchor    = AnchorStyles.Right;
         btnCsv.Font      = new Font("Segoe UI", 9F, FontStyle.Bold);
