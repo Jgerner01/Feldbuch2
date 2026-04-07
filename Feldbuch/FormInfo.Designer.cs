@@ -27,88 +27,111 @@ partial class FormInfo
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(440, 400);
+        ClientSize      = new Size(460, 490);
         Text            = "Info";
         StartPosition   = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox     = false;
         MinimizeBox     = false;
-        AutoScaleMode   = AutoScaleMode.Font;
+        AutoScaleMode   = AutoScaleMode.None;
+        Font            = new Font("Segoe UI", 9F);
+
+        const int lx = 24;          // linker Rand
+        const int cw = 412;         // Inhaltsbreite (460 - 2×24)
+        int y = 24;
 
         // ── Programm-Icon ─────────────────────────────────────────────────────
-        picIcon.Location  = new Point(24, 24);
-        picIcon.Size      = new Size(48, 48);
-        picIcon.SizeMode  = PictureBoxSizeMode.Zoom;
-        picIcon.Image     = SystemIcons.Application.ToBitmap();
+        picIcon.Location = new Point(lx, y);
+        picIcon.Size     = new Size(52, 52);
+        picIcon.SizeMode = PictureBoxSizeMode.Zoom;
+        picIcon.Image    = SystemIcons.Application.ToBitmap();
 
         // ── Programmname ──────────────────────────────────────────────────────
         lblName.Text      = "Feldbuch";
-        lblName.Location  = new Point(86, 22);
-        lblName.Size      = new Size(320, 34);
+        lblName.Location  = new Point(90, y);
+        lblName.Size      = new Size(346, 32);
         lblName.Font      = new Font("Segoe UI", 18F, FontStyle.Bold);
         lblName.ForeColor = Color.FromArgb(30, 60, 110);
 
         // ── Version ───────────────────────────────────────────────────────────
         lblVersion.Text      = "Version 1.1.0";
-        lblVersion.Location  = new Point(88, 58);
-        lblVersion.Size      = new Size(320, 22);
+        lblVersion.Location  = new Point(92, y + 34);
+        lblVersion.Size      = new Size(344, 22);
         lblVersion.Font      = new Font("Segoe UI", 10F);
         lblVersion.ForeColor = Color.FromArgb(80, 80, 80);
 
+        y += 62;   // unter Icon-Block (max von Icon-Höhe 52 und Text-Block 56)
+
         // ── Trennlinie 1 ──────────────────────────────────────────────────────
+        y += 14;
         lblTrenn1.BorderStyle = BorderStyle.Fixed3D;
-        lblTrenn1.Location    = new Point(20, 84);
-        lblTrenn1.Size        = new Size(400, 2);
+        lblTrenn1.Location    = new Point(lx, y);
+        lblTrenn1.Size        = new Size(cw, 2);
+        y += 2;
 
         // ── Beschreibung ──────────────────────────────────────────────────────
+        y += 14;
         var lblBeschreibung = new Label
         {
-            Text      = "Geodätisches Feldbuch mit Freier Stationierung,\nTachymeteranbindung und DXF-Viewer.",
-            Location  = new Point(24, 98),
-            Size      = new Size(396, 44),
+            Text      = "Geodätisches Feldbuch mit Freier Stationierung,\n" +
+                        "Tachymeteranbindung und DXF-Viewer.",
+            Location  = new Point(lx, y),
+            Size      = new Size(cw, 48),
             Font      = new Font("Segoe UI", 9.5F),
             ForeColor = Color.FromArgb(50, 50, 50)
         };
+        y += 48;
 
         // ── Autor / Copyright ─────────────────────────────────────────────────
+        y += 14;
         lblAutor.Text      = "Autor:   Johann Gerner";
-        lblAutor.Location  = new Point(24, 152);
-        lblAutor.Size      = new Size(396, 22);
+        lblAutor.Location  = new Point(lx, y);
+        lblAutor.Size      = new Size(cw, 22);
         lblAutor.Font      = new Font("Segoe UI", 9.5F);
+        y += 22;
 
+        y += 4;
         lblCopyright.Text      = "© 2026 Johann Gerner";
-        lblCopyright.Location  = new Point(24, 174);
-        lblCopyright.Size      = new Size(396, 22);
+        lblCopyright.Location  = new Point(lx, y);
+        lblCopyright.Size      = new Size(cw, 22);
         lblCopyright.Font      = new Font("Segoe UI", 9F);
         lblCopyright.ForeColor = Color.FromArgb(100, 100, 100);
+        y += 22;
 
         // ── Trennlinie 2 ──────────────────────────────────────────────────────
+        y += 18;
         lblTrenn2.BorderStyle = BorderStyle.Fixed3D;
-        lblTrenn2.Location    = new Point(20, 208);
-        lblTrenn2.Size        = new Size(400, 2);
+        lblTrenn2.Location    = new Point(lx, y);
+        lblTrenn2.Size        = new Size(cw, 2);
+        y += 2;
 
         // ── Hilfe-Abschnitt ───────────────────────────────────────────────────
+        y += 14;
         lblHilfe.Text      = "Hilfe";
-        lblHilfe.Location  = new Point(24, 220);
-        lblHilfe.Size      = new Size(200, 22);
+        lblHilfe.Location  = new Point(lx, y);
+        lblHilfe.Size      = new Size(cw, 22);
         lblHilfe.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
+        y += 22;
 
+        y += 8;
         lblHilfeText.Text =
             "• Bluetooth-Gerät zuerst über Windows-Einstellungen koppeln,\n" +
-            "  dann unter Tachymeter Kommunikation den COM-Port wählen.\n" +
-            "• DXF-Datei über den DXF Viewer öffnen.\n" +
+            "  dann unter Tachymeter-Kommunikation den COM-Port wählen.\n" +
+            "• DXF-Datei über den DXF-Viewer öffnen.\n" +
             "• Freie Stationierung benötigt mind. 2 bekannte Punkte im DXF.";
-        lblHilfeText.Location  = new Point(24, 244);
-        lblHilfeText.Size      = new Size(396, 100);
+        lblHilfeText.Location  = new Point(lx, y);
+        lblHilfeText.Size      = new Size(cw, 88);
         lblHilfeText.Font      = new Font("Segoe UI", 9F);
         lblHilfeText.ForeColor = Color.FromArgb(50, 50, 50);
+        y += 88;
 
         // ── OK-Button ─────────────────────────────────────────────────────────
-        btnOK.Text      = "OK";
-        btnOK.Location  = new Point(334, 354);
-        btnOK.Size      = new Size(84, 32);
-        btnOK.Font      = new Font("Segoe UI", 10F);
-        btnOK.Click    += btnOK_Click;
+        y += 22;
+        btnOK.Text     = "OK";
+        btnOK.Location = new Point(460 - 24 - 88, y);
+        btnOK.Size     = new Size(88, 32);
+        btnOK.Font     = new Font("Segoe UI", 10F);
+        btnOK.Click   += btnOK_Click;
 
         Controls.AddRange(
         [

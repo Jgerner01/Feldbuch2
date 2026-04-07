@@ -25,6 +25,8 @@ partial class Form1
         btnTachymeterKommunikation = new Button();
         lblSekDaten           = new Label();
         btnKonvertierung      = new Button();
+        btnProtokolle         = new Button();
+        btnDatenManager       = new Button();
         grpOptionen           = new GroupBox();
         chkProtokoll          = new CheckBox();
         chkAutoBackup         = new CheckBox();
@@ -44,7 +46,7 @@ partial class Form1
         var btnFontBig = new Font("Segoe UI", 11F, FontStyle.Bold);
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(460, 530);
+        ClientSize      = new Size(460, 632);
         Text            = "Feldbuch";
         StartPosition   = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -54,7 +56,7 @@ partial class Form1
 
         // ── Header-Panel ──────────────────────────────────────────────────────
         pnlHeader.Dock      = DockStyle.Top;
-        pnlHeader.Height    = 58;
+        pnlHeader.Height    = 68;
         pnlHeader.BackColor = Color.FromArgb(42, 72, 130);
         pnlHeader.Padding   = new Padding(14, 6, 14, 0);
 
@@ -67,15 +69,15 @@ partial class Form1
         lblProjektInfo.Text      = "Kein Projekt gewählt";
         lblProjektInfo.Font      = new Font("Segoe UI", 8F, FontStyle.Italic);
         lblProjektInfo.ForeColor = Color.FromArgb(190, 210, 240);
-        lblProjektInfo.Location  = new Point(14, 33);
+        lblProjektInfo.Location  = new Point(14, 44);
         lblProjektInfo.Size      = new Size(432, 18);
 
         pnlHeader.Controls.Add(lblTitel);
         pnlHeader.Controls.Add(lblProjektInfo);
 
         // ── Body-Panel ────────────────────────────────────────────────────────
-        pnlBody.Location  = new Point(0, 58);
-        pnlBody.Size      = new Size(460, 432);
+        pnlBody.Location  = new Point(0, 68);
+        pnlBody.Size      = new Size(460, 518);
         pnlBody.BackColor = bgColor;
         pnlBody.Padding   = new Padding(14, 10, 14, 0);
 
@@ -134,29 +136,44 @@ partial class Form1
         y += 24;
 
         btnKonvertierung.Text     = "Konvertierung";
-        btnKonvertierung.Size     = new Size(w, bh);
+        btnKonvertierung.Size     = new Size(half, bh);
         btnKonvertierung.Location = new Point(x, y);
         btnKonvertierung.Font     = btnFont;
         GrauButton(btnKonvertierung);
         btnKonvertierung.Click   += btnKonvertierung_Click;
+
+        btnProtokolle.Text     = "Protokolle";
+        btnProtokolle.Size     = new Size(half, bh);
+        btnProtokolle.Location = new Point(x + half + gap, y);
+        btnProtokolle.Font     = btnFont;
+        GrauButton(btnProtokolle);
+        btnProtokolle.Click   += btnProtokolle_Click;
+        y += bh + 8;
+
+        btnDatenManager.Text     = "Daten-Manager";
+        btnDatenManager.Size     = new Size(w, bh);
+        btnDatenManager.Location = new Point(x, y);
+        btnDatenManager.Font     = btnFont;
+        GrauButton(btnDatenManager);
+        btnDatenManager.Click   += btnDatenManager_Click;
         y += bh + 14;
 
         // ─── Optionen ─────────────────────────────────────────────────────────
         grpOptionen.Text     = "Optionen";
         grpOptionen.Location = new Point(x, y);
-        grpOptionen.Size     = new Size(w, 68);
+        grpOptionen.Size     = new Size(w, 108);
         grpOptionen.Font     = new Font("Segoe UI", 8.5F);
         grpOptionen.BackColor = bgColor;
         grpOptionen.FlatStyle = GroupBoxStyle(grpOptionen);
 
-        int cx1 = 8, cx2 = 160, cx3 = 316;
-        int cy1 = 16, cy2 = 38;
+        int cx1 = 8, cx2 = 220;
+        int cy1 = 20, cy2 = 52, cy3 = 84;
 
         SetChk(chkProtokoll,   "Protokoll",          cx1, cy1);
         SetChk(chkAutoBackup,  "Auto-Backup",         cx2, cy1);
-        SetChk(chkKoordTooltip,"Koordinaten-Tooltip", cx3, cy1);
         SetChk(chkTon,         "Ton",                 cx1, cy2);
         SetChk(chkErwProto,    "Erw. Protokoll",      cx2, cy2);
+        SetChk(chkKoordTooltip,"Koordinaten-Tooltip", cx1, cy3);
 
         chkProtokoll.CheckedChanged    += chkProtokoll_CheckedChanged;
         chkAutoBackup.CheckedChanged   += chkOption_CheckedChanged;
@@ -171,14 +188,14 @@ partial class Form1
         {
             lblSekProjekt, btnProjekt, btnProjektdaten,
             lblSekFeldarbeit, btnDxfViewer, btnFreieStationierung, btnTachymeterKommunikation,
-            lblSekDaten, btnKonvertierung,
+            lblSekDaten, btnKonvertierung, btnProtokolle, btnDatenManager,
             grpOptionen
         });
 
         // ── Info-Button (unten links) ─────────────────────────────────────────
         btnInfo.Text      = "?";
         btnInfo.Size      = new Size(30, 30);
-        btnInfo.Location  = new Point(10, 494);
+        btnInfo.Location  = new Point(10, 596);
         btnInfo.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnInfo.FlatStyle = FlatStyle.Flat;
         btnInfo.ForeColor = Color.FromArgb(100, 100, 120);
@@ -265,6 +282,8 @@ partial class Form1
     private Button    btnFreieStationierung        = null!;
     private Button    btnTachymeterKommunikation   = null!;
     private Button    btnKonvertierung             = null!;
+    private Button    btnProtokolle                = null!;
+    private Button    btnDatenManager              = null!;
     private Button    btnInfo                     = null!;
     private GroupBox  grpOptionen                 = null!;
     private CheckBox  chkProtokoll                = null!;

@@ -31,6 +31,7 @@ partial class FormDxfViewer
         btnExportDxf        = new Button();
         btnImportKorCsv     = new Button();
         btnImportJson       = new Button();
+        btnLoeschen         = new Button();
         pnlStatus           = new Panel();
         lblStatus           = new Label();
         flpLayers           = new FlowLayoutPanel();
@@ -243,12 +244,18 @@ partial class FormDxfViewer
         IconLoader.Apply(btnImportJson, "sidebar_import_json.png");
         btnImportJson.Click += btnImportJson_Click;
         new ToolTip().SetToolTip(btnImportJson, "JSON importieren");
+        sy += ss + sp;
+
+        // ── Löschen (Auswahlrechteck) ─────────────────────────────────────────
+        SideBtn(btnLoeschen, "⌫", fntIco, sy, ss, colBase, Color.FromArgb(220, 200, 200), colBorder);
+        btnLoeschen.Click += btnLoeschen_Click;
+        new ToolTip().SetToolTip(btnLoeschen, "Feldbuchpunkte löschen (Fenster aufziehen)");
 
         pnlSide.Controls.AddRange(new Control[]
         {
             btnOpen, btnZoomIn, btnZoomOut, btnFit,
             btnSnap, btnPunkte, btnDxfToggle, btnExportDxf,
-            btnNeu, btnImportKorCsv, btnImportJson
+            btnNeu, btnImportKorCsv, btnImportJson, btnLoeschen
         });
 
         // ══ Canvas ════════════════════════════════════════════════════════════
@@ -301,6 +308,7 @@ partial class FormDxfViewer
     private Button             btnExportDxf        = null!;
     private Button             btnImportKorCsv     = null!;
     private Button             btnImportJson       = null!;
+    private Button             btnLoeschen         = null!;
     private Panel              pnlStatus           = null!;
     private Label              lblStatus           = null!;
     private FlowLayoutPanel    flpLayers           = null!;

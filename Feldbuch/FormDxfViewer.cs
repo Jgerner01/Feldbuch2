@@ -32,8 +32,9 @@ public partial class FormDxfViewer : Form
         canvas.PunkteVisible = punkteState != "Inaktiv";   // Standard: aktiv
         UpdatePunkteButton();
 
-        canvas.PointPicked += OnPointPicked;
-        FormClosed         += OnFormClosed;
+        canvas.PointPicked        += OnPointPicked;
+        canvas.RectangleSelected  += OnRectangleSelected;
+        FormClosed                += OnFormClosed;
 
         // ImportPunkteManager initialisieren
         ImportPunkteManager.Initialize(
@@ -482,5 +483,94 @@ public partial class FormDxfViewer : Form
         File.WriteAllLines(AnschlusspunktePfad,
             new[] { header }.Concat(zeilen),
             System.Text.Encoding.UTF8);
+    }
+
+    // ── Lösch-Modus ───────────────────────────────────────────────────────────
+    private void btnLoeschen_Click(object? sender, EventArgs e)
+    {
+        canvas.DeleteModeActive = !canvas.DeleteModeActive;
+        UpdateLoeschenButton();
+        lblStatus.Text = canvas.DeleteModeActive
+            ? "Lösch-Modus: Fenster aufziehen, um Feldbuchpunkte zu löschen  |  Erneut klicken zum Abbrechen"
+            : "Lösch-Modus beendet.";
+    }
+
+    private void UpdateLoeschenButton()
+    {
+        if (canvas.DeleteModeActive)
+        {
+            btnLoeschen.BackColor = Color.FromArgb(160, 40, 40);
+            btnLoeschen.ForeColor = Color.White;
+            btnLoeschen.FlatAppearance.BorderColor = Color.FromArgb(130, 20, 20);
+        }
+        else
+        {
+            btnLoeschen.BackColor = Color.FromArgb(68, 74, 92);
+            btnLoeschen.ForeColor = Color.FromArgb(220, 200, 200);
+            btnLoeschen.FlatAppearance.BorderColor = Color.FromArgb(85, 92, 115);
+        }
+    }
+
+    private void OnRectangleSelected(double minX, double minY, double maxX, double maxY)
+    {
+        bool InRect(double r, double h) =>
+            r >= minX && r <= maxX && h >= minY && h <= maxY;
+
+        var feldbuchTreffer = FeldbuchpunkteManager.Punkte
+            .Where(p => InRect(p.R, p.H)).ToList();
+
+        var importTreffer = ImportPunkteManager.Punkte
+            .Where(p => InRect(p.R, p.H)).ToList();
+
+        int gesamt = feldbuchTreffer.Count + importTreffer.Count;
+        if (gesamt == 0)
+        {
+            lblStatus.Text = "Keine Punkte im markierten Bereich gefunden.";
+            return;
+        }
+
+        // Zusammenfassung für den Dialog aufbauen
+        var zeilen = new System.Text.StringBuilder();
+        if (feldbuchTreffer.Count > 0)
+        {
+            string nrn = string.Join(", ", feldbuchTreffer.Take(8).Select(p => p.PunktNr))
+                         + (feldbuchTreffer.Count > 8 ? $" … (+{feldbuchTreffer.Count - 8})" : "");
+            zeilen.AppendLine($"Feldbuchpunkte ({feldbuchTreffer.Count}):  {nrn}");
+        }
+        if (importTreffer.Count > 0)
+        {
+            string nrn = string.Join(", ", importTreffer.Take(8).Select(p => p.PunktNr))
+                         + (importTreffer.Count > 8 ? $" … (+{importTreffer.Count - 8})" : "");
+            zeilen.AppendLine($"Importpunkte ({importTreffer.Count}):  {nrn}");
+        }
+
+        var res = MessageBox.Show(
+            $"{gesamt} Punkt(e) löschen?\n\n{zeilen}",
+            "Punkte löschen", MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+
+        if (res != DialogResult.Yes) return;
+
+        int gelFeldbuch = 0, gelImport = 0;
+        if (feldbuchTreffer.Count > 0)
+        {
+            var nummern = feldbuchTreffer.Select(p => p.PunktNr).ToHashSet();
+            gelFeldbuch = FeldbuchpunkteManager.RemoveWhere(p => nummern.Contains(p.PunktNr));
+            BaueOverlay();
+        }
+        if (importTreffer.Count > 0)
+        {
+            var nummern = importTreffer.Select(p => p.PunktNr).ToHashSet();
+            gelImport = ImportPunkteManager.RemoveWhere(p => nummern.Contains(p.PunktNr));
+            BaueImportOverlay();
+        }
+
+        canvas.DeleteModeActive = false;
+        UpdateLoeschenButton();
+
+        string log = $"FB:{gelFeldbuch} Import:{gelImport}";
+        lblStatus.Text = $"{gelFeldbuch + gelImport} Punkt(e) gelöscht " +
+                         $"(Feldbuch: {gelFeldbuch}, Import: {gelImport}).";
+        ProtokollManager.Log("LÖSCH", $"{gesamt} Punkte gelöscht [{log}]: {zeilen.ToString().Replace('\n', ' ')}");
     }
 }
