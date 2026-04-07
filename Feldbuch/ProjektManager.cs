@@ -31,6 +31,14 @@ public static class ProjektManager
     /// <summary>Erweiterte Protokollierung (Eingabedaten, Rohmessungen) (Platzhalter).</summary>
     public static bool ErweiterteProtokollierung { get; set; } = false;
 
+    // ── Tachymeter-Verbindungseinstellungen ──────────────────────────────────
+    public static TachymeterModell TachymeterModell   { get; set; } = TachymeterModell.Manuell;
+    public static string           TachymeterPort     { get; set; } = "";
+    public static int              TachymeterBaudRate { get; set; } = 9600;
+    public static int              TachymeterDataBits { get; set; } = 8;
+    public static string           TachymeterParitaet { get; set; } = "None";
+    public static string           TachymeterStopBits { get; set; } = "1";
+
     // ── Gespeicherter DXF-Zoom ────────────────────────────────────────────────
     // Zoom wird pro DXF-Dateipfad gespeichert, sodass er nach erneutem Öffnen
     // automatisch wiederhergestellt wird.
@@ -107,6 +115,16 @@ public static class ProjektManager
             TonBeiBerechnung          = LadeBool(root, "TonBeiBerechnung",         defaultVal: false);
             ErweiterteProtokollierung = LadeBool(root, "ErweiterteProtokollierung",defaultVal: false);
 
+            // Tachymeter
+            var tachModellText = root.SelectSingleNode("TachymeterModell")?.InnerText?.Trim() ?? "";
+            if (Enum.TryParse<TachymeterModell>(tachModellText, out var tm))
+                TachymeterModell = tm;
+            TachymeterPort     = root.SelectSingleNode("TachymeterPort")    ?.InnerText?.Trim() ?? "";
+            if (int.TryParse(root.SelectSingleNode("TachymeterBaudRate")?.InnerText, out var baud)) TachymeterBaudRate = baud;
+            if (int.TryParse(root.SelectSingleNode("TachymeterDataBits")?.InnerText, out var bits)) TachymeterDataBits = bits;
+            TachymeterParitaet = root.SelectSingleNode("TachymeterParitaet")?.InnerText?.Trim() ?? "None";
+            TachymeterStopBits = root.SelectSingleNode("TachymeterStopBits")?.InnerText?.Trim() ?? "1";
+
             _zoomDatei = root.SelectSingleNode("DxfZoomDatei")?.InnerText?.Trim() ?? "";
             double.TryParse(root.SelectSingleNode("DxfZoomScale")?.InnerText,
                 System.Globalization.NumberStyles.Any,
@@ -144,6 +162,12 @@ public static class ProjektManager
             Append(doc, root, "KoordinatenTooltip",         KoordinatenTooltip.ToString().ToLower());
             Append(doc, root, "TonBeiBerechnung",           TonBeiBerechnung.ToString().ToLower());
             Append(doc, root, "ErweiterteProtokollierung",  ErweiterteProtokollierung.ToString().ToLower());
+            Append(doc, root, "TachymeterModell",   TachymeterModell.ToString());
+            Append(doc, root, "TachymeterPort",     TachymeterPort);
+            Append(doc, root, "TachymeterBaudRate", TachymeterBaudRate.ToString());
+            Append(doc, root, "TachymeterDataBits", TachymeterDataBits.ToString());
+            Append(doc, root, "TachymeterParitaet", TachymeterParitaet);
+            Append(doc, root, "TachymeterStopBits", TachymeterStopBits);
             Append(doc, root, "DxfZoomDatei",  _zoomDatei);
             Append(doc, root, "DxfZoomScale",  _zoomScale.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             Append(doc, root, "DxfZoomPanX",   _zoomPanX .ToString("R", System.Globalization.CultureInfo.InvariantCulture));
