@@ -23,6 +23,7 @@ partial class Form1
         btnDxfViewer          = new Button();
         btnFreieStationierung = new Button();
         btnTachymeterKommunikation = new Button();
+        btnTestmessungen      = new Button();
         lblSekDaten           = new Label();
         btnKonvertierung      = new Button();
         btnProtokolle         = new Button();
@@ -46,7 +47,7 @@ partial class Form1
         var btnFontBig = new Font("Segoe UI", 11F, FontStyle.Bold);
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(460, 632);
+        ClientSize      = new Size(460, 682);
         Text            = "Feldbuch";
         StartPosition   = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -77,7 +78,7 @@ partial class Form1
 
         // ── Body-Panel ────────────────────────────────────────────────────────
         pnlBody.Location  = new Point(0, 68);
-        pnlBody.Size      = new Size(460, 518);
+        pnlBody.Size      = new Size(460, 568);
         pnlBody.BackColor = bgColor;
         pnlBody.Padding   = new Padding(14, 10, 14, 0);
 
@@ -129,6 +130,14 @@ partial class Form1
         btnTachymeterKommunikation.Font     = btnFont;
         GruenerButton(btnTachymeterKommunikation);
         btnTachymeterKommunikation.Click   += btnTachymeterKommunikation_Click;
+        y += bh + 8;
+
+        btnTestmessungen.Text     = "Testmessungen  GeoCOM";
+        btnTestmessungen.Size     = new Size(w, bh);
+        btnTestmessungen.Location = new Point(x, y);
+        btnTestmessungen.Font     = btnFont;
+        OrangeButton(btnTestmessungen);
+        btnTestmessungen.Click   += btnTestmessungen_Click;
         y += bh + 14;
 
         // ─── Sektion: DATEN ───────────────────────────────────────────────────
@@ -188,6 +197,7 @@ partial class Form1
         {
             lblSekProjekt, btnProjekt, btnProjektdaten,
             lblSekFeldarbeit, btnDxfViewer, btnFreieStationierung, btnTachymeterKommunikation,
+            btnTestmessungen,
             lblSekDaten, btnKonvertierung, btnProtokolle, btnDatenManager,
             grpOptionen
         });
@@ -195,7 +205,7 @@ partial class Form1
         // ── Info-Button (unten links) ─────────────────────────────────────────
         btnInfo.Text      = "?";
         btnInfo.Size      = new Size(30, 30);
-        btnInfo.Location  = new Point(10, 596);
+        btnInfo.Location  = new Point(10, 646);
         btnInfo.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnInfo.FlatStyle = FlatStyle.Flat;
         btnInfo.ForeColor = Color.FromArgb(100, 100, 120);
@@ -252,6 +262,15 @@ partial class Form1
         b.Cursor    = Cursors.Hand;
     }
 
+    private static void OrangeButton(Button b)
+    {
+        b.BackColor = Color.FromArgb(160, 85, 20);
+        b.ForeColor = Color.White;
+        b.FlatStyle = FlatStyle.Flat;
+        b.FlatAppearance.BorderColor = Color.FromArgb(130, 65, 10);
+        b.Cursor    = Cursors.Hand;
+    }
+
     private static void SetChk(CheckBox chk, string text, int x, int y)
     {
         chk.Text      = text;
@@ -281,6 +300,7 @@ partial class Form1
     private Button    btnDxfViewer                = null!;
     private Button    btnFreieStationierung        = null!;
     private Button    btnTachymeterKommunikation   = null!;
+    private Button    btnTestmessungen             = null!;
     private Button    btnKonvertierung             = null!;
     private Button    btnProtokolle                = null!;
     private Button    btnDatenManager              = null!;

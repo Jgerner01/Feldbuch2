@@ -195,6 +195,7 @@ public partial class FormTachymeterKommunikation : Form
             try
             {
                 TachymeterVerbindung.Verbinden();
+                TachymeterVerbindung.SpeichereEinstellungen();
             }
             catch (Exception ex)
             {
@@ -246,6 +247,8 @@ public partial class FormTachymeterKommunikation : Form
 
         if (cboStoppbits.SelectedItem is string sb)
             TachymeterVerbindung.StopBits = StopBitsVonAnzeige(sb);
+
+        TachymeterVerbindung.SpeichereEinstellungen();
 
         DialogResult = DialogResult.OK;
         Close();
