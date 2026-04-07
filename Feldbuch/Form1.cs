@@ -132,6 +132,42 @@ public partial class Form1 : Form
         form.ShowDialog(this);
     }
 
+    private void btnDatenManager_Click(object? sender, EventArgs e)
+    {
+        using var form = new FormDatenEditor();
+        form.ShowDialog(this);
+    }
+
+    private void btnProtokolle_Click(object? sender, EventArgs e)
+    {
+        string startDir = ProjektManager.IstGeladen
+            ? ProjektManager.ProjektVerzeichnis
+            : AppPfade.Basis;
+
+        using var dlg = new OpenFileDialog
+        {
+            Title            = "Protokoll öffnen",
+            Filter           = "RTF-Protokolle (*.rtf)|*.rtf|Alle Dateien (*.*)|*.*",
+            InitialDirectory = Directory.Exists(startDir) ? startDir : "",
+        };
+
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        try
+        {
+            var info = new System.Diagnostics.ProcessStartInfo(dlg.FileName)
+            {
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(info);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Datei konnte nicht geöffnet werden:\n{ex.Message}",
+                "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
     private void btnTachymeterKommunikation_Click(object? sender, EventArgs e)
     {
         using var form = new FormTachymeterKommunikation();

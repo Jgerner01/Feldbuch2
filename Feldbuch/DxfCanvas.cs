@@ -48,7 +48,17 @@ public class DxfCanvas : Panel
     IEnumerable<DxfEntity> SichtbareImports()
         => ImportLayers.Where(l => l.Visible).SelectMany(l => l.Entities);
 
-    public event Action<double, double, DxfEntity?>? PointPicked;
+    public event Action<double, double, DxfEntity?>?           PointPicked;
+    public event Action<double, double, double, double>?       RectangleSelected;
+
+    // Delete-Modus: Auswahlrechteck statt Pan
+    bool _deleteModeActive;
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool DeleteModeActive
+    {
+        get => _deleteModeActive;
+        set { _deleteModeActive = value; Cursor = value ? Cursors.Cross : Cursors.Default; Invalidate(); }
+    }
 
     // ── Erscheinungsbild ──────────────────────────────────────────────────────
     static readonly Color BgColor      = Color.White;
@@ -79,6 +89,11 @@ public class DxfCanvas : Panel
 
     // ── Snap-Zustand ──────────────────────────────────────────────────────────
     (double x, double y)? _snapPoint;   // aktueller Snap-Punkt (null = keiner)
+
+    // ── Lösch-Auswahlrechteck ─────────────────────────────────────────────────
+    bool  _selecting;
+    Point _selStart;
+    Point _selEnd;
 
     // ── Touch-Status (WM_TOUCH) ───────────────────────────────────────────────
     readonly Dictionary<uint, Point> _touches = new();
@@ -220,11 +235,19 @@ public class DxfCanvas : Panel
     void OnMouseDown(object? s, MouseEventArgs e)
     {
         if (e.Button == MouseButtons.Left)
-        { _panning = true; _moved = false; _lastMouse = e.Location; Capture = true; }
+        {
+            if (DeleteModeActive)
+            { _selecting = true; _selStart = _selEnd = e.Location; Capture = true; }
+            else
+            { _panning = true; _moved = false; _lastMouse = e.Location; Capture = true; }
+        }
     }
 
     void OnMouseMove(object? s, MouseEventArgs e)
     {
+        if (_selecting)
+        { _selEnd = e.Location; Invalidate(); return; }
+
         if (_panning && e.Button == MouseButtons.Left)
         {
             int dx = e.X - _lastMouse.X, dy = e.Y - _lastMouse.Y;
@@ -254,6 +277,25 @@ public class DxfCanvas : Panel
 
     void OnMouseUp(object? s, MouseEventArgs e)
     {
+        if (_selecting)
+        {
+            _selecting = false;
+            Capture    = false;
+            int x1 = Math.Min(_selStart.X, _selEnd.X);
+            int y1 = Math.Min(_selStart.Y, _selEnd.Y);
+            int x2 = Math.Max(_selStart.X, _selEnd.X);
+            int y2 = Math.Max(_selStart.Y, _selEnd.Y);
+            if (x2 - x1 > 4 && y2 - y1 > 4)
+            {
+                var (wx1, wy1) = ToWorld(x1, y1);
+                var (wx2, wy2) = ToWorld(x2, y2);
+                RectangleSelected?.Invoke(
+                    Math.Min(wx1, wx2), Math.Min(wy1, wy2),
+                    Math.Max(wx1, wx2), Math.Max(wy1, wy2));
+            }
+            Invalidate();
+            return;
+        }
         if (!_panning) return;
         _panning = false;
         Capture  = false;
@@ -442,6 +484,22 @@ public class DxfCanvas : Panel
             g.DrawLine(snapPen, sp.X + s, sp.Y, sp.X + s + 4, sp.Y);
             g.DrawLine(snapPen, sp.X, sp.Y - s - 4, sp.X, sp.Y - s);
             g.DrawLine(snapPen, sp.X, sp.Y + s, sp.X, sp.Y + s + 4);
+        }
+
+        // Lösch-Auswahlrechteck (rot transparent)
+        if (_selecting)
+        {
+            int rx = Math.Min(_selStart.X, _selEnd.X);
+            int ry = Math.Min(_selStart.Y, _selEnd.Y);
+            int rw = Math.Abs(_selEnd.X - _selStart.X);
+            int rh = Math.Abs(_selEnd.Y - _selStart.Y);
+            if (rw > 0 && rh > 0)
+            {
+                using var fill   = new SolidBrush(Color.FromArgb(55, 210, 0, 0));
+                using var border = new Pen(Color.FromArgb(210, 180, 0, 0), 1.5f);
+                g.FillRectangle(fill, rx, ry, rw, rh);
+                g.DrawRectangle(border, rx, ry, rw, rh);
+            }
         }
     }
 }

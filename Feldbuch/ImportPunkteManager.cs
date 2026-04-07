@@ -65,6 +65,14 @@ public static class ImportPunkteManager
         Save();
     }
 
+    /// <summary>Löscht alle Punkte die das Prädikat erfüllen. Gibt Anzahl zurück.</summary>
+    public static int RemoveWhere(Func<ImportPunkt, bool> predicate)
+    {
+        int count = _punkte.RemoveAll(p => predicate(p));
+        if (count > 0) Save();
+        return count;
+    }
+
     // ── Laden: KOR-Datei (.kor) ───────────────────────────────────────────────
     // Format: PunktNr  R  H  Hoehe  (Leerzeichen-getrennt, Kommentare mit %)
     public static List<ImportPunkt> LeseKor(string path)

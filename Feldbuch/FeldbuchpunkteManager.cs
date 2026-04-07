@@ -60,6 +60,14 @@ public static class FeldbuchpunkteManager
         Save();
     }
 
+    /// <summary>Löscht alle Punkte die das Prädikat erfüllen. Gibt Anzahl zurück.</summary>
+    public static int RemoveWhere(Func<FeldbuchPunkt, bool> predicate)
+    {
+        int count = _punkte.RemoveAll(p => predicate(p));
+        if (count > 0) Save();
+        return count;
+    }
+
     // ── Laden / Speichern ─────────────────────────────────────────────────────
     static void Load()
     {
