@@ -21,13 +21,19 @@ public sealed class DosenlibellControl : Panel
     private double _laengs  = 0.0;   // LengthIncline [rad]
     private bool   _gueltig = false; // false = Kompensator außerhalb Messbereich
 
-    // Vollausschlag: Blase am Rand bei dieser Neigung
-    // Dosenlibelle TPS1200: typisch ±8' ≈ ±0.0023 rad; wir zeigen ±6' ≈ 0.0017 rad
-    // Für deutlich sichtbare Reaktion auf echte Geländekippungen: ±0.005 rad (≈ ±17')
+    // Vollausschlag: Blase am Rand bei dieser Neigung (≈ ±17')
     private const double MaxNeigung = 0.005;
+
+    // Kompensator-Messbereich TPS1200: typisch ±10' ≈ 0.003 rad
+    // Innerhalb dieses Rings reagiert die Blase empfindlicher (zwei Zonen).
+    private const double KompRange  = 0.003;
 
     // Toleranzring-Radius relativ zum Libellen-Radius (z. B. 0.15 ≈ 1.5')
     private const double TolRel = 0.15;
+
+    // Anteil von spielR, den der Kompensator-Ring (KompRange) belegt (Zonengrenze)
+    // > KompRange/MaxNeigung → verstärkte Empfindlichkeit im Innenbereich
+    private const float KompFrac = 0.75f;
 
     public DosenlibellControl()
     {
@@ -120,11 +126,21 @@ public sealed class DosenlibellControl : Panel
         float rGlanz = rLibelle * 0.93f;
         g.DrawArc(penGlanz, cx - rGlanz, cy - rGlanz, rGlanz * 2, rGlanz * 2, 200, 130);
 
-        // Toleranzring (gestrichelt)
+        // Toleranzring (gepunktet)
         float rTol = rLibelle * (float)TolRel;
         using var penTol = new Pen(Color.FromArgb(120, 160, 180), 1.0f)
             { DashStyle = DashStyle.Dot };
         g.DrawEllipse(penTol, cx - rTol, cy - rTol, rTol * 2, rTol * 2);
+
+        // Kompensator-Bereichsring (gestrichelt, cyan) – zeigt den gültigen Kompensatorbereich
+        // Pixel-Radius entspricht der Blaseposition bei genau KompRange Neigung
+        float rBlaseVoraus = rLibelle * 0.19f;
+        float spielRVoraus = rLibelle - rBlaseVoraus * 1.1f;
+        float rKompRing    = spielRVoraus * KompFrac;
+        using var penKomp = new Pen(Color.FromArgb(80, 60, 200, 180), 1.3f)
+            { DashStyle = DashStyle.Dash };
+        g.DrawEllipse(penKomp,
+            cx - rKompRing, cy - rKompRing, rKompRing * 2, rKompRing * 2);
 
         // ── Fadenkreuz ────────────────────────────────────────────────────────
         using var penKreuz = new Pen(Color.FromArgb(55, 80, 110), 1.0f);
@@ -140,31 +156,49 @@ public sealed class DosenlibellControl : Panel
 
         // ── Libellen-Blase ────────────────────────────────────────────────────
         // CrossIncline > 0 → Gerät kippt rechts → Blase links → dx negativ
-        // LengthIncline > 0 → Gerät kippt vorne → Blase hinten → in Bildschirm: oben → dy negativ
-        double normiert_x = -_kreuz  / MaxNeigung;
-        double normiert_y = -_laengs / MaxNeigung;
+        // LengthIncline > 0 → Gerät kippt nach vorne (N) → Blase nach hinten (S) → dy positiv
+        //
+        // Zwei-Zonen-Empfindlichkeit:
+        //   Zone 1 (|neigung| ≤ KompRange): belegt KompFrac × spielR → erhöhte Pixelauflösung
+        //   Zone 2 (KompRange < |neigung| ≤ MaxNeigung): restliche (1−KompFrac) × spielR
+        float rBlase = rLibelle * 0.19f;
+        float spielR = rLibelle - rBlase * 1.1f;
+        float rKomp  = spielR * KompFrac;   // Pixelradius der Zonengrenze
 
-        double abstand = Math.Sqrt(normiert_x * normiert_x + normiert_y * normiert_y);
-        if (abstand > 1.0)
+        double abstand_rad = Math.Sqrt(_kreuz * _kreuz + _laengs * _laengs);
+        double abstand_clamped = Math.Min(abstand_rad, MaxNeigung);
+
+        float pixelDist;
+        if (abstand_clamped <= KompRange)
+            pixelDist = (float)(abstand_clamped / KompRange * rKomp);
+        else
+            pixelDist = rKomp + (float)((abstand_clamped - KompRange)
+                                        / (MaxNeigung - KompRange)
+                                        * (spielR - rKomp));
+
+        float bx, by;
+        if (abstand_rad < 1e-12)
         {
-            normiert_x /= abstand;
-            normiert_y /= abstand;
-            abstand     = 1.0;
+            bx = cx;
+            by = cy;
+        }
+        else
+        {
+            double dirX = -_kreuz  / abstand_rad;  // CrossIncline+ → links
+            double dirY =  _laengs / abstand_rad;  // LengthIncline+ → unten (S)
+            bx = cx + (float)(dirX * pixelDist);
+            by = cy + (float)(dirY * pixelDist);
         }
 
-        float rBlase   = rLibelle * 0.19f;
-        float spielR   = rLibelle - rBlase * 1.1f;   // maximaler Mittelpunkt-Abstand
-        float bx = cx + (float)(normiert_x * spielR);
-        float by = cy + (float)(normiert_y * spielR);
-
         // Blasenfarbe
+        double abstand_norm = Math.Min(abstand_rad / MaxNeigung, 1.0);
         Color blaseFarbe;
-        if (abstand < TolRel)
-            blaseFarbe = Color.FromArgb(30, 210, 80);    // grün: gut zentriert
-        else if (abstand < 0.65)
-            blaseFarbe = Color.FromArgb(230, 200, 20);   // gelb: leichte Abweichung
+        if (abstand_norm < TolRel)
+            blaseFarbe = Color.FromArgb(30, 210, 80);    // grün:  gut zentriert
+        else if (abstand_rad <= KompRange)
+            blaseFarbe = Color.FromArgb(230, 200, 20);   // gelb:  im Kompensatorbereich
         else
-            blaseFarbe = Color.FromArgb(230, 60, 40);    // rot: zu weit außen
+            blaseFarbe = Color.FromArgb(230, 60, 40);    // rot:   außerhalb Kompensatorbereich
 
         // Blase: Radialverlauf mit Glanzpunkt
         var blaseRect = new RectangleF(bx - rBlase, by - rBlase, rBlase * 2, rBlase * 2);

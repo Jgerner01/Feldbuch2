@@ -1,5 +1,6 @@
 using System.IO.Ports;
 using System.Management;
+using System.Diagnostics;
 
 namespace Feldbuch;
 
@@ -10,6 +11,7 @@ public partial class FormTachymeterKommunikation : Form
         InitializeComponent();
         LadeModelle();
         LadeComPorts();
+        LadeBluetoothGeraete();
         LadeAktuelleEinstellungen();
         AktualisiereVerbindungsStatus();
     }
@@ -65,6 +67,165 @@ public partial class FormTachymeterKommunikation : Form
             cboBtPort.SelectedIndex = 0;
 
         cboBtPort.EndUpdate();
+    }
+
+    // ── Bluetooth-Geräteverwaltung ────────────────────────────────────────────
+
+    /// <summary>
+    /// Lädt bereits gekoppelte Bluetooth-Geräte und zeigt sie in der Liste an.
+    /// Erkennt Geräte über die Bluetooth-Device-Klasse in WMI.
+    /// </summary>
+    private void LadeBluetoothGeraete()
+    {
+        lstBluetoothGeraete.BeginUpdate();
+        lstBluetoothGeraete.Items.Clear();
+
+        try
+        {
+            // Gekoppelte Bluetooth-Geräte über Win32_PnPEntity ermitteln
+            using var searcher = new ManagementObjectSearcher(
+                "SELECT Name, DeviceID, ClassGuid FROM Win32_PnPEntity " +
+                "WHERE ClassGuid='{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}'");
+
+            var geraete = new List<string>();
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                var name = obj["Name"]?.ToString();
+                if (!string.IsNullOrEmpty(name) && !geraete.Contains(name))
+                    geraete.Add(name);
+            }
+
+            // Zusätzlich: COM-Ports die über Bluetooth bereitgestellt werden
+            var btComPorts = new List<string>();
+            using var comSearcher = new ManagementObjectSearcher(
+                "SELECT Name, DeviceID FROM Win32_PnPEntity WHERE Name LIKE '%(COM%)'");
+            foreach (ManagementObject obj in comSearcher.Get())
+            {
+                var name = obj["Name"]?.ToString();
+                if (!string.IsNullOrEmpty(name) && name.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Extrahiere COM-Port aus Name
+                    var start = name.LastIndexOf('(');
+                    var end = name.LastIndexOf(')');
+                    if (start >= 0 && end > start)
+                    {
+                        var port = name[(start + 1)..end].Trim();
+                        var label = name[..start].Trim();
+                        btComPorts.Add($"{port} – {label}");
+                    }
+                }
+            }
+
+            if (geraete.Count == 0 && btComPorts.Count == 0)
+            {
+                lstBluetoothGeraete.Items.Add("Keine Bluetooth-Geräte gefunden");
+            }
+            else
+            {
+                foreach (var g in geraete)
+                    lstBluetoothGeraete.Items.Add($"📡 {g}");
+                foreach (var p in btComPorts)
+                    lstBluetoothGeraete.Items.Add($"🔌 {p}");
+            }
+        }
+        catch (Exception ex)
+        {
+            lstBluetoothGeraete.Items.Add($"Fehler beim Laden: {ex.Message}");
+        }
+
+        lstBluetoothGeraete.EndUpdate();
+    }
+
+    /// <summary>
+    /// Öffnet den Windows Bluetooth-Pairing-Assistenten zum Koppeln neuer Geräte.
+    /// </summary>
+    private void btnGeraetKoppeln_Click(object? sender, EventArgs e)
+    {
+        try
+        {
+            // Windows 10/11: Bluetooth-Einstellungen öffnen
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "ms-settings:bluetooth",
+                UseShellExecute = true
+            });
+
+            lblKoppelnInfo.Text = "Füge ein Gerät in den Windows-Einstellungen hinzu. Klicke dann auf 'Aktualisieren'.";
+        }
+        catch (Exception)
+        {
+            // Fallback: Systemsteuerung Bluetooth
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "control.exe",
+                    Arguments = "bthprops.cpl",
+                    UseShellExecute = true
+                });
+                lblKoppelnInfo.Text = "Füge ein Gerät im Bluetooth-Assistenten hinzu. Klicke dann auf 'Aktualisieren'.";
+            }
+            catch
+            {
+                MessageBox.Show(
+                    "Bluetooth-Einstellungen konnten nicht geöffnet werden.\n\n" +
+                    "Bitte öffne manuell:\n" +
+                    "  Windows 10/11: Einstellungen → Bluetooth & Geräte\n" +
+                    "  Windows 7/8:   Systemsteuerung → Geräte und Drucker → Bluetooth",
+                    "Bluetooth", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Aktualisiert alle Listen (COM-Ports und Bluetooth-Geräte).
+    /// </summary>
+    private void btnBtAktualisieren_Click(object? sender, EventArgs e)
+    {
+        var vorher = cboBtPort.Text;
+        LadeComPorts();
+        LadeBluetoothGeraete();
+
+        // Port-Auswahl wiederherstellen, falls noch vorhanden
+        for (int i = 0; i < cboBtPort.Items.Count; i++)
+        {
+            if (cboBtPort.Items[i]!.ToString()!.StartsWith(
+                    vorher.Split(' ')[0], StringComparison.OrdinalIgnoreCase))
+            {
+                cboBtPort.SelectedIndex = i;
+                break;
+            }
+        }
+
+        lblKoppelnInfo.Text = "Listen aktualisiert.";
+    }
+
+    /// <summary>
+    /// Übernimmt den ausgewählten Bluetooth-COM-Port aus der Geräte-Liste.
+    /// </summary>
+    private void lstBluetoothGeraete_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        if (lstBluetoothGeraete.SelectedItem is not string auswahl) return;
+        if (!auswahl.StartsWith("🔌 ")) return;
+
+        // COM-Port aus Eintrag extrahieren
+        var ohneIcon = auswahl.Substring(2);
+        var port = ohneIcon.Split(' ', '–', '-')[0].Trim();
+
+        if (port.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
+        {
+            // Suche passenden Eintrag in cboBtPort
+            for (int i = 0; i < cboBtPort.Items.Count; i++)
+            {
+                if (cboBtPort.Items[i]!.ToString()!.StartsWith(port,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    cboBtPort.SelectedIndex = i;
+                    lblKoppelnInfo.Text = $"COM-Port {port} ausgewählt.";
+                    break;
+                }
+            }
+        }
     }
 
     /// <summary>Liefert eine Map COM-Port → Anzeigename via WMI.</summary>

@@ -39,10 +39,12 @@ public class GeoCOMParser : ITachymeterDatenParser
     // Kontext: zuletzt gesendeter RPC (0 = unbekannt / kein Kontext)
     private int _letzterRpc = 0;
 
-    // Informative RCs: Daten sind verwertbar, Korrektur ist aber unvollständig
+    // Informative RCs: Befehl wurde ausgeführt, Gerät meldet Zusatzinfo – kein Fehler.
     // GRC_TMC_NO_FULL_CORRECTION=1283, GRC_TMC_ACCURACY_GUARANTEE=1284,
     // GRC_TMC_ANGLE_OK=1285, GRC_TMC_ANGLE_NO_FULL_CORRECTION=1288
-    private static readonly HashSet<int> _informativeRcs = [1283, 1284, 1285, 1288];
+    // GRC_BAP_CHANGE_ALL_TO_DIST=3079 – EDM-Parameter auf Reflektor/IR umgestellt (OK)
+    // GRC_BAP_CHANGE_ALL_TO_RL=3081   – EDM-Parameter auf Reflektorlos/RL umgestellt (OK)
+    private static readonly HashSet<int> _informativeRcs = [1283, 1284, 1285, 1288, 3079, 3081];
 
     // ── ITachymeterDatenParser ────────────────────────────────────────────────
     public string FormatName        => "GeoCOM";
@@ -149,6 +151,7 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_TMC_GetSimpleMea => ParseVollmessung(m, daten),
             RPC_TMC_GetFullMeas  => ParseVollmessungErweitert(m, daten),
             RPC_TMC_GetEdmMode   => ParseEdmModus(m, daten),
+            RPC_BAP_GetTargetType => ParseZieltyp(m, daten),
             RPC_COM_GetSWBaud    => ParseBaudrate(m, daten),
 
             // Bestätigungen ohne Nutzdaten / Einzel-Wert-Antworten
@@ -275,6 +278,22 @@ public class GeoCOMParser : ITachymeterDatenParser
         return m;
     }
 
+    // ── Zieltyp (BAP_GetTargetType, RPC 17022) ───────────────────────────────
+    // Antwort: RC, TargetType  (0=BAP_REFL_USE Prisma/IR, 1=BAP_REFL_LESS Reflektorlos/RL)
+    private static TachymeterMessung ParseZieltyp(TachymeterMessung m, string[] d)
+    {
+        m.Typ = MessungsTyp.EdmModusInfo;
+        if (d.Length >= 1 && int.TryParse(d[0].Trim(), out int typ))
+        {
+            m.EdmModusRoh = typ;
+            m.EdmModus    = typ == 0 ? MessungsEdmModus.Prisma : MessungsEdmModus.Reflektorlos;
+            m.Bemerkung   = typ == 0
+                ? "Zieltyp: Reflektor / Prisma (IR-EDM, BAP_REFL_USE)"
+                : "Zieltyp: Reflektorlos (RL-EDM, BAP_REFL_LESS)";
+        }
+        return m;
+    }
+
     // ── Baudrate (COM_GetSWBaudrate, RPC 1000) ────────────────────────────────
     private static TachymeterMessung ParseBaudrate(TachymeterMessung m, string[] d)
     {
@@ -343,29 +362,31 @@ public class GeoCOMParser : ITachymeterDatenParser
     private static MessungsEdmModus EdmModusAusCode(int code) => code switch
     {
         1  => MessungsEdmModus.Folie,
-        2  => MessungsEdmModus.Reflektorlos,
+        2  => MessungsEdmModus.Reflektorlos,   // EDM_SINGLE_LRRL (selten genutzt)
         3  => MessungsEdmModus.Prisma,
-        5  => MessungsEdmModus.Prisma,
-        8  => MessungsEdmModus.Reflektorlos,
-        10 => MessungsEdmModus.Reflektorlos,
-        11 => MessungsEdmModus.Reflektorlos,
+        4  => MessungsEdmModus.Prisma,          // Dauermessung Prisma
+        5  => MessungsEdmModus.Reflektorlos,   // EDM_SINGLE_SRANGE – RL Kurzstrecke
+        7  => MessungsEdmModus.Prisma,          // Tracking Prisma
+        8  => MessungsEdmModus.Reflektorlos,   // EDM_CONT_REFLESS – RL Dauermessung
+        10 => MessungsEdmModus.Reflektorlos,   // EDM_SINGLE_LRRL – RL Langdistanz
+        11 => MessungsEdmModus.Reflektorlos,   // EDM_AVERAGE_SR – RL Mittelwert Langstrecke
         _  => MessungsEdmModus.Unbekannt
     };
 
     private static string EdmModusText(int code) => code switch
     {
         0  => "Nicht aktiv",
-        1  => "EDM_SINGLE_TAPE – Folie",
-        2  => "EDM_SINGLE_LRRL – Reflektorlos kurz",
-        3  => "EDM_SINGLE_PRISM – Prisma",
-        4  => "EDM_CONT_STANDARD – Dauermessung",
-        5  => "EDM_SINGLE_STANDARD – Einzelmessung Standard",
-        6  => "EDM_CONT_DYNAMIC – Dauermessung dynamisch",
-        7  => "EDM_SINGLE_TRACKING – Tracking",
-        8  => "EDM_CONT_REFLESS – Dauermessung RL",
+        1  => "EDM_SINGLE_TAPE – Folie/Kleintarget",
+        2  => "EDM_SINGLE_LRRL – RL Langdistanz (alt)",
+        3  => "EDM_SINGLE_PRISM – Prisma Einzelmessung",
+        4  => "EDM_CONT_STANDARD – Prisma Dauermessung",
+        5  => "EDM_SINGLE_SRANGE – RL Kurzstrecke Einzelmessung",
+        6  => "EDM_CONT_DYNAMIC – Prisma Dauermessung dynamisch",
+        7  => "EDM_SINGLE_TRACKING – Prisma Tracking",
+        8  => "EDM_CONT_REFLESS – RL Dauermessung",
         9  => "EDM_SINGLE_FAST – Schnellmessung",
-        10 => "EDM_SINGLE_LRRL – Reflektorlos Langdistanz",
-        11 => "EDM_CONT_LRRL – Dauermessung RL Langdistanz",
+        10 => "EDM_SINGLE_LRRL – RL Langdistanz",
+        11 => "EDM_AVERAGE_SR – RL Mittelwert Langstrecke",
         12 => "EDM_SCAN_REF",
         _  => $"Unbekannt ({code})"
     };
@@ -403,6 +424,9 @@ public class GeoCOMParser : ITachymeterDatenParser
         1792 => "GRC_EDM_BUSYMODE – EDM in parallelem Messmodus",
         1793 => "GRC_EDM_NO_VALID_MEAS – Keine gültige Messung (Reflektormodus/Ziel prüfen)",
         1800 => "GRC_EDM_DEV_NOT_INSTALLED – Reflektorlos-Option nicht installiert",
+        // BAP-Hinweise (3079, 3081) – Befehl OK, Gerät meldet Parameteranpassung
+        3079 => "GRC_BAP_CHANGE_ALL_TO_DIST – Alle EDM-Parameter auf Reflektor/IR umgestellt",
+        3081 => "GRC_BAP_CHANGE_ALL_TO_RL – Alle EDM-Parameter auf Reflektorlos/RL umgestellt",
         _    => ""
     };
 

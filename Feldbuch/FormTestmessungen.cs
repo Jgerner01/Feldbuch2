@@ -16,9 +16,18 @@ public partial class FormTestmessungen : Form
     private static readonly Color FarbeFehler    = Color.FromArgb(255, 110, 110); // hellrot   – Fehlermeldungen
 
     // ── EDM-Modus ─────────────────────────────────────────────────────────────
-    private bool _reflektorModus = true;
-    private const int EDM_SINGLE_PRISM = 3;
-    private const int EDM_SINGLE_LRRL  = 10;   // Reflektorlos Langdistanz (RL-Option nötig!)
+    // Drei Messmodi, zyklisch per Button wählbar:
+    //   Prisma          – BAP_REFL_USE(0)  + TMC_SetEdmMode(3)  EDM_SINGLE_PRISM
+    //   Reflektorlos-K  – BAP_REFL_LESS(1) + TMC_SetEdmMode(2)  EDM_SINGLE_LRRL (kurze Dist.)
+    //   Reflektorlos-L  – BAP_REFL_LESS(1) + TMC_SetEdmMode(10) EDM_SINGLE_LRRL (lange Dist.)
+    private enum MessModus { Prisma, ReflektorlosKurz, ReflektorlosLang }
+    private MessModus _messModus = MessModus.Prisma;
+
+    private const int BAP_REFL_USE      = 0;
+    private const int BAP_REFL_LESS     = 1;
+    private const int EDM_SINGLE_PRISM  = 3;   // IR Einzel-Prisma
+    private const int EDM_SINGLE_RL_K   = 5;   // RL Einzelmessung Kurzstrecke (EDM_SINGLE_SRANGE)
+    private const int EDM_SINGLE_RL_L   = 11;  // RL Mittelwert Langstrecke   (EDM_AVERAGE_SR)
 
     // ── Laserpointer ─────────────────────────────────────────────────────────
     private bool _laserAn = false;
@@ -38,6 +47,13 @@ public partial class FormTestmessungen : Form
     // Start-Sequenz: PPM lesen → setzen → Timer starten
     private enum LibelleZustand { Bereit, LesePPM, SetzePPM, Aktiv }
     private LibelleZustand _libelleZustand = LibelleZustand.Bereit;
+
+    // ── Messungs-Zustandsmaschine ─────────────────────────────────────────────
+    // WarteMessen:   TMC_DoMeasure gesendet, warte auf Bestätigung
+    // WarteErgebnis: TMC_GetSimpleMea gesendet, warte auf Messdaten
+    private enum MessungZustand { Bereit, WarteMessen, WarteErgebnis }
+    private MessungZustand _messungZustand    = MessungZustand.Bereit;
+    private bool           _messungLibelleWar = false;  // Libelle vor Messung aktiv?
 
     public FormTestmessungen()
     {
@@ -113,8 +129,11 @@ public partial class FormTestmessungen : Form
         // 1. Rohdaten anzeigen
         AppendFarbe($"<< {zeile}", FarbeRoh);
 
-        // 2. Parsen
-        var messung = GeoCOMParser.ParseAntwort(zeile, _parser_letzterRpc);
+        // 2. RPC-Kontext sichern, bevor mögliche SendeBefehl-Aufrufe ihn überschreiben
+        int rpcKontext = _parser_letzterRpc;
+
+        // 3. Parsen
+        var messung = GeoCOMParser.ParseAntwort(zeile, rpcKontext);
         if (messung == null) return;
 
         // 3. Geparste Darstellung
@@ -147,7 +166,7 @@ public partial class FormTestmessungen : Form
                     messung.LaengsNeigung_rad ?? 0.0,
                     messung.ReturnCode        ?? 0);
             }
-            else if (_libelleAktiv && _parser_letzterRpc == GeoCOMParser.RPC_TMC_GetAngle1)
+            else if (_libelleAktiv && rpcKontext == GeoCOMParser.RPC_TMC_GetAngle1)
             {
                 // Angle1-Antwort ohne Kompensatordaten → Kompensator außerhalb Bereich
                 pnlLibelle.MarciereUngueltig();
@@ -159,15 +178,37 @@ public partial class FormTestmessungen : Form
         // ── Libelle-Startsequenz: Zustand weiterschalten ──────────────────────
         if (_libelleZustand == LibelleZustand.SetzePPM
             && messung.Typ == MessungsTyp.Status
-            && _parser_letzterRpc == GeoCOMParser.RPC_TMC_SetAtmCorr)
+            && rpcKontext == GeoCOMParser.RPC_TMC_SetAtmCorr)
         {
-            AppendInfo("[INFO] PPM=0 gesetzt. Starte Dosenlibelle Live...");
-            lblPPM.Text      = "PPM: 0.0 ppm  (gesetzt)";
-            lblPPM.ForeColor = Color.FromArgb(100, 200, 100);
+            AppendInfo("[INFO] Atmosphäre gesetzt. Starte Dosenlibelle Live...");
             _libelleAktiv   = true;
             _libelleZustand = LibelleZustand.Aktiv;
             _libelleTimer.Start();
             AktualisiereLibelleButton();
+        }
+
+        // ── Messungs-Zustandsmaschine ──────────────────────────────────────────
+        if (_messungZustand == MessungZustand.WarteMessen
+            && rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure)
+        {
+            if (messung.IstFehler)
+            {
+                AppendFehler($"[FEHLER] Messung konnte nicht gestartet werden: {messung.Bemerkung}");
+                MessungAbschliessen();
+            }
+            else
+            {
+                // DoMeasure bestätigt → jetzt Messwert abrufen
+                _messungZustand    = MessungZustand.WarteErgebnis;
+                _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetSimpleMea;
+                SendeBefehl("%R1Q,2108,0:5000,1");
+            }
+        }
+        else if (_messungZustand == MessungZustand.WarteErgebnis
+            && rpcKontext == GeoCOMParser.RPC_TMC_GetSimpleMea)
+        {
+            // Messergebnis (oder Fehler) empfangen → Messung abschließen
+            MessungAbschliessen();
         }
     }
 
@@ -207,65 +248,88 @@ public partial class FormTestmessungen : Form
 
     // ── Messung auslösen ──────────────────────────────────────────────────────
     //
-    // GRC=1285 (GRC_TMC_BUSY) Erklärung:
-    //   TMC_DoMeasure startet die Messung asynchron und kehrt sofort zurück.
-    //   Wenn danach sofort TMC_GetSimpleMea mit WaitTime>0 gesendet wird,
-    //   startet die Funktion intern NOCHMALS eine Messung – das ergibt BUSY.
+    // Zwei-Schritt-Sequenz (Zustandsmaschine):
+    //   Schritt 1: TMC_DoMeasure (RPC 2008, Cmd=1 DEF_DIST, Mode=1 AUTO_INC)
+    //              Gerät startet die EDM-Messung, antwortet sofort mit GRC.
+    //   Schritt 2: TMC_GetSimpleMea (RPC 2108, WaitTime=5000, Mode=1)
+    //              Wird erst nach OK-Bestätigung von DoMeasure gesendet.
+    //              Liefert Hz, V, Schrägdistanz.
     //
-    // Fix: Nur TMC_GetSimpleMea mit langem WaitTime verwenden.
-    //   Die Funktion startet bei WaitTime>0 selbst eine TMC_DEF_DIST-Messung
-    //   und wartet bis das Ergebnis vorliegt. Ein Befehl, ein Ergebnis.
+    // Kein BAP_SetTargetType vor der Messung – der EDM-Modus wird über
+    // "Modus"-Button (TMC_SetEdmMode) separat verwaltet.
 
     private void btnMessung_Click(object? sender, EventArgs e)
     {
-        btnMessung.Enabled = false;
+        if (_messungZustand != MessungZustand.Bereit) return;
+
+        if (!TachymeterVerbindung.IstVerbunden)
+        {
+            AppendFehler("[FEHLER] Kein Tachymeter verbunden.");
+            AktualisiereStatus();
+            return;
+        }
+
         try
         {
-            if (!TachymeterVerbindung.IstVerbunden)
-            {
-                AppendFehler("[FEHLER] Kein Tachymeter verbunden.");
-                AktualisiereStatus();
-                return;
-            }
+            btnMessung.Enabled = false;
 
-            // 1. Zieltyp sicherstellen (BAP_SetTargetType, RPC 17021)
-            //    0 = Reflektor/IR,  1 = Reflektorlos/RL
-            //    GeoCOM verarbeitet Befehle seriell → Modus ist aktiv wenn Messung startet
-            int zieltyp = _reflektorModus ? 0 : 1;
-            TachymeterVerbindung.GeoCOM_Senden($"%R1Q,17021,0:{zieltyp}");
-            AppendFarbe($">> %R1Q,17021,0:{zieltyp}  (Zieltyp: {(_reflektorModus ? "Reflektor/IR" : "Reflektorlos/RL")})", FarbeSenden);
+            // Libelle während der Messung pausieren (verhindert Kollision auf serieller Schnittstelle)
+            _messungLibelleWar = _libelleAktiv;
+            if (_libelleAktiv) _libelleTimer.Stop();
 
-            // 2. Messung auslösen: TMC_GetSimpleMea (RPC 2108)
-            //    WaitTime=10000 ms, Mode=1 (TMC_AUTO_INC – robust bei instabilen Bedingungen)
-            //    Antwort: %R1P,0,0:0,{Hz_rad},{V_rad},{SlopeDist_m}
-            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetSimpleMea;
-            SendeBefehl("%R1Q,2108,0:10000,1");
-            // Antwort kommt über DatenEmpfangen-Event → VerarbeiteZeile() → Parser
+            // Schritt 1: Messung starten
+            _messungZustand = MessungZustand.WarteMessen;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_DoMeasure;
+            SendeBefehl("%R1Q,2008,0:1,1");
         }
-        catch (Exception ex) { AppendFehler($"[FEHLER] {ex.Message}"); }
-        finally { btnMessung.Enabled = true; }
+        catch (Exception ex)
+        {
+            AppendFehler($"[FEHLER] {ex.Message}");
+            MessungAbschliessen();
+        }
+    }
+
+    private void MessungAbschliessen()
+    {
+        _messungZustand = MessungZustand.Bereit;
+        btnMessung.Enabled = true;
+
+        // Libelle wieder starten falls sie vorher aktiv war
+        if (_messungLibelleWar && _libelleAktiv)
+            _libelleTimer.Start();
+        _messungLibelleWar = false;
     }
 
     // ── EDM-Modus umschalten ──────────────────────────────────────────────────
 
     private void btnModus_Click(object? sender, EventArgs e)
     {
-        _reflektorModus = !_reflektorModus;
+        // Zyklisch weiterschalten: Prisma → RL-Kurz → RL-Lang → Prisma
+        _messModus = _messModus switch
+        {
+            MessModus.Prisma           => MessModus.ReflektorlosKurz,
+            MessModus.ReflektorlosKurz => MessModus.ReflektorlosLang,
+            _                          => MessModus.Prisma
+        };
 
         if (TachymeterVerbindung.IstVerbunden)
         {
             try
             {
-                int modus = _reflektorModus ? EDM_SINGLE_PRISM : EDM_SINGLE_LRRL;
-                // TMC_SetEdmMode (RPC 2020)
-                // Reflektorlos (Modus 10 = EDM_SINGLE_LRRL) benötigt die "R"-Option im Gerät.
-                // Wenn das Gerät GRC=35 (GRC_NOTACCEPTED) zurückgibt, ist RL nicht installiert.
-                _parser_letzterRpc = GeoCOMParser.RPC_TMC_SetEdmMode;
-                SendeBefehl($"%R1Q,2020,0:{modus}");
+                // Schritt 1: IR/RL-Zieltyp setzen (BAP_SetTargetType, RPC 17021)
+                int zieltyp = _messModus == MessModus.Prisma ? BAP_REFL_USE : BAP_REFL_LESS;
+                _parser_letzterRpc = GeoCOMParser.RPC_BAP_SetTargetType;
+                SendeBefehl($"%R1Q,17021,0:{zieltyp}");
 
-                // Modus sofort auslesen und bestätigen → erkennt ob RL-Option vorhanden
-                _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetEdmMode;
-                SendeBefehl("%R1Q,2021,0:");
+                // Schritt 2: EDM-Messprogramm setzen (TMC_SetEdmMode, RPC 2020)
+                int edmModus = _messModus switch
+                {
+                    MessModus.ReflektorlosKurz => EDM_SINGLE_RL_K,
+                    MessModus.ReflektorlosLang => EDM_SINGLE_RL_L,
+                    _                          => EDM_SINGLE_PRISM
+                };
+                _parser_letzterRpc = GeoCOMParser.RPC_TMC_SetEdmMode;
+                SendeBefehl($"%R1Q,2020,0:{edmModus}");
             }
             catch (Exception ex) { AppendFehler($"[FEHLER] {ex.Message}"); }
         }
@@ -279,17 +343,23 @@ public partial class FormTestmessungen : Form
 
     private void AktualisiereModusButton()
     {
-        if (_reflektorModus)
+        switch (_messModus)
         {
-            btnModus.Text      = "Modus: Reflektormessung  →  Reflektorlos wechseln";
-            btnModus.BackColor = Color.FromArgb(38, 110, 72);
-            btnModus.FlatAppearance.BorderColor = Color.FromArgb(26, 86, 54);
-        }
-        else
-        {
-            btnModus.Text      = "Modus: Reflektorlose Messung  →  Reflektor wechseln";
-            btnModus.BackColor = Color.FromArgb(140, 80, 20);
-            btnModus.FlatAppearance.BorderColor = Color.FromArgb(110, 60, 10);
+            case MessModus.Prisma:
+                btnModus.Text      = "Modus: Prisma / Reflektor  →  weiter: RL Kurz";
+                btnModus.BackColor = Color.FromArgb(38, 110, 72);
+                btnModus.FlatAppearance.BorderColor = Color.FromArgb(26, 86, 54);
+                break;
+            case MessModus.ReflektorlosKurz:
+                btnModus.Text      = "Modus: Reflektorlos Kurz  →  weiter: RL Lang";
+                btnModus.BackColor = Color.FromArgb(140, 80, 20);
+                btnModus.FlatAppearance.BorderColor = Color.FromArgb(110, 60, 10);
+                break;
+            case MessModus.ReflektorlosLang:
+                btnModus.Text      = "Modus: Reflektorlos Lang  →  weiter: Prisma";
+                btnModus.BackColor = Color.FromArgb(100, 50, 130);
+                btnModus.FlatAppearance.BorderColor = Color.FromArgb(75, 30, 105);
+                break;
         }
     }
 
