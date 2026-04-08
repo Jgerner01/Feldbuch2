@@ -2,8 +2,6 @@ namespace Feldbuch;
 
 public partial class Form1 : Form
 {
-    private readonly System.Windows.Forms.Timer _reconnectTimer = new() { Interval = 5000 };
-
     public Form1()
     {
         InitializeComponent();
@@ -31,18 +29,9 @@ public partial class Form1 : Form
         ProtokollManager.Log("START", $"Programm gestartet" +
             (ProjektManager.IstGeladen ? $" | Projekt: {ProjektManager.ProjektName}" : ""));
 
-        // Tachymeter: gespeicherte Einstellungen laden und automatisch verbinden
+        // Tachymeter: gespeicherte Einstellungen laden und einmalig verbinden
         TachymeterVerbindung.LadeEinstellungen();
         VerbindeTachymeter(zeigeInfoMeldung: true);
-
-        // Reconnect-Timer: alle 5 s erneut versuchen solange kein Tachymeter verbunden
-        _reconnectTimer.Tick += (_, _) =>
-        {
-            if (TachymeterVerbindung.IstVerbunden) return;
-            if (string.IsNullOrEmpty(TachymeterVerbindung.Port)) return;
-            VerbindeTachymeter(zeigeInfoMeldung: false);
-        };
-        _reconnectTimer.Start();
     }
 
     // ── Optionen laden / Handler ──────────────────────────────────────────────
@@ -92,26 +81,23 @@ public partial class Form1 : Form
         {
             TachymeterVerbindung.Verbinden();
             ProtokollManager.Log("TACHY",
-                $"Automatisch verbunden: {TachymeterVerbindung.Port}  ({TachymeterVerbindung.BaudRate} Baud)");
+                $"Verbunden: {TachymeterVerbindung.Port}  ({TachymeterVerbindung.BaudRate} Baud)");
         }
         catch (Exception ex)
         {
             if (zeigeInfoMeldung)
             {
                 MessageBox.Show(
-                    $"Tachymeter ({TachymeterVerbindung.Port}) konnte nicht verbunden werden:\n{ex.Message}\n\n" +
-                    "Die Verbindung wird alle 5 Sekunden automatisch erneut versucht.",
+                    $"Tachymeter ({TachymeterVerbindung.Port}) konnte nicht verbunden werden:\n{ex.Message}",
                     "Tachymeter – Verbindung",
                     MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                    MessageBoxIcon.Warning);
             }
         }
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        _reconnectTimer.Stop();
-        _reconnectTimer.Dispose();
         base.OnFormClosing(e);
         ProtokollManager.Log("ENDE", "Programm beendet");
     }
