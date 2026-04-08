@@ -10,3 +10,5 @@ packages/
 CLAUDE.md
 **/Backup/
 **/publish/
+
+.fake

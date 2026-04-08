@@ -23,6 +23,7 @@ public enum MessungsTyp
     Koordinate,     // direkte XYZ-Koordinaten
     Status,         // Gerätestatus, Bestätigung, Ping-Antwort
     EdmModusInfo,   // EDM-Modus-Rückmeldung
+    AtmKorrektur,   // Atmosphärische Korrekturdaten (Lambda, Druck, Temp, PPM)
     Fehler          // Fehlermeldung / ungültiger Returncode
 }
 
@@ -100,6 +101,24 @@ public class TachymeterMessung
     public double?       WinkelGenauigkeit_cc   { get; set; }
     /// <summary>Streckengenauigkeit [mm].</summary>
     public double?       StreckenGenauigkeit_mm { get; set; }
+
+    // ── Kompensatordaten (GeoCOM TMC_GetAngle1, RPC 2003) ─────────────────────
+    /// <summary>Querachsenneigung (CrossIncline) [rad].</summary>
+    public double?       KreuzNeigung_rad       { get; set; }
+    /// <summary>Längsachsenneigung (LengthIncline) [rad].</summary>
+    public double?       LaengsNeigung_rad      { get; set; }
+
+    // ── Atmosphärische Korrekturdaten (GeoCOM TMC_GetAtmCorr, RPC 2029) ───────
+    /// <summary>Wellenlänge des EDM [m] (z. B. 6.58e-7 für roten Laser).</summary>
+    public double?       Atm_Lambda_m           { get; set; }
+    /// <summary>Luftdruck [mbar].</summary>
+    public double?       Atm_Druck_mbar         { get; set; }
+    /// <summary>Trockentemperatur [°C].</summary>
+    public double?       Atm_TempTrock_C        { get; set; }
+    /// <summary>Feuchttemperatur [°C].</summary>
+    public double?       Atm_TempFeucht_C       { get; set; }
+    /// <summary>Berechneter PPM-Wert (Barrel-Formel). Positiv = Verkürzt.</summary>
+    public double?       Atm_PPM                { get; set; }
 
     // ── Sonstiges ─────────────────────────────────────────────────────────────
     public string        Bemerkung          { get; set; }  = "";
