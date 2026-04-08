@@ -31,11 +31,20 @@ public partial class FormTestmessungen : Form
     private readonly System.Windows.Forms.Timer _winkelTimer = new() { Interval = 500 };
     private bool _winkelAktiv = false;
 
+    // ── Timer für Dosenlibelle Live ───────────────────────────────────────────
+    private readonly System.Windows.Forms.Timer _libelleTimer = new() { Interval = 800 };
+    private bool _libelleAktiv = false;
+
+    // Start-Sequenz: PPM lesen → setzen → Timer starten
+    private enum LibelleZustand { Bereit, LesePPM, SetzePPM, Aktiv }
+    private LibelleZustand _libelleZustand = LibelleZustand.Bereit;
+
     public FormTestmessungen()
     {
         InitializeComponent();
         TachymeterVerbindung.DatenEmpfangen += OnDatenEmpfangen;
-        _winkelTimer.Tick += WinkelTimer_Tick;
+        _winkelTimer.Tick  += WinkelTimer_Tick;
+        _libelleTimer.Tick += LibelleTimer_Tick;
         AktualisiereStatus();
         AktualisiereModusButton();
     }
@@ -121,9 +130,44 @@ public partial class FormTestmessungen : Form
         {
             AppendFarbe($"   → {messung.Bemerkung}", FarbeInfo);
         }
+        else if (messung.Typ == MessungsTyp.AtmKorrektur)
+        {
+            AppendFarbe($"   → {messung.Bemerkung}", FarbeGeparst);
+            VerarbeiteAtmKorrektur(messung);
+        }
         else if (messung.HatWinkel || messung.IstVollmessung)
         {
             AppendFarbe(FormatiereMessung(messung), FarbeGeparst);
+
+            // Kompensatordaten an Libelle weitergeben (falls vorhanden)
+            if (messung.KreuzNeigung_rad.HasValue || messung.LaengsNeigung_rad.HasValue)
+            {
+                AktualisiereLibelle(
+                    messung.KreuzNeigung_rad  ?? 0.0,
+                    messung.LaengsNeigung_rad ?? 0.0,
+                    messung.ReturnCode        ?? 0);
+            }
+            else if (_libelleAktiv && _parser_letzterRpc == GeoCOMParser.RPC_TMC_GetAngle1)
+            {
+                // Angle1-Antwort ohne Kompensatordaten → Kompensator außerhalb Bereich
+                pnlLibelle.MarciereUngueltig();
+                lblNeigung.ForeColor = Color.FromArgb(220, 100, 50);
+                lblNeigung.Text      = "Quer:    außerh. Messbereich\r\nLängs:   außerh. Messbereich";
+            }
+        }
+
+        // ── Libelle-Startsequenz: Zustand weiterschalten ──────────────────────
+        if (_libelleZustand == LibelleZustand.SetzePPM
+            && messung.Typ == MessungsTyp.Status
+            && _parser_letzterRpc == GeoCOMParser.RPC_TMC_SetAtmCorr)
+        {
+            AppendInfo("[INFO] PPM=0 gesetzt. Starte Dosenlibelle Live...");
+            lblPPM.Text      = "PPM: 0.0 ppm  (gesetzt)";
+            lblPPM.ForeColor = Color.FromArgb(100, 200, 100);
+            _libelleAktiv   = true;
+            _libelleZustand = LibelleZustand.Aktiv;
+            _libelleTimer.Start();
+            AktualisiereLibelleButton();
         }
     }
 
@@ -184,11 +228,18 @@ public partial class FormTestmessungen : Form
                 return;
             }
 
-            // TMC_GetSimpleMea (RPC 2108) – löst Messung aus UND wartet auf Ergebnis
-            // WaitTime = 10000 ms (10 s), IncliModus = 0 (mit Kompensator)
-            // Antwort: %R1P,0,0:0,{Hz_rad},{V_rad},{SlopeDist_m}
+            // 1. Zieltyp sicherstellen (BAP_SetTargetType, RPC 17021)
+            //    0 = Reflektor/IR,  1 = Reflektorlos/RL
+            //    GeoCOM verarbeitet Befehle seriell → Modus ist aktiv wenn Messung startet
+            int zieltyp = _reflektorModus ? 0 : 1;
+            TachymeterVerbindung.GeoCOM_Senden($"%R1Q,17021,0:{zieltyp}");
+            AppendFarbe($">> %R1Q,17021,0:{zieltyp}  (Zieltyp: {(_reflektorModus ? "Reflektor/IR" : "Reflektorlos/RL")})", FarbeSenden);
+
+            // 2. Messung auslösen: TMC_GetSimpleMea (RPC 2108)
+            //    WaitTime=10000 ms, Mode=1 (TMC_AUTO_INC – robust bei instabilen Bedingungen)
+            //    Antwort: %R1P,0,0:0,{Hz_rad},{V_rad},{SlopeDist_m}
             _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetSimpleMea;
-            SendeBefehl("%R1Q,2108,0:10000,0");
+            SendeBefehl("%R1Q,2108,0:10000,1");
             // Antwort kommt über DatenEmpfangen-Event → VerarbeiteZeile() → Parser
         }
         catch (Exception ex) { AppendFehler($"[FEHLER] {ex.Message}"); }
@@ -358,6 +409,187 @@ public partial class FormTestmessungen : Form
         }
     }
 
+    // ── Dosenlibelle Live ─────────────────────────────────────────────────────
+    //   RPC 2003 = TMC_GetAngle1 – liefert Hz, V, Genauigkeit, AngleTime,
+    //              CrossIncline [rad], LengthIncline [rad], AccuracyIncline,
+    //              InclineTime, FaceDef
+
+    private void btnLibelle_Click(object? sender, EventArgs e)
+    {
+        if (_libelleAktiv || _libelleZustand != LibelleZustand.Bereit)
+        {
+            // Stoppen
+            _libelleTimer.Stop();
+            _libelleAktiv   = false;
+            _libelleZustand = LibelleZustand.Bereit;
+            pnlLibelle.Zuruecksetzen();
+            lblNeigung.ForeColor = Color.FromArgb(130, 160, 200);
+            lblNeigung.Text      = "Quer:    –\r\nLängs:   –";
+            lblPPM.Text          = "PPM: –";
+            lblPPM.ForeColor     = Color.FromArgb(200, 160, 80);
+            AppendInfo("[INFO] Dosenlibelle Live gestoppt.");
+        }
+        else
+        {
+            if (!TachymeterVerbindung.IstVerbunden)
+            {
+                AppendFehler("[FEHLER] Kein Tachymeter verbunden.");
+                AktualisiereStatus();
+                return;
+            }
+
+            // Start-Sequenz: 1. PPM lesen, 2. PPM=0 setzen, 3. Timer starten
+            AppendInfo("[INFO] Lese atmosphärische Korrekturdaten (RPC 2029)...");
+            _libelleZustand    = LibelleZustand.LesePPM;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetAtmCorr;
+            SendeBefehl("%R1Q,2029,0:");
+        }
+        AktualisiereLibelleButton();
+    }
+
+    private void LibelleTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!TachymeterVerbindung.IstVerbunden)
+        {
+            _libelleTimer.Stop();
+            _libelleAktiv = false;
+            BeginInvoke(() =>
+            {
+                pnlLibelle.Zuruecksetzen();
+                lblNeigung.Text = "Quer:    –\r\nLängs:   –";
+                AktualisiereStatus();
+                AktualisiereLibelleButton();
+            });
+            return;
+        }
+        try
+        {
+            // TMC_GetAngle1 (RPC 2003): Winkelmessung + Kompensatordaten
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetAngle1;
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2003,0:1");  // Mode=1 (TMC_AUTO_INC)
+        }
+        catch (Exception ex)
+        {
+            _libelleTimer.Stop();
+            _libelleAktiv = false;
+            BeginInvoke(() =>
+            {
+                AppendFehler($"[FEHLER] {ex.Message} – Libelle-Live gestoppt.");
+                AktualisiereLibelleButton();
+            });
+        }
+    }
+
+    /// <summary>
+    /// Verarbeitet AtmKorrektur-Antwort im Rahmen der Libelle-Startsequenz.
+    ///
+    /// Logik:
+    ///  • Sind die Geräte-Werte für Luftdruck und Temperatur plausibel
+    ///    (800–1100 mbar, −30…+55 °C) → Werte UNVERÄNDERT belassen, PPM anzeigen.
+    ///  • Sind die Geräte-Werte unplausibel (nicht eingestellt, Null) →
+    ///    ICAO-Standardatmosphäre setzen (P=1013.25 mbar, T=15 °C).
+    /// </summary>
+    private void VerarbeiteAtmKorrektur(TachymeterMessung m)
+    {
+        if (_libelleZustand != LibelleZustand.LesePPM) return;
+
+        double p      = m.Atm_Druck_mbar  ?? 0.0;
+        double tTrock = m.Atm_TempTrock_C ?? 0.0;
+        double lambda = m.Atm_Lambda_m    ?? 6.58e-7;
+
+        // Plausibilitätsprüfung der Geräteeinstellungen
+        bool plausibel = p      is > 800.0 and < 1100.0
+                      && tTrock is > -30.0  and < 55.0;
+
+        if (plausibel && m.Atm_PPM.HasValue)
+        {
+            // ── Gerätewerte gültig → unverändert übernehmen ───────────────────
+            double ppm = m.Atm_PPM.Value;
+            lblPPM.Text      = $"PPM: {ppm:+0.00;-0.00;+0.00} ppm  " +
+                               $"(P={p:F1} mbar, T={tTrock:F1} °C  –  Gerätewerte)";
+            lblPPM.ForeColor = Color.FromArgb(100, 200, 100);
+
+            AppendInfo($"[INFO] Atmosphäre OK: PPM={ppm:+0.0} ppm  " +
+                       $"P={p:F1} mbar  T={tTrock:F1} °C  –  Gerätewerte übernommen.");
+
+            // Keine SetAtmCorr nötig → direkt zu Aktiv
+            _libelleZustand = LibelleZustand.Aktiv;
+            _libelleAktiv   = true;
+            _libelleTimer.Start();
+            AktualisiereLibelleButton();
+        }
+        else
+        {
+            // ── Unplausible/fehlende Werte → ICAO-Standardatmosphäre setzen ───
+            string grund = p <= 0
+                ? "Luftdruck nicht eingestellt (P=0)"
+                : $"unplausibler Wert (P={p:F0} mbar, T={tTrock:F0} °C)";
+
+            AppendInfo($"[WARN] Atmosphäre: {grund} → setze ICAO-Standard (P=1013.25 mbar, T=15 °C).");
+
+            lblPPM.Text      = $"PPM: {(m.Atm_PPM.HasValue ? m.Atm_PPM.Value.ToString("+0.00;-0.00;+0.00") : "?")} ppm " +
+                               $"→ ICAO-Standard wird gesetzt";
+            lblPPM.ForeColor = Color.FromArgb(220, 150, 40);
+
+            // ICAO-Standard: T=15 °C, P=1013.25 mbar → PPM ≈ −0.5 (nahe 0)
+            const double pICAO = 1013.25;
+            const double tICAO = 15.0;
+            _libelleZustand    = LibelleZustand.SetzePPM;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_SetAtmCorr;
+            string cmd = string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"%R1Q,2028,0:{lambda:G6},{pICAO:F2},{tICAO:F1},{tICAO:F1}");
+            AppendInfo($"[INFO] {cmd}");
+            SendeBefehl(cmd);
+        }
+    }
+
+    /// <summary>Aktualisiert Libelle-Zeichenfläche und Neigungsanzeige.</summary>
+    private void AktualisiereLibelle(double kreuz_rad, double laengs_rad, int rc = 0)
+    {
+        // GRC=1283 + beide Werte exakt 0 → Kompensator konnte nicht messen
+        bool ausserBereich = rc == 1283
+                          && Math.Abs(kreuz_rad) < 1e-12
+                          && Math.Abs(laengs_rad) < 1e-12;
+
+        if (ausserBereich)
+        {
+            pnlLibelle.MarciereUngueltig();
+            lblNeigung.ForeColor = Color.FromArgb(220, 100, 50);
+            lblNeigung.Text      = "Quer:    außerh. Messbereich\r\nLängs:   außerh. Messbereich";
+            return;
+        }
+
+        pnlLibelle.SetzeNeigung(kreuz_rad, laengs_rad, gueltig: true);
+        lblNeigung.ForeColor = Color.FromArgb(130, 160, 200);
+
+        // Anzeige in mgon und mm/m (1 rad = 200/π gon; mm/m = rad * 1000)
+        double kreuz_mgon  = kreuz_rad  * (200.0 / Math.PI) * 1000.0;
+        double laengs_mgon = laengs_rad * (200.0 / Math.PI) * 1000.0;
+        double kreuz_mmm   = kreuz_rad  * 1000.0;
+        double laengs_mmm  = laengs_rad * 1000.0;
+
+        lblNeigung.Text =
+            $"Quer:  {kreuz_mgon:+0.00;-0.00;+0.00} mgon  ({kreuz_mmm:+0.000;-0.000;+0.000} mm/m)\r\n" +
+            $"Längs: {laengs_mgon:+0.00;-0.00;+0.00} mgon  ({laengs_mmm:+0.000;-0.000;+0.000} mm/m)";
+    }
+
+    private void AktualisiereLibelleButton()
+    {
+        if (_libelleAktiv)
+        {
+            btnLibelle.Text      = "Libelle Live  stoppen";
+            btnLibelle.BackColor = Color.FromArgb(160, 40, 40);
+            btnLibelle.FlatAppearance.BorderColor = Color.FromArgb(130, 20, 20);
+        }
+        else
+        {
+            btnLibelle.Text      = "Libelle Live  starten";
+            btnLibelle.BackColor = Color.FromArgb(50, 90, 70);
+            btnLibelle.FlatAppearance.BorderColor = Color.FromArgb(35, 70, 52);
+        }
+    }
+
     // ── Löschen ───────────────────────────────────────────────────────────────
 
     private void btnClear_Click(object? sender, EventArgs e)
@@ -372,6 +604,8 @@ public partial class FormTestmessungen : Form
     {
         _winkelTimer.Stop();
         _winkelTimer.Dispose();
+        _libelleTimer.Stop();
+        _libelleTimer.Dispose();
 
         // Laserpointer sicher ausschalten
         if (_laserAn && TachymeterVerbindung.IstVerbunden)

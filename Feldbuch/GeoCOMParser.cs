@@ -27,12 +27,22 @@ public class GeoCOMParser : ITachymeterDatenParser
     public const int RPC_TMC_DoMeasure    = 2008;
     public const int RPC_TMC_SetEdmMode   = 2020;
     public const int RPC_TMC_GetEdmMode   = 2021;
+    public const int RPC_TMC_GetAngle1    = 2003;  // volle Winkelmessung + Kompensator (CrossIncline, LengthIncline)
+    public const int RPC_TMC_SetAtmCorr   = 2028;  // atmosphärische Korrektur setzen (Lambda, Druck, TempTrock, TempFeucht)
+    public const int RPC_TMC_GetAtmCorr   = 2029;  // atmosphärische Korrektur lesen
+    public const int RPC_BAP_SetTargetType = 17021; // Zieltyp setzen: 0=Reflektor (IR), 1=Reflektorlos (RL)
+    public const int RPC_BAP_GetTargetType = 17022; // Zieltyp abfragen
     public const int RPC_TMC_GetAngle     = 2107;
     public const int RPC_TMC_GetSimpleMea = 2108;
     public const int RPC_TMC_GetFullMeas  = 2167;
 
     // Kontext: zuletzt gesendeter RPC (0 = unbekannt / kein Kontext)
     private int _letzterRpc = 0;
+
+    // Informative RCs: Daten sind verwertbar, Korrektur ist aber unvollständig
+    // GRC_TMC_NO_FULL_CORRECTION=1283, GRC_TMC_ACCURACY_GUARANTEE=1284,
+    // GRC_TMC_ANGLE_OK=1285, GRC_TMC_ANGLE_NO_FULL_CORRECTION=1288
+    private static readonly HashSet<int> _informativeRcs = [1283, 1284, 1285, 1288];
 
     // ── ITachymeterDatenParser ────────────────────────────────────────────────
     public string FormatName        => "GeoCOM";
@@ -111,17 +121,30 @@ public class GeoCOMParser : ITachymeterDatenParser
             ReturnCode = rc
         };
 
-        // ── Fehler-Antwort ────────────────────────────────────────────────────
+        // ── Rückgabecode auswerten ────────────────────────────────────────────
+        // Informative RCs (1283–1288): Daten sind vorhanden, aber nicht vollständig
+        // korrigiert → weiter parsen, Hinweis in Bemerkung.
+        // Echte Fehler: Messung sofort als Fehler markieren.
         if (rc != 0)
         {
-            m.Typ      = MessungsTyp.Fehler;
-            m.Bemerkung = $"GRC={rc}  {GeoCOMReturnCodeText(rc)}";
-            return m;
+            if (_informativeRcs.Contains(rc))
+            {
+                // Warnung, aber Daten weiter parsen
+                m.Bemerkung = $"[Hinweis GRC={rc}: {GeoCOMReturnCodeText(rc)}]";
+            }
+            else
+            {
+                m.Typ       = MessungsTyp.Fehler;
+                m.Bemerkung = $"GRC={rc}  {GeoCOMReturnCodeText(rc)}";
+                return m;
+            }
         }
 
-        // ── Erfolgreiche Antwort: Daten interpretieren ────────────────────────
+        // ── Erfolgreiche oder informative Antwort: Daten interpretieren ───────
         return rpcKontext switch
         {
+            RPC_TMC_GetAngle1    => ParseWinkelVoll(m, daten),
+            RPC_TMC_GetAtmCorr   => ParseAtmKorrektur(m, daten),
             RPC_TMC_GetAngle     => ParseWinkel(m, daten),
             RPC_TMC_GetSimpleMea => ParseVollmessung(m, daten),
             RPC_TMC_GetFullMeas  => ParseVollmessungErweitert(m, daten),
@@ -129,15 +152,70 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_COM_GetSWBaud    => ParseBaudrate(m, daten),
 
             // Bestätigungen ohne Nutzdaten / Einzel-Wert-Antworten
-            RPC_COM_NullProc      or
-            RPC_TMC_DoMeasure     or
-            RPC_TMC_SetEdmMode    or
-            RPC_COM_SetSWBaud     or
-            RPC_EDM_Laserpointer  => ParseStatus(m, daten, rpcKontext),
+            RPC_COM_NullProc       or
+            RPC_TMC_DoMeasure      or
+            RPC_TMC_SetEdmMode     or
+            RPC_TMC_SetAtmCorr     or
+            RPC_BAP_SetTargetType  or
+            RPC_COM_SetSWBaud      or
+            RPC_EDM_Laserpointer   => ParseStatus(m, daten, rpcKontext),
 
             // Kein Kontext: aus Datenanzahl schließen
             _ => InferiereTyp(m, daten)
         };
+    }
+
+    // ── Atmosphärische Korrektur (TMC_GetAtmCorr, RPC 2029) ──────────────────
+    // Antwort: RC, Lambda[double], Pressure[double], DryTemperature[double], WetTemperature[double]
+    // PPM-Formel (Barrel & Sears, Leica-Variante):
+    //   PPM = 281.8 − (79.661 × P) / (273.15 + T_trocken)
+    //   Für PPM=0 bei T=15°C: P_ref = 281.8 × 288.15 / 79.661 ≈ 1019.4 mbar
+    private static TachymeterMessung ParseAtmKorrektur(TachymeterMessung m, string[] d)
+    {
+        m.Typ = MessungsTyp.AtmKorrektur;
+        if (d.Length >= 1 && TryParseDouble(d[0], out double lambda))
+            m.Atm_Lambda_m     = lambda;
+        if (d.Length >= 2 && TryParseDouble(d[1], out double druck))
+            m.Atm_Druck_mbar   = druck;
+        if (d.Length >= 3 && TryParseDouble(d[2], out double tTrock))
+            m.Atm_TempTrock_C  = tTrock;
+        if (d.Length >= 4 && TryParseDouble(d[3], out double tFeucht))
+            m.Atm_TempFeucht_C = tFeucht;
+
+        // PPM berechnen wenn Druck und Temperatur vorhanden
+        if (m.Atm_Druck_mbar.HasValue && m.Atm_TempTrock_C.HasValue)
+        {
+            double ppm = 281.8 - 79.661 * m.Atm_Druck_mbar.Value
+                         / (273.15 + m.Atm_TempTrock_C.Value);
+            m.Atm_PPM = Math.Round(ppm, 2);
+        }
+
+        m.Bemerkung = m.Atm_PPM.HasValue
+            ? $"PPM={m.Atm_PPM.Value:+0.00;-0.00;+0.00}  " +
+              $"P={m.Atm_Druck_mbar:F1} mbar  " +
+              $"T={m.Atm_TempTrock_C:F1}°C"
+            : "AtmCorr gelesen (unvollständige Daten)";
+        return m;
+    }
+
+    // ── Winkel vollständig mit Kompensator (TMC_GetAngle1, RPC 2003) ──────────
+    // Antwort: RC, Hz, V, AngleAccuracy, AngleTime, CrossIncline, LengthIncline,
+    //          AccuracyIncline, InclineTime, FaceDef
+    private static TachymeterMessung ParseWinkelVoll(TachymeterMessung m, string[] d)
+    {
+        m.Typ = MessungsTyp.Winkel;
+        if (d.Length >= 1 && TryParseDouble(d[0], out double hz))
+            m.Hz_gon = RadNachGon(hz);
+        if (d.Length >= 2 && TryParseDouble(d[1], out double v))
+            m.V_gon  = RadNachGon(v);
+        if (d.Length >= 3 && TryParseDouble(d[2], out double accH))
+            m.WinkelGenauigkeit_cc = accH * (200.0 / Math.PI) * 10000;
+        // d[3] = AngleTime [ms seit Einschalten], überspringen
+        if (d.Length >= 5 && TryParseDouble(d[4], out double cross))
+            m.KreuzNeigung_rad  = cross;
+        if (d.Length >= 6 && TryParseDouble(d[5], out double length))
+            m.LaengsNeigung_rad = length;
+        return m;
     }
 
     // ── Winkel (TMC_GetAngle, RPC 2107) ──────────────────────────────────────
@@ -215,6 +293,8 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_COM_NullProc      => "Ping OK",
             RPC_TMC_DoMeasure     => "Messung gestartet",
             RPC_TMC_SetEdmMode    => "EDM-Modus gesetzt",
+            RPC_TMC_SetAtmCorr    => "Atmosphärische Korrektur (PPM) gesetzt",
+            RPC_BAP_SetTargetType => "Zieltyp (IR/RL) gesetzt",
             RPC_COM_SetSWBaud     => "Baudrate geändert",
             RPC_EDM_Laserpointer  => d.Length > 0 && d[0].Trim() == "1"
                                      ? "Laserpointer EIN" : "Laserpointer AUS",
@@ -306,15 +386,18 @@ public class GeoCOMParser : ITachymeterDatenParser
         25   => "GRC_ABORT – Messung abgebrochen",
         30   => "GRC_NOMEAS – Keine Messung vorhanden",
         35   => "GRC_NOTACCEPTED – Befehl abgelehnt (Funktion nicht verfügbar?)",
-        // TMC-Fehler (1280–1299)
+        // TMC-Fehler/Hinweise (1280–1299) – korrekt laut GeoCOM Reference Manual V1.10
         1280 => "GRC_TMC_NO_MEASUREMENT – Keine Messung gestartet",
         1281 => "GRC_TMC_NOT_STABLE – Instrument nicht stabil",
         1282 => "GRC_TMC_DIST_WAIT – Messung läuft noch, Ergebnis noch nicht bereit",
-        1283 => "GRC_TMC_DIST_PPM – Ungültiger ppm-Wert",
-        1284 => "GRC_TMC_DIST_ERROR – Distanzfehler (kein Reflex / falscher Modus?)",
-        1285 => "GRC_TMC_BUSY – Messmodul beschäftigt (TMC_DoMeasure läuft noch)",
+        1283 => "GRC_TMC_NO_FULL_CORRECTION – Ergebnis nicht vollständig korrigiert (Kompensator/PPM prüfen!)",
+        1284 => "GRC_TMC_ACCURACY_GUARANTEE – Genauigkeit nicht garantiert, Daten vorhanden",
+        1285 => "GRC_TMC_ANGLE_OK – Nur Winkel gültig, keine Distanz",
         1286 => "GRC_TMC_SIGNAL_ERROR – Kein Reflexionssignal empfangen",
-        1288 => "GRC_TMC_NO_FULL_CORRECTION – Keine vollständige Korrektion",
+        1288 => "GRC_TMC_ANGLE_NO_FULL_CORRECTION – Winkel vorhanden, nicht vollständig korrigiert",
+        1291 => "GRC_TMC_DIST_PPM – Falsche EDM/PPM-Einstellungen, keine Distanz",
+        1292 => "GRC_TMC_DIST_ERROR – Distanzfehler (kein Reflex / falscher Modus?)",
+        1293 => "GRC_TMC_BUSY – Messmodul beschäftigt (TMC_DoMeasure läuft noch)",
         508  => "GRC_TMC_NO_FULL_CORRECTION – Keine vollständige Korrektion",
         // EDM-Fehler (ab 1792)
         1792 => "GRC_EDM_BUSYMODE – EDM in parallelem Messmodus",

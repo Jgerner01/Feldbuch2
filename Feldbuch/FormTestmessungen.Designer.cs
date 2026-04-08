@@ -25,6 +25,12 @@ partial class FormTestmessungen
         btnWinkel       = new Button();
         btnLaser        = new Button();
 
+        grpLibelle      = new GroupBox();
+        pnlLibelle      = new DosenlibellControl();
+        lblNeigung      = new Label();
+        lblPPM          = new Label();
+        btnLibelle      = new Button();
+
         SuspendLayout();
 
         var fontNormal = new Font("Segoe UI", 9.5F);
@@ -32,7 +38,7 @@ partial class FormTestmessungen
         var bgColor    = Color.FromArgb(244, 246, 250);
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(560, 558);
+        ClientSize      = new Size(850, 558);
         Text            = "Testmessungen GeoCOM";
         StartPosition   = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -44,7 +50,7 @@ partial class FormTestmessungen
         // ═══ GroupBox: Verbindungsstatus ══════════════════════════════════════
         grpStatus.Text     = "Verbindungsstatus";
         grpStatus.Location = new Point(12, 12);
-        grpStatus.Size     = new Size(534, 52);
+        grpStatus.Size     = new Size(826, 52);
         grpStatus.Font     = fontNormal;
         grpStatus.BackColor = bgColor;
 
@@ -64,12 +70,12 @@ partial class FormTestmessungen
         // ═══ GroupBox: Empfangene Daten ════════════════════════════════════════
         grpDaten.Text     = "Daten auf der COM-Schnittstelle";
         grpDaten.Location = new Point(12, 76);
-        grpDaten.Size     = new Size(534, 330);
+        grpDaten.Size     = new Size(524, 330);
         grpDaten.Font     = fontNormal;
         grpDaten.BackColor = bgColor;
 
         txtDaten.Location    = new Point(10, 22);
-        txtDaten.Size        = new Size(514, 270);
+        txtDaten.Size        = new Size(504, 270);
         txtDaten.ReadOnly    = true;
         txtDaten.Font        = fontMono;
         txtDaten.BackColor   = Color.FromArgb(18, 20, 26);
@@ -102,7 +108,7 @@ partial class FormTestmessungen
 
         btnModus.Text      = "Reflektormessung";
         btnModus.Location  = new Point(224, 422);
-        btnModus.Size      = new Size(322, 48);
+        btnModus.Size      = new Size(312, 48);
         btnModus.Font      = new Font("Segoe UI", 10F);
         btnModus.BackColor = Color.FromArgb(38, 110, 72);
         btnModus.ForeColor = Color.White;
@@ -111,10 +117,10 @@ partial class FormTestmessungen
         btnModus.Cursor    = Cursors.Hand;
         btnModus.Click    += btnModus_Click;
 
-        // ═══ Button: Winkel-Dauerübertragung (halbe Breite) ═══════════════════
+        // ═══ Button: Winkel-Dauerübertragung ══════════════════════════════════
         btnWinkel.Text      = "Winkel-Dauerübertragung starten";
         btnWinkel.Location  = new Point(12, 478);
-        btnWinkel.Size      = new Size(260, 40);
+        btnWinkel.Size      = new Size(254, 40);
         btnWinkel.Font      = new Font("Segoe UI", 9.5F);
         btnWinkel.BackColor = Color.FromArgb(80, 50, 130);
         btnWinkel.ForeColor = Color.White;
@@ -125,8 +131,8 @@ partial class FormTestmessungen
 
         // ═══ Button: Laserpointer ══════════════════════════════════════════════
         btnLaser.Text      = "Laserpointer  EIN";
-        btnLaser.Location  = new Point(280, 478);
-        btnLaser.Size      = new Size(266, 40);
+        btnLaser.Location  = new Point(278, 478);
+        btnLaser.Size      = new Size(258, 40);
         btnLaser.Font      = new Font("Segoe UI", 9.5F);
         btnLaser.BackColor = Color.FromArgb(75, 60, 60);
         btnLaser.ForeColor = Color.White;
@@ -135,19 +141,68 @@ partial class FormTestmessungen
         btnLaser.Cursor    = Cursors.Hand;
         btnLaser.Click    += btnLaser_Click;
 
-        Controls.AddRange([grpStatus, grpDaten, btnMessung, btnModus, btnWinkel, btnLaser]);
+        // ═══ GroupBox: Dosenlibelle ════════════════════════════════════════════
+        grpLibelle.Text      = "Dosenlibelle  (Kompensator)";
+        grpLibelle.Location  = new Point(548, 76);
+        grpLibelle.Size      = new Size(290, 330);
+        grpLibelle.Font      = fontNormal;
+        grpLibelle.BackColor = bgColor;
+
+        // Libellen-Panel (Zeichenfläche)
+        pnlLibelle.Location = new Point(35, 18);
+        pnlLibelle.Size     = new Size(220, 220);
+        pnlLibelle.Cursor   = Cursors.Default;
+
+        // Neigungsanzeige (Textwerte)
+        lblNeigung.Location  = new Point(6, 244);
+        lblNeigung.Size      = new Size(278, 38);
+        lblNeigung.Font      = new Font("Consolas", 8.5F);
+        lblNeigung.ForeColor = Color.FromArgb(130, 160, 200);
+        lblNeigung.Text      = "Quer:    –\r\nLängs:   –";
+        lblNeigung.TextAlign = ContentAlignment.MiddleLeft;
+
+        // PPM-Anzeige
+        lblPPM.Location  = new Point(6, 285);
+        lblPPM.Size      = new Size(278, 36);
+        lblPPM.Font      = new Font("Consolas", 8.5F);
+        lblPPM.ForeColor = Color.FromArgb(200, 160, 80);
+        lblPPM.Text      = "PPM: –";
+        lblPPM.TextAlign = ContentAlignment.MiddleLeft;
+
+        grpLibelle.Controls.AddRange([pnlLibelle, lblNeigung, lblPPM]);
+
+        // ═══ Button: Libelle Live ══════════════════════════════════════════════
+        btnLibelle.Text      = "Libelle Live  starten";
+        btnLibelle.Location  = new Point(548, 418);
+        btnLibelle.Size      = new Size(290, 100);
+        btnLibelle.Font      = new Font("Segoe UI", 10.5F, FontStyle.Bold);
+        btnLibelle.BackColor = Color.FromArgb(50, 90, 70);
+        btnLibelle.ForeColor = Color.White;
+        btnLibelle.FlatStyle = FlatStyle.Flat;
+        btnLibelle.FlatAppearance.BorderColor = Color.FromArgb(35, 70, 52);
+        btnLibelle.Cursor    = Cursors.Hand;
+        btnLibelle.Click    += btnLibelle_Click;
+
+        Controls.AddRange([grpStatus, grpDaten,
+                           btnMessung, btnModus, btnWinkel, btnLaser,
+                           grpLibelle, btnLibelle]);
 
         ResumeLayout(false);
     }
 
-    private GroupBox    grpStatus;
-    private Label       lblStatusDot;
-    private Label       lblStatusText;
-    private GroupBox    grpDaten;
-    private RichTextBox txtDaten;
-    private Button      btnClear;
-    private Button      btnMessung;
-    private Button      btnModus;
-    private Button      btnWinkel;
-    private Button      btnLaser;
+    private GroupBox           grpStatus;
+    private Label              lblStatusDot;
+    private Label              lblStatusText;
+    private GroupBox           grpDaten;
+    private RichTextBox        txtDaten;
+    private Button             btnClear;
+    private Button             btnMessung;
+    private Button             btnModus;
+    private Button             btnWinkel;
+    private Button             btnLaser;
+    private GroupBox           grpLibelle;
+    private DosenlibellControl pnlLibelle;
+    private Label              lblNeigung;
+    private Label              lblPPM;
+    private Button             btnLibelle;
 }
