@@ -36,9 +36,25 @@ public class DxfCanvas : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool DxfVisible { get; set; } = true;
 
-    // Feldbuchpunkte-Overlay (Standpunkte, Neupunkte)
+    // Feldbuchpunkte-Overlay (Standpunkte, Neupunkte aus Feldbuchpunkte.json)
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public List<DxfEntity> OverlayEntities { get; set; } = new();
+
+    // Gemessene Neupunkte (aus NeupunkteManager – separat schaltbar)
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<DxfEntity> NeupunkteEntities { get; set; } = new();
+
+    // Residual-Marker für Anschlusspunkte (nach Stationierungsberechnung)
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<DxfEntity> ResidualEntities { get; set; } = new();
+
+    // Neupunkte sichtbar / unsichtbar
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool NeupunkteVisible { get; set; } = true;
+
+    // Residual-Marker sichtbar / unsichtbar
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ResidualVisible { get; set; } = true;
 
     // Import-Layer (KOR / CSV / JSON – je Datei ein Layer mit Sichtbarkeits-Flag)
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -168,10 +184,9 @@ public class DxfCanvas : Panel
 
     public void FitToView()
     {
-        // Bei ausgeblendetem DXF: nur Overlay; sonst beides
         IEnumerable<DxfEntity> src = DxfVisible
-            ? Entities.Concat(OverlayEntities).Concat(SichtbareImports())
-            : OverlayEntities.Concat(SichtbareImports());
+            ? Entities.Concat(OverlayEntities).Concat(SichtbareImports()).Concat(NeupunkteEntities)
+            : OverlayEntities.Concat(SichtbareImports()).Concat(NeupunkteEntities);
         if (!src.Any()) return;
         BoundingBox? bb = null;
         foreach (var e in src)
@@ -204,6 +219,14 @@ public class DxfCanvas : Panel
         {
             double d = e.DistanceTo(wx, wy);
             if (d < bestD) { bestD = d; best = e; }
+        }
+        if (NeupunkteVisible)
+        {
+            foreach (var e in NeupunkteEntities)
+            {
+                double d = e.DistanceTo(wx, wy);
+                if (d < bestD) { bestD = d; best = e; }
+            }
         }
         foreach (var e in SichtbareImports())
         {
@@ -398,7 +421,8 @@ public class DxfCanvas : Panel
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-        bool hatDaten = (DxfVisible && Entities.Count > 0) || OverlayEntities.Count > 0 || ImportLayers.Count > 0;
+        bool hatDaten = (DxfVisible && Entities.Count > 0) || OverlayEntities.Count > 0
+                     || ImportLayers.Count > 0 || NeupunkteEntities.Count > 0;
         if (!hatDaten)
         {
             using var f = new Font("Segoe UI", 14);
@@ -458,13 +482,35 @@ public class DxfCanvas : Panel
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawImport: {ex.Message}"); }
         }
 
-        // Feldbuch-Overlay (Standpunkte, Neupunkte) – immer ganz vorne
+        // Feldbuch-Overlay (Standpunkte, Neupunkte aus JSON) – immer ganz vorne
         foreach (var entity in OverlayEntities)
         {
             bool isSel = entity == Selected;
             Pen  pen   = isSel ? selPen : defPen;
             try { entity.Draw(g, pen, ToScreen, Scale); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawOverlay: {ex.Message}"); }
+        }
+
+        // Gemessene Neupunkte (blau, schaltbar)
+        if (NeupunkteVisible)
+        {
+            foreach (var entity in NeupunkteEntities)
+            {
+                bool isSel = entity == Selected;
+                Pen  pen   = isSel ? selPen : defPen;
+                try { entity.Draw(g, pen, ToScreen, Scale); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawNeupunkte: {ex.Message}"); }
+            }
+        }
+
+        // Residual-Marker
+        if (ResidualVisible)
+        {
+            foreach (var entity in ResidualEntities)
+            {
+                try { entity.Draw(g, defPen, ToScreen, Scale); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawResidual: {ex.Message}"); }
+            }
         }
 
         // Fadenkreuz

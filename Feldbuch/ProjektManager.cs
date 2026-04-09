@@ -31,6 +31,20 @@ public static class ProjektManager
     /// <summary>Erweiterte Protokollierung (Eingabedaten, Rohmessungen) (Platzhalter).</summary>
     public static bool ErweiterteProtokollierung { get; set; } = false;
 
+    // ── Neupunkt-/Messzähler & DXF-Viewer-Optionen ───────────────────────────
+    /// <summary>Aktueller Neupunkt-Zähler (auto-increment im DXF-Viewer).</summary>
+    public static int    NeupunktZaehler       { get; set; } = 1;
+    /// <summary>Aktueller Stationierungs-Zähler für auto-generierte Standpunktnummern.</summary>
+    public static int    StationierungZaehler  { get; set; } = 1;
+    /// <summary>Instrumentenhöhe [m] (wird im DXF-Viewer gesetzt).</summary>
+    public static double InstrumentenHoehe     { get; set; } = 0.0;
+    /// <summary>Neupunkte-Overlay im DXF-Viewer eingeblendet.</summary>
+    public static bool   NeupunkteVisible      { get; set; } = true;
+    /// <summary>Residual-Marker im DXF-Viewer eingeblendet.</summary>
+    public static bool   ResidualVisible       { get; set; } = true;
+    /// <summary>Letzte aktive Standpunktnummer im DXF-Viewer.</summary>
+    public static string LetzteStandpunktNr   { get; set; } = "";
+
     // ── Tachymeter-Verbindungseinstellungen ──────────────────────────────────
     public static TachymeterModell TachymeterModell   { get; set; } = TachymeterModell.Manuell;
     public static string           TachymeterPort     { get; set; } = "";
@@ -115,6 +129,17 @@ public static class ProjektManager
             TonBeiBerechnung          = LadeBool(root, "TonBeiBerechnung",         defaultVal: false);
             ErweiterteProtokollierung = LadeBool(root, "ErweiterteProtokollierung",defaultVal: false);
 
+            // Messzähler & Viewer-Optionen
+            if (int.TryParse(root.SelectSingleNode("NeupunktZaehler")?.InnerText,    out var npz)) NeupunktZaehler      = npz;
+            if (int.TryParse(root.SelectSingleNode("StationierungZaehler")?.InnerText, out var spz)) StationierungZaehler = spz;
+            double.TryParse(root.SelectSingleNode("InstrumentenHoehe")?.InnerText,
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var ih);
+            InstrumentenHoehe  = ih;
+            NeupunkteVisible   = LadeBool(root, "NeupunkteVisible",  defaultVal: true);
+            ResidualVisible    = LadeBool(root, "ResidualVisible",   defaultVal: true);
+            LetzteStandpunktNr = root.SelectSingleNode("LetzteStandpunktNr")?.InnerText?.Trim() ?? "";
+
             // Tachymeter
             var tachModellText = root.SelectSingleNode("TachymeterModell")?.InnerText?.Trim() ?? "";
             if (Enum.TryParse<TachymeterModell>(tachModellText, out var tm))
@@ -162,6 +187,12 @@ public static class ProjektManager
             Append(doc, root, "KoordinatenTooltip",         KoordinatenTooltip.ToString().ToLower());
             Append(doc, root, "TonBeiBerechnung",           TonBeiBerechnung.ToString().ToLower());
             Append(doc, root, "ErweiterteProtokollierung",  ErweiterteProtokollierung.ToString().ToLower());
+            Append(doc, root, "NeupunktZaehler",      NeupunktZaehler.ToString());
+            Append(doc, root, "StationierungZaehler", StationierungZaehler.ToString());
+            Append(doc, root, "InstrumentenHoehe",    InstrumentenHoehe.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+            Append(doc, root, "NeupunkteVisible",     NeupunkteVisible.ToString().ToLower());
+            Append(doc, root, "ResidualVisible",      ResidualVisible.ToString().ToLower());
+            Append(doc, root, "LetzteStandpunktNr",  LetzteStandpunktNr);
             Append(doc, root, "TachymeterModell",   TachymeterModell.ToString());
             Append(doc, root, "TachymeterPort",     TachymeterPort);
             Append(doc, root, "TachymeterBaudRate", TachymeterBaudRate.ToString());

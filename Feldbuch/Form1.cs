@@ -17,6 +17,13 @@ public partial class Form1 : Form
         FeldbuchpunkteManager.Initialize(
             ProjektManager.GetPfad("Feldbuchpunkte.json"));
 
+        // Neupunkte laden (gemessene Neupunkte mit Koordinaten)
+        NeupunkteManager.Initialize(
+            ProjektManager.GetPfad(ProjektManager.ProjektName + "-Neupunkte.json"));
+
+        // Stationsdaten des letzten Standpunktes laden
+        StationsdatenManager.LadeAktuellenStandpunkt();
+
         // Rechenparameter bleiben global (Geräteeinstellungen)
         RechenparameterManager.Initialize(
             AppPfade.Get("Freie-Stationierung.xml"));
@@ -113,6 +120,9 @@ public partial class Form1 : Form
             ProjektManager.GetPfad("Projektdaten.csv"));
         FeldbuchpunkteManager.Initialize(
             ProjektManager.GetPfad("Feldbuchpunkte.json"));
+        NeupunkteManager.Initialize(
+            ProjektManager.GetPfad(ProjektManager.ProjektName + "-Neupunkte.json"));
+        StationsdatenManager.LadeAktuellenStandpunkt();
 
         ProtokollManager.Log("PROJEKT", $"Projekt gewechselt: {ProjektManager.ProjektName}");
         AktualisiereAnzeige();

@@ -150,7 +150,7 @@ public class OverlayImportPunkt : DxfEntity
     }
 }
 
-// ── Neupunkt ──────────────────────────────────────────────────────────────────
+// ── Neupunkt (aus Feldbuchpunkte.json) ───────────────────────────────────────
 // Symbol: ausgefülltes grünes Dreieck (nach oben zeigend)
 public class OverlayNeupunkt : FeldbuchOverlayEntity
 {
@@ -178,5 +178,142 @@ public class OverlayNeupunkt : FeldbuchOverlayEntity
         g.DrawPolygon(pen,   tri);
 
         DrawLabel(g, c, Punkt.PunktNr, Punkt, Farbe, H * 0.67f);
+    }
+}
+
+// ── Gemessener Neupunkt (aus NeupunkteManager) ───────────────────────────────
+// Symbol: blaues ausgefülltes Quadrat (zoom-invariant)
+// Beschriftung: PunktNr + Code + Höhe (wenn 3D)
+public class OverlayGemessenerNeupunkt : DxfEntity
+{
+    public NeupunktErgebnis Ergebnis { get; }
+    private static readonly Color FarbeSymbol = Color.FromArgb(20,  80, 200);   // Blau
+    private static readonly Color FarbeBeschr = Color.FromArgb(10,  60, 160);   // Dunkelblau
+    const float S = 4f;   // Hälfte der Quadratseite [px]
+
+    public OverlayGemessenerNeupunkt(NeupunktErgebnis e)
+    {
+        Ergebnis = e;
+        Layer    = "Neupunkt";
+    }
+
+    public override BoundingBox GetBounds() =>
+        new(Ergebnis.R - 1, Ergebnis.H - 1, Ergebnis.R + 1, Ergebnis.H + 1);
+
+    public override double DistanceTo(double wx, double wy) =>
+        Math.Sqrt((wx - Ergebnis.R) * (wx - Ergebnis.R) +
+                  (wy - Ergebnis.H) * (wy - Ergebnis.H));
+
+    public override (double x, double y) GetNearestPoint(double wx, double wy) =>
+        (Ergebnis.R, Ergebnis.H);
+
+    public override (double x, double y) GetSnapPoint(double wx, double wy) =>
+        (Ergebnis.R, Ergebnis.H);
+
+    public override string GetInfo()
+    {
+        string basis = $"Neupunkt  {Ergebnis.PunktNr}  " +
+                       $"R={Ergebnis.R:F3}  H={Ergebnis.H:F3}";
+        if (Ergebnis.Ist3D)  basis += $"  Höhe={Ergebnis.Hoehe:F3}";
+        if (!string.IsNullOrEmpty(Ergebnis.Code)) basis += $"  Code={Ergebnis.Code}";
+        basis += $"  SP={Ergebnis.StandpunktNr}";
+        return basis;
+    }
+
+    public override void Draw(Graphics g, Pen _pen,
+        Func<double, double, PointF> ts, double scale)
+    {
+        var c = ts(Ergebnis.R, Ergebnis.H);
+        using var penSym  = new Pen(FarbeSymbol, 1.5f);
+        using var brSym   = new SolidBrush(Color.FromArgb(160, FarbeSymbol));
+        using var brLbl   = new SolidBrush(FarbeBeschr);
+        using var fntNr   = new Font("Arial", 9f,  FontStyle.Bold,    GraphicsUnit.Pixel);
+        using var fntCode = new Font("Arial", 8f,  FontStyle.Regular, GraphicsUnit.Pixel);
+        using var fntH    = new Font("Arial", 7.5f, FontStyle.Regular, GraphicsUnit.Pixel);
+
+        // Quadrat
+        g.FillRectangle(brSym, c.X - S, c.Y - S, S * 2, S * 2);
+        g.DrawRectangle(penSym, c.X - S, c.Y - S, S * 2, S * 2);
+
+        // Mittelpunkt
+        using var brDot = new SolidBrush(FarbeSymbol);
+        g.FillEllipse(brDot, c.X - 1.2f, c.Y - 1.2f, 2.4f, 2.4f);
+
+        // Beschriftung
+        float gap = S + 3f;
+        float y   = c.Y - gap - fntNr.Size - 1;
+
+        g.DrawString(Ergebnis.PunktNr, fntNr, brLbl, c.X + gap * 0.4f, y);
+        y += fntNr.Size + 1f;
+
+        if (!string.IsNullOrEmpty(Ergebnis.Code))
+        {
+            g.DrawString(Ergebnis.Code, fntCode, brLbl, c.X + gap * 0.4f, y);
+            y += fntCode.Size + 1f;
+        }
+
+        if (Ergebnis.Ist3D)
+            g.DrawString($"{Ergebnis.Hoehe:F3}", fntH, brLbl, c.X + gap * 0.4f, c.Y + gap);
+    }
+}
+
+// ── Residual-Marker für Anschlusspunkte ───────────────────────────────────────
+// Zeigt am Anschlusspunkt einen farbigen Kreis, dessen Farbe und Radius
+// proportional zum Residuum ist.  Tooltip zeigt Werte.
+public class OverlayResidualPunkt : DxfEntity
+{
+    public PunktResidum Residuum { get; }
+    public double WX { get; }
+    public double WY { get; }
+
+    private readonly Color _farbe;
+    private readonly float _radius;
+
+    public OverlayResidualPunkt(PunktResidum res, double wx, double wy)
+    {
+        Residuum = res;
+        WX       = wx;
+        WY       = wy;
+        Layer    = "Residual";
+
+        // Farbe nach Gesamtabweichung in mm
+        double vGes = Math.Sqrt(res.vQuer_mm * res.vQuer_mm +
+                                res.vStrecke_mm * res.vStrecke_mm);
+        if      (vGes >  20) { _farbe = Color.FromArgb(220, 20, 20); _radius = 6f; }
+        else if (vGes >   8) { _farbe = Color.FromArgb(220, 140, 0); _radius = 5f; }
+        else if (vGes >   3) { _farbe = Color.FromArgb(180, 200, 0); _radius = 4f; }
+        else                 { _farbe = Color.FromArgb( 40, 180, 50); _radius = 3f; }
+    }
+
+    public override BoundingBox GetBounds() => new(WX - 1, WY - 1, WX + 1, WY + 1);
+    public override double DistanceTo(double wx, double wy) =>
+        Math.Sqrt((wx - WX) * (wx - WX) + (wy - WY) * (wy - WY));
+    public override (double x, double y) GetNearestPoint(double wx, double wy) => (WX, WY);
+    public override (double x, double y) GetSnapPoint  (double wx, double wy) => (WX, WY);
+
+    public override string GetInfo() =>
+        $"Anschlusspunkt {Residuum.PunktNr}  " +
+        $"vQuer={Residuum.vQuer_mm:+0.0;-0.0} mm  " +
+        $"vStr={Residuum.vStrecke_mm:+0.0;-0.0} mm  " +
+        $"D={Residuum.StreckeH:F1} m";
+
+    public override void Draw(Graphics g, Pen _pen,
+        Func<double, double, PointF> ts, double scale)
+    {
+        var c = ts(WX, WY);
+        float r = _radius;
+        using var pen   = new Pen(_farbe, 1.5f);
+        using var brush = new SolidBrush(Color.FromArgb(120, _farbe));
+        using var fnt   = new Font("Arial", 7.5f, FontStyle.Regular, GraphicsUnit.Pixel);
+        using var lbl   = new SolidBrush(_farbe);
+
+        // Äußerer Residual-Ring
+        g.DrawEllipse(pen, c.X - r - 2, c.Y - r - 2, (r + 2) * 2, (r + 2) * 2);
+        g.FillEllipse(brush, c.X - r,   c.Y - r,     r * 2,        r * 2);
+
+        // Kurzinfo (vGes in mm)
+        double vGes = Math.Sqrt(Residuum.vQuer_mm * Residuum.vQuer_mm +
+                                Residuum.vStrecke_mm * Residuum.vStrecke_mm);
+        g.DrawString($"{vGes:F1}", fnt, lbl, c.X + r + 2, c.Y - fnt.Size / 2);
     }
 }
