@@ -21,6 +21,10 @@
 - **Zielrahmen:** `net10.0-windows`
 - **Abhängigkeiten:** `System.IO.Ports`, `System.Management`
 
+## Version
+
+Aktuelle Version: **v1.7.3**
+
 ## Autor
 
 Johann Gerner – © 2026
