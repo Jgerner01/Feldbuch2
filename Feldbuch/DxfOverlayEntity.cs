@@ -94,6 +94,57 @@ public class OverlayStandpunkt : FeldbuchOverlayEntity
     }
 }
 
+// ── DXF-Punkt-Marker (Beschriftung für DXF-Koordinaten) ──────────────────────
+// Zeigt die fortlaufende Punktnummer aus dem DxfPunktIndex als Beschriftung
+// über den原有的 DXF-Symbolen (Insert, Circle, Line, Point).
+// Symbol: kleiner orangefarbener Kreis + Nummer in Grün (analog OverlayImportPunkt).
+public class DxfPunktMarker : DxfEntity
+{
+    public string PunktNr { get; }
+    public double WX { get; }
+    public double WY { get; }
+
+    private static readonly Color FarbeSymbol = Color.FromArgb(200, 140, 30);    // Orange
+    private static readonly Color FarbeBeschr = Color.FromArgb(0,   160, 60);    // Grün
+    const float R = 2.5f;   // Radius [px]
+    const float FontSize = 12f;  // Schriftgröße [px] – 50% größer als Standard (8pt)
+
+    public DxfPunktMarker(string punktNr, double wx, double wy)
+    {
+        PunktNr = punktNr;
+        WX = wx;
+        WY = wy;
+        Layer = "DXF-Punkte";
+    }
+
+    public override BoundingBox GetBounds() => new(WX - 0.5, WY - 0.5, WX + 0.5, WY + 0.5);
+    public override double DistanceTo(double wx, double wy) =>
+        Math.Sqrt((wx - WX) * (wx - WX) + (wy - WY) * (wy - WY));
+    public override (double x, double y) GetNearestPoint(double wx, double wy) => (WX, WY);
+    public override (double x, double y) GetSnapPoint(double wx, double wy) => (WX, WY);
+    public override string GetInfo() =>
+        $"DXF-Punkt {PunktNr}  R={WX:F3}  H={WY:F3}";
+
+    public override void Draw(Graphics g, Pen _pen,
+        Func<double, double, PointF> ts, double scale)
+    {
+        var c = ts(WX, WY);
+        using var penSym   = new Pen(FarbeSymbol, 1f);
+        using var brushSym = new SolidBrush(FarbeSymbol);
+        using var brushLbl = new SolidBrush(FarbeBeschr);
+        using var fntNr    = new Font("Arial", FontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+
+        // Kleiner Kreis
+        g.DrawEllipse(penSym, c.X - R, c.Y - R, R * 2, R * 2);
+        g.FillEllipse(brushSym, c.X - 1f, c.Y - 1f, 2f, 2f);
+
+        // Punktnummer rechts-oben (wie OverlayImportPunkt)
+        float gap = R + 2f;
+        g.DrawString(PunktNr, fntNr, brushLbl,
+            c.X + gap * 0.4f, c.Y - gap - FontSize);
+    }
+}
+
 // ── Import-Punkt ──────────────────────────────────────────────────────────────
 // Symbol: roter Kreis (etwas kleiner als Standpunkt), Beschriftung grün.
 // Wird für KOR/CSV/JSON-Import verwendet.

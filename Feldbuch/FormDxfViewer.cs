@@ -150,6 +150,37 @@ public partial class FormDxfViewer : Form
         flpLayers.Controls.Add(_chkResidual);
     }
 
+    // ── DXF-Punkt-Marker Checkbox ─────────────────────────────────────────────
+    private CheckBox? _chkPunktMarker;
+
+    private void BauePunktMarkerCheckbox()
+    {
+        // Bestehende Checkbox entfernen falls vorhanden
+        if (_chkPunktMarker != null) flpLayers.Controls.Remove(_chkPunktMarker);
+
+        _chkPunktMarker = new CheckBox
+        {
+            Text      = "DXF-Punkte",
+            Checked   = canvas.PunktMarkerVisible,
+            AutoSize  = true,
+            Font      = new Font("Segoe UI", 8.5F),
+            ForeColor = Color.FromArgb(30, 30, 30),
+            Margin    = new Padding(6, 3, 0, 0),
+            Cursor    = Cursors.Hand
+        };
+        _chkPunktMarker.CheckedChanged += (s, e) =>
+        {
+            canvas.PunktMarkerVisible = _chkPunktMarker.Checked;
+            canvas.Invalidate();
+        };
+        new ToolTip().SetToolTip(_chkPunktMarker, "DXF-Punktnummern ein-/ausblenden");
+
+        // Vor Neupunkte/Residual einfügen
+        int idx = flpLayers.Controls.IndexOf(_chkNeupunkte);
+        if (idx >= 0) flpLayers.Controls.SetChildIndex(_chkPunktMarker, idx);
+        else flpLayers.Controls.Add(_chkPunktMarker);
+    }
+
     // ── Signallampe ───────────────────────────────────────────────────────────
     // Farbe und Tooltip werden aus dem aktuellen Stationierungsergebnis abgeleitet.
     private Color _signalFarbe = Color.Black;
@@ -830,6 +861,77 @@ public partial class FormDxfViewer : Form
         {
             Cursor = Cursors.WaitCursor;
             canvas.Entities = DxfReader.Read(pfad);
+
+            // Bestehenden persistenten Punkt-Index laden (falls vorhanden)
+            string indexPfad = PunktIndexPfad();
+            var bestehend = DxfPunktIndexManager.Laden(indexPfad);
+            bool istNeuLadung = bestehend != null;
+
+            // Punkt-Index aufbauen mit Merge-Logik (bestehende Nummern übernehmen)
+            canvas.PunktIndex = DxfPunktIndexManager.AufbauenMitMerge(
+                canvas.Entities, bestehend);
+
+            // Persistenter Index speichern
+            DxfPunktIndexManager.Speichern(canvas.PunktIndex._eintraege, indexPfad);
+
+            // Punkt-Marker erstellen (für jede eindeutige Koordinate eine Beschriftung)
+            canvas.PunktMarker.Clear();
+            foreach (var e in canvas.Entities)
+            {
+                switch (e)
+                {
+                    case DxfInsert ins:
+                    {
+                        var nr = canvas.PunktIndex.GetPunktNr(ins.X, ins.Y);
+                        if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, ins.X, ins.Y));
+                        break;
+                    }
+                    case DxfPoint pt:
+                    {
+                        var nr = canvas.PunktIndex.GetPunktNr(pt.X, pt.Y);
+                        if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, pt.X, pt.Y));
+                        break;
+                    }
+                    case DxfCircle circ:
+                    {
+                        var nr = canvas.PunktIndex.GetPunktNr(circ.CX, circ.CY);
+                        if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, circ.CX, circ.CY));
+                        break;
+                    }
+                    case DxfLine line:
+                    {
+                        var nr1 = canvas.PunktIndex.GetPunktNr(line.X1, line.Y1);
+                        var nr2 = canvas.PunktIndex.GetPunktNr(line.X2, line.Y2);
+                        if (nr1 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr1, line.X1, line.Y1));
+                        if (nr2 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr2, line.X2, line.Y2));
+                        break;
+                    }
+                    case DxfLwPolyline poly:
+                    {
+                        foreach (var v in poly.Vertices)
+                        {
+                            var nr = canvas.PunktIndex.GetPunktNr(v.x, v.y);
+                            if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, v.x, v.y));
+                        }
+                        break;
+                    }
+                    case DxfArc arc:
+                    {
+                        double sr = arc.StartAngle * Math.PI / 180.0;
+                        double er = arc.EndAngle * Math.PI / 180.0;
+                        double sx = arc.CX + arc.Radius * Math.Cos(sr);
+                        double sy = arc.CY + arc.Radius * Math.Sin(sr);
+                        double ex = arc.CX + arc.Radius * Math.Cos(er);
+                        double ey = arc.CY + arc.Radius * Math.Sin(er);
+                        var nr1 = canvas.PunktIndex.GetPunktNr(sx, sy);
+                        var nr2 = canvas.PunktIndex.GetPunktNr(ex, ey);
+                        if (nr1 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr1, sx, sy));
+                        if (nr2 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr2, ex, ey));
+                        break;
+                    }
+                }
+            }
+
             var zoom = ProjektManager.LadeZoom(pfad);
             if (zoom.HasValue)
             {
@@ -842,8 +944,17 @@ public partial class FormDxfViewer : Form
 
             _aktuellerDxfPfad = pfad;
             string name       = Path.GetFileName(pfad);
-            lblStatus.Text    = $"Geladen: {name}  |  {canvas.Entities.Count} Objekte";
+            int neuPunkte = canvas.PunktIndex.Anzahl - (bestehend?.Count ?? 0);
+            lblStatus.Text    = $"Geladen: {name}  |  {canvas.Entities.Count} Objekte, " +
+                                $"{canvas.PunktIndex.Anzahl} Punkte" +
+                                (istNeuLadung && neuPunkte > 0
+                                    ? $"  ({neuPunkte} neu, {canvas.PunktIndex.Anzahl - neuPunkte} übernommen)"
+                                    : istNeuLadung ? "  (Nummern übernommen)"
+                                    : "");
             Text              = $"DXF-Viewer – {name}";
+
+            // Checkbox für Punkt-Marker Sichtbarkeit
+            BauePunktMarkerCheckbox();
         }
         catch (Exception ex)
         {
@@ -965,7 +1076,31 @@ public partial class FormDxfViewer : Form
             GepickterPunkt = (x, y);
             lblStatus.Text = $"R: {x:F3}   H: {y:F3}{snapHinweis}   |   {entity.GetInfo()}";
 
-            using var dlg = new FormMessdatenEingabe(x, y);
+            // Punktnummer und Höhe aus der geklickten Entity extrahieren
+            string punktNr = entity switch
+            {
+                OverlayImportPunkt         imp => imp.PunktNr,
+                FeldbuchOverlayEntity      fb  => fb.Punkt.PunktNr,
+                OverlayGemessenerNeupunkt  np  => np.Ergebnis.PunktNr,
+                DxfPunktMarker             m   => m.PunktNr,
+                DxfInsert                  ins => canvas.PunktIndex?.GetPunktNr(ins.X, ins.Y),
+                DxfPoint                   pt  => canvas.PunktIndex?.GetPunktNr(pt.X, pt.Y),
+                DxfCircle                  circ => canvas.PunktIndex?.GetPunktNr(circ.CX, circ.CY),
+                DxfLine                    line => canvas.PunktIndex?.GetPunktNr(line.X1, line.Y1),
+                _                              => ""
+            } ?? "";
+            double hoehe = entity switch
+            {
+                OverlayImportPunkt        imp => imp.Hoehe,
+                FeldbuchOverlayEntity     fb  => fb.Punkt.Hoehe,
+                _                             => 0.0
+            };
+
+            // Punktnummer ins Eingabefeld übernehmen
+            if (!string.IsNullOrEmpty(punktNr))
+                txtPunktNr.Text = punktNr;
+
+            using var dlg = new FormMessdatenEingabe(x, y, punktNr, hoehe);
             if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Ergebnis != null)
             {
                 SchreibeAnschlusspunkt(dlg.Ergebnis);
@@ -1023,6 +1158,14 @@ public partial class FormDxfViewer : Form
         lblStatus.Text = canvas.DeleteModeActive
             ? "Lösch-Modus: Fenster aufziehen  |  Erneut klicken zum Abbrechen"
             : "Lösch-Modus beendet.";
+    }
+
+    // ── Punkt-Index zurücksetzen ──────────────────────────────────────────────
+    private void btnPunktIndexReset_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new FormPunktIndexReset();
+        if (dlg.ShowDialog(this) == DialogResult.OK)
+            PunktIndexZuruecksetzen();
     }
 
     private void UpdateLoeschenButton()
@@ -1104,5 +1247,91 @@ public partial class FormDxfViewer : Form
         UpdateLoeschenButton();
         lblStatus.Text = $"{gesamt} Punkt(e) gelöscht (FB:{gelFeldbuch} NP:{gelNeu} Imp:{gelImport}).";
         ProtokollManager.Log("LÖSCH", $"{gesamt} Punkte gelöscht");
+    }
+
+    // ── Persistenter Punkt-Index Pfad ─────────────────────────────────────────
+    private string PunktIndexPfad()
+    {
+        string projektName = ProjektManager.ProjektName ?? "OhneProjekt";
+        return ProjektManager.GetPfad($"{projektName}-PunktIndex.json");
+    }
+
+    // ── Punkt-Index zurücksetzen ──────────────────────────────────────────────
+    public void PunktIndexZuruecksetzen()
+    {
+        string indexPfad = PunktIndexPfad();
+        DxfPunktIndexManager.Loeschen(indexPfad);
+
+        if (!string.IsNullOrEmpty(_aktuellerDxfPfad) && canvas.Entities.Count > 0)
+        {
+            // Neu aufbauen ohne bestehende Einträge
+            canvas.PunktIndex = DxfPunktIndex.Aufbauen(canvas.Entities);
+            DxfPunktIndexManager.Speichern(canvas.PunktIndex._eintraege, indexPfad);
+
+            // Marker neu erstellen
+            canvas.PunktMarker.Clear();
+            foreach (var e in canvas.Entities)
+            {
+                switch (e)
+                {
+                    case DxfInsert ins:
+                    {
+                        var nr = canvas.PunktIndex.GetPunktNr(ins.X, ins.Y);
+                        if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, ins.X, ins.Y));
+                        break;
+                    }
+                    case DxfPoint pt:
+                    {
+                        var nr = canvas.PunktIndex.GetPunktNr(pt.X, pt.Y);
+                        if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, pt.X, pt.Y));
+                        break;
+                    }
+                    case DxfCircle circ:
+                    {
+                        var nr = canvas.PunktIndex.GetPunktNr(circ.CX, circ.CY);
+                        if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, circ.CX, circ.CY));
+                        break;
+                    }
+                    case DxfLine line:
+                    {
+                        var nr1 = canvas.PunktIndex.GetPunktNr(line.X1, line.Y1);
+                        var nr2 = canvas.PunktIndex.GetPunktNr(line.X2, line.Y2);
+                        if (nr1 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr1, line.X1, line.Y1));
+                        if (nr2 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr2, line.X2, line.Y2));
+                        break;
+                    }
+                    case DxfLwPolyline poly:
+                    {
+                        foreach (var v in poly.Vertices)
+                        {
+                            var nr = canvas.PunktIndex.GetPunktNr(v.x, v.y);
+                            if (nr != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr, v.x, v.y));
+                        }
+                        break;
+                    }
+                    case DxfArc arc:
+                    {
+                        double sr = arc.StartAngle * Math.PI / 180.0;
+                        double er = arc.EndAngle * Math.PI / 180.0;
+                        double sx = arc.CX + arc.Radius * Math.Cos(sr);
+                        double sy = arc.CY + arc.Radius * Math.Sin(sr);
+                        double ex = arc.CX + arc.Radius * Math.Cos(er);
+                        double ey = arc.CY + arc.Radius * Math.Sin(er);
+                        var nr1 = canvas.PunktIndex.GetPunktNr(sx, sy);
+                        var nr2 = canvas.PunktIndex.GetPunktNr(ex, ey);
+                        if (nr1 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr1, sx, sy));
+                        if (nr2 != null) canvas.PunktMarker.Add(new DxfPunktMarker(nr2, ex, ey));
+                        break;
+                    }
+                }
+            }
+
+            canvas.Invalidate();
+            lblStatus.Text = $"Punkt-Index zurückgesetzt: {canvas.PunktIndex.Anzahl} Punkte neu nummeriert.";
+        }
+        else
+        {
+            lblStatus.Text = "Keine DXF-Datei geladen – Punkt-Index gelöscht.";
+        }
     }
 }

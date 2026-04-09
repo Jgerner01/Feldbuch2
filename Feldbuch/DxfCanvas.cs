@@ -64,6 +64,18 @@ public class DxfCanvas : Panel
     IEnumerable<DxfEntity> SichtbareImports()
         => ImportLayers.Where(l => l.Visible).SelectMany(l => l.Entities);
 
+    // DXF-Punkt-Index (fortlaufende Nummern für DXF-Koordinaten, dedupliziert)
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public DxfPunktIndex? PunktIndex { get; set; }
+
+    // DXF-Punkt-Marker (Beschriftungen mit Punktnummern)
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<DxfPunktMarker> PunktMarker { get; set; } = new();
+
+    // Sichtbarkeit der DXF-Punkt-Marker
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool PunktMarkerVisible { get; set; } = true;
+
     public event Action<double, double, DxfEntity?>?           PointPicked;
     public event Action<double, double, double, double>?       RectangleSelected;
 
@@ -244,6 +256,18 @@ public class DxfCanvas : Panel
                 if (d < bestD) { bestD = d; best = e; }
             }
         }
+
+        // Punkt-Marker (Punktnummern-Beschriftungen) – Vorrang beim Picking
+        if (PunktMarkerVisible && PunktMarker.Count > 0)
+        {
+            double markerThresh = 20.0 / Scale;
+            foreach (var m in PunktMarker)
+            {
+                double d = m.DistanceTo(wx, wy);
+                if (d < markerThresh) return m;
+            }
+        }
+
         return best;
     }
 
@@ -510,6 +534,16 @@ public class DxfCanvas : Panel
             {
                 try { entity.Draw(g, defPen, ToScreen, Scale); }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawResidual: {ex.Message}"); }
+            }
+        }
+
+        // DXF-Punkt-Marker (Punktnummern aus DxfPunktIndex)
+        if (PunktMarkerVisible && PunktMarker.Count > 0)
+        {
+            foreach (var m in PunktMarker)
+            {
+                try { m.Draw(g, defPen, ToScreen, Scale); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawPunktMarker: {ex.Message}"); }
             }
         }
 

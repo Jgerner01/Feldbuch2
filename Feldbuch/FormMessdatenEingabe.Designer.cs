@@ -12,32 +12,35 @@ partial class FormMessdatenEingabe
 
     private void InitializeComponent()
     {
-        grpKoordinaten  = new GroupBox();
-        lblRVal         = new Label();
-        lblHVal         = new Label();
-        grpPunktdaten   = new GroupBox();
-        lblPunktNr      = new Label();
-        txtPunktNr      = new TextBox();
-        lblHoeheKoord   = new Label();
-        nudHoehe        = new NumericUpDown();
-        lblHoeheUnit    = new Label();
-        grpMessdaten    = new GroupBox();
-        lblHz           = new Label();
-        nudHz           = new NumericUpDown();
-        lblHzUnit       = new Label();
-        lblV            = new Label();
-        nudV            = new NumericUpDown();
-        lblVUnit        = new Label();
-        lblStrecke      = new Label();
-        nudStrecke      = new NumericUpDown();
-        lblStreckeUnit  = new Label();
-        lblZielhoehe    = new Label();
-        nudZielhoehe    = new NumericUpDown();
-        lblZielhoeheUnit= new Label();
-        lblSimInfo      = new Label();
-        btnSimulieren   = new Button();
-        btnUebernehmen  = new Button();
-        btnAbbrechen    = new Button();
+        grpKoordinaten   = new GroupBox();
+        lblRVal          = new Label();
+        lblHVal          = new Label();
+        grpPunktdaten    = new GroupBox();
+        lblPunktNr       = new Label();
+        txtPunktNr       = new TextBox();
+        lblHoeheKoord    = new Label();
+        nudHoehe         = new NumericUpDown();
+        lblHoeheUnit     = new Label();
+        grpMessdaten     = new GroupBox();
+        lblHz            = new Label();
+        nudHz            = new NumericUpDown();
+        lblHzUnit        = new Label();
+        lblV             = new Label();
+        nudV             = new NumericUpDown();
+        lblVUnit         = new Label();
+        lblStrecke       = new Label();
+        nudStrecke       = new NumericUpDown();
+        lblStreckeUnit   = new Label();
+        lblZielhoehe     = new Label();
+        nudZielhoehe     = new NumericUpDown();
+        lblZielhoeheUnit = new Label();
+        lblCodeLabel     = new Label();
+        txtCode          = new TextBox();
+        lblMessInfo      = new Label();
+        btnReflModus     = new Button();
+        btnMessen        = new Button();
+        btnUebernehmen   = new Button();
+        btnAbbrechen     = new Button();
 
         ((System.ComponentModel.ISupportInitialize)nudHoehe).BeginInit();
         ((System.ComponentModel.ISupportInitialize)nudHz).BeginInit();
@@ -47,7 +50,7 @@ partial class FormMessdatenEingabe
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(440, 460);
+        ClientSize      = new Size(460, 530);
         Text            = "Anschlusspunkt – Messdaten";
         StartPosition   = FormStartPosition.CenterParent;
         AutoScaleMode   = AutoScaleMode.Font;
@@ -55,24 +58,24 @@ partial class FormMessdatenEingabe
         MaximizeBox     = false; MinimizeBox = false;
         BackColor       = Color.FromArgb(245, 245, 245);
 
-        var lblFont = new Font("Segoe UI", 10F);
-        var grpFont = new Font("Segoe UI", 10F, FontStyle.Bold);
-        var monoFont= new Font("Courier New", 10F);
+        var lblFont  = new Font("Segoe UI", 10F);
+        var grpFont  = new Font("Segoe UI", 10F, FontStyle.Bold);
+        var monoFont = new Font("Courier New", 10F);
 
         // ── Gruppe: Koordinaten (aus DXF, read-only) ──────────────────────────
         grpKoordinaten.Text     = "Koordinaten (aus DXF)";
         grpKoordinaten.Font     = grpFont;
         grpKoordinaten.Location = new Point(14, 10);
-        grpKoordinaten.Size     = new Size(412, 80);
+        grpKoordinaten.Size     = new Size(430, 80);
 
         lblRVal.Font     = monoFont;
-        lblRVal.Location = new Point(14, 28);
-        lblRVal.Size     = new Size(380, 22);
+        lblRVal.Location = new Point(14, 26);
+        lblRVal.Size     = new Size(400, 22);
         lblRVal.Text     = "R (Rechtswert):   – m";
 
         lblHVal.Font     = monoFont;
-        lblHVal.Location = new Point(14, 52);
-        lblHVal.Size     = new Size(380, 22);
+        lblHVal.Location = new Point(14, 50);
+        lblHVal.Size     = new Size(400, 22);
         lblHVal.Text     = "H (Hochwert):     – m";
 
         grpKoordinaten.Controls.AddRange(new Control[] { lblRVal, lblHVal });
@@ -80,8 +83,8 @@ partial class FormMessdatenEingabe
         // ── Gruppe: Punktdaten ────────────────────────────────────────────────
         grpPunktdaten.Text     = "Punktdaten";
         grpPunktdaten.Font     = grpFont;
-        grpPunktdaten.Location = new Point(14, 100);
-        grpPunktdaten.Size     = new Size(412, 110);
+        grpPunktdaten.Location = new Point(14, 98);
+        grpPunktdaten.Size     = new Size(430, 110);
 
         lblPunktNr.Text     = "Punktnummer:";
         lblPunktNr.Font     = lblFont;
@@ -89,20 +92,20 @@ partial class FormMessdatenEingabe
         lblPunktNr.Size     = new Size(120, 24);
         lblPunktNr.AutoSize = false;
 
-        txtPunktNr.Font     = lblFont;
+        txtPunktNr.Font     = new Font("Consolas", 10F);
         txtPunktNr.Location = new Point(140, 28);
-        txtPunktNr.Size     = new Size(150, 26);
+        txtPunktNr.Size     = new Size(160, 26);
 
-        lblHoeheKoord.Text     = "Höhe [m]:";
+        lblHoeheKoord.Text     = "Inst. Höhe [m]:";
         lblHoeheKoord.Font     = lblFont;
         lblHoeheKoord.Location = new Point(14, 68);
         lblHoeheKoord.Size     = new Size(120, 24);
         lblHoeheKoord.AutoSize = false;
 
         nudHoehe.Location      = new Point(140, 66);
-        nudHoehe.Size          = new Size(100, 26);
+        nudHoehe.Size          = new Size(110, 26);
         nudHoehe.Font          = lblFont;
-        nudHoehe.Minimum       = -999m;
+        nudHoehe.Minimum       = -9999m;
         nudHoehe.Maximum       = 9999.999m;
         nudHoehe.DecimalPlaces = 3;
         nudHoehe.Increment     = 0.001m;
@@ -110,7 +113,7 @@ partial class FormMessdatenEingabe
 
         lblHoeheUnit.Text     = "m";
         lblHoeheUnit.Font     = lblFont;
-        lblHoeheUnit.Location = new Point(248, 68);
+        lblHoeheUnit.Location = new Point(258, 68);
         lblHoeheUnit.AutoSize = true;
 
         grpPunktdaten.Controls.AddRange(new Control[]
@@ -120,12 +123,12 @@ partial class FormMessdatenEingabe
         });
 
         // ── Gruppe: Messdaten ─────────────────────────────────────────────────
-        grpMessdaten.Text     = "Messdaten  (Tachymeter / simuliert)";
+        grpMessdaten.Text     = "Messdaten";
         grpMessdaten.Font     = grpFont;
-        grpMessdaten.Location = new Point(14, 220);
-        grpMessdaten.Size     = new Size(412, 178);
+        grpMessdaten.Location = new Point(14, 216);
+        grpMessdaten.Size     = new Size(430, 216);
 
-        int y = 30, step = 36;
+        int y = 28, step = 36;
 
         // HZ
         lblHz.Text     = "HZ [gon]:";
@@ -135,7 +138,7 @@ partial class FormMessdatenEingabe
         lblHz.AutoSize = false;
 
         nudHz.Location      = new Point(140, y - 2);
-        nudHz.Size          = new Size(110, 26);
+        nudHz.Size          = new Size(120, 26);
         nudHz.Font          = lblFont;
         nudHz.Minimum       = 0m;
         nudHz.Maximum       = 399.9999m;
@@ -144,7 +147,7 @@ partial class FormMessdatenEingabe
 
         lblHzUnit.Text     = "gon";
         lblHzUnit.Font     = lblFont;
-        lblHzUnit.Location = new Point(258, y);
+        lblHzUnit.Location = new Point(268, y);
         lblHzUnit.AutoSize = true;
         y += step;
 
@@ -156,7 +159,7 @@ partial class FormMessdatenEingabe
         lblV.AutoSize = false;
 
         nudV.Location      = new Point(140, y - 2);
-        nudV.Size          = new Size(110, 26);
+        nudV.Size          = new Size(120, 26);
         nudV.Font          = lblFont;
         nudV.Minimum       = 0m;
         nudV.Maximum       = 199.9999m;
@@ -166,7 +169,7 @@ partial class FormMessdatenEingabe
 
         lblVUnit.Text     = "gon";
         lblVUnit.Font     = lblFont;
-        lblVUnit.Location = new Point(258, y);
+        lblVUnit.Location = new Point(268, y);
         lblVUnit.AutoSize = true;
         y += step;
 
@@ -178,7 +181,7 @@ partial class FormMessdatenEingabe
         lblStrecke.AutoSize = false;
 
         nudStrecke.Location      = new Point(140, y - 2);
-        nudStrecke.Size          = new Size(110, 26);
+        nudStrecke.Size          = new Size(120, 26);
         nudStrecke.Font          = lblFont;
         nudStrecke.Minimum       = 0m;
         nudStrecke.Maximum       = 9999.999m;
@@ -187,7 +190,7 @@ partial class FormMessdatenEingabe
 
         lblStreckeUnit.Text     = "m";
         lblStreckeUnit.Font     = lblFont;
-        lblStreckeUnit.Location = new Point(258, y);
+        lblStreckeUnit.Location = new Point(268, y);
         lblStreckeUnit.AutoSize = true;
         y += step;
 
@@ -199,7 +202,7 @@ partial class FormMessdatenEingabe
         lblZielhoehe.AutoSize = false;
 
         nudZielhoehe.Location      = new Point(140, y - 2);
-        nudZielhoehe.Size          = new Size(110, 26);
+        nudZielhoehe.Size          = new Size(120, 26);
         nudZielhoehe.Font          = lblFont;
         nudZielhoehe.Minimum       = 0m;
         nudZielhoehe.Maximum       = 9.999m;
@@ -209,36 +212,66 @@ partial class FormMessdatenEingabe
 
         lblZielhoeheUnit.Text     = "m";
         lblZielhoeheUnit.Font     = lblFont;
-        lblZielhoeheUnit.Location = new Point(258, y);
+        lblZielhoeheUnit.Location = new Point(268, y);
         lblZielhoeheUnit.AutoSize = true;
+        y += step;
+
+        // Code
+        lblCodeLabel.Text     = "Code:";
+        lblCodeLabel.Font     = lblFont;
+        lblCodeLabel.Location = new Point(14, y);
+        lblCodeLabel.Size     = new Size(120, 24);
+        lblCodeLabel.AutoSize = false;
+
+        txtCode.Font        = new Font("Consolas", 10F);
+        txtCode.Location    = new Point(140, y - 2);
+        txtCode.Size        = new Size(160, 26);
+        txtCode.BorderStyle = BorderStyle.FixedSingle;
+        new ToolTip().SetToolTip(txtCode, "Punktcode / Objektschlüssel");
 
         grpMessdaten.Controls.AddRange(new Control[]
         {
             lblHz, nudHz, lblHzUnit,
             lblV, nudV, lblVUnit,
             lblStrecke, nudStrecke, lblStreckeUnit,
-            lblZielhoehe, nudZielhoehe, lblZielhoeheUnit
+            lblZielhoehe, nudZielhoehe, lblZielhoeheUnit,
+            lblCodeLabel, txtCode
         });
 
-        // ── Simulations-Hinweis ───────────────────────────────────────────────
-        lblSimInfo.Text      = "⚠ Platzhalter – später: Leica TCR307";
-        lblSimInfo.Font      = new Font("Segoe UI", 8.5F, FontStyle.Italic);
-        lblSimInfo.ForeColor = Color.FromArgb(120, 100, 30);
-        lblSimInfo.Location  = new Point(14, 406);
-        lblSimInfo.AutoSize  = true;
+        // ── Messinfo-Label ────────────────────────────────────────────────────
+        lblMessInfo.Text      = "";
+        lblMessInfo.Font      = new Font("Segoe UI", 8.5F, FontStyle.Italic);
+        lblMessInfo.ForeColor = Color.FromArgb(100, 130, 170);
+        lblMessInfo.Location  = new Point(14, 440);
+        lblMessInfo.Size      = new Size(340, 20);
+        lblMessInfo.AutoSize  = false;
 
         // ── Buttons ───────────────────────────────────────────────────────────
-        btnSimulieren.Text      = "Simulieren";
-        btnSimulieren.Location  = new Point(14, 418);
-        btnSimulieren.Size      = new Size(110, 32);
-        btnSimulieren.Font      = lblFont;
-        btnSimulieren.BackColor = Color.FromArgb(140, 100, 20);
-        btnSimulieren.ForeColor = Color.White;
-        btnSimulieren.FlatStyle = FlatStyle.Flat;
-        btnSimulieren.Click    += btnSimulieren_Click;
+        // [Prisma / Reflektorlos]   [▶ Messen]   [Übernehmen]   [Abbrechen]
+
+        btnReflModus.Size      = new Size(120, 32);
+        btnReflModus.Location  = new Point(14, 464);
+        btnReflModus.Font      = lblFont;
+        btnReflModus.ForeColor = Color.White;
+        btnReflModus.FlatStyle = FlatStyle.Flat;
+        btnReflModus.Cursor    = Cursors.Hand;
+        btnReflModus.Click    += btnReflModus_Click;
+        new ToolTip().SetToolTip(btnReflModus, "Messmodus umschalten: Prisma / Reflektorlos");
+
+        btnMessen.Text      = "▶ Messen";
+        btnMessen.Size      = new Size(90, 32);
+        btnMessen.Location  = new Point(140, 464);
+        btnMessen.Font      = lblFont;
+        btnMessen.BackColor = Color.FromArgb(160, 60, 20);
+        btnMessen.ForeColor = Color.White;
+        btnMessen.FlatStyle = FlatStyle.Flat;
+        btnMessen.FlatAppearance.BorderColor = Color.FromArgb(120, 40, 10);
+        btnMessen.Cursor    = Cursors.Hand;
+        btnMessen.Click    += btnMessen_Click;
+        new ToolTip().SetToolTip(btnMessen, "Messung mit dem Tachymeter auslösen");
 
         btnUebernehmen.Text      = "Übernehmen";
-        btnUebernehmen.Location  = new Point(210, 418);
+        btnUebernehmen.Location  = new Point(238, 464);
         btnUebernehmen.Size      = new Size(110, 32);
         btnUebernehmen.Font      = lblFont;
         btnUebernehmen.BackColor = Color.FromArgb(60, 130, 60);
@@ -247,7 +280,7 @@ partial class FormMessdatenEingabe
         btnUebernehmen.Click    += btnUebernehmen_Click;
 
         btnAbbrechen.Text     = "Abbrechen";
-        btnAbbrechen.Location = new Point(328, 418);
+        btnAbbrechen.Location = new Point(354, 464);
         btnAbbrechen.Size     = new Size(100, 32);
         btnAbbrechen.Font     = lblFont;
         btnAbbrechen.Click   += btnAbbrechen_Click;
@@ -255,7 +288,7 @@ partial class FormMessdatenEingabe
         Controls.AddRange(new Control[]
         {
             grpKoordinaten, grpPunktdaten, grpMessdaten,
-            lblSimInfo, btnSimulieren, btnUebernehmen, btnAbbrechen
+            lblMessInfo, btnReflModus, btnMessen, btnUebernehmen, btnAbbrechen
         });
 
         ((System.ComponentModel.ISupportInitialize)nudHoehe).EndInit();
@@ -266,6 +299,7 @@ partial class FormMessdatenEingabe
         ResumeLayout(false);
     }
 
+    // ── Felder ────────────────────────────────────────────────────────────────
     private GroupBox      grpKoordinaten   = null!;
     private Label         lblRVal          = null!;
     private Label         lblHVal          = null!;
@@ -288,8 +322,11 @@ partial class FormMessdatenEingabe
     private Label         lblZielhoehe     = null!;
     private NumericUpDown nudZielhoehe     = null!;
     private Label         lblZielhoeheUnit = null!;
-    private Label         lblSimInfo       = null!;
-    private Button        btnSimulieren    = null!;
+    private Label         lblCodeLabel     = null!;
+    private TextBox       txtCode          = null!;
+    private Label         lblMessInfo      = null!;
+    private Button        btnReflModus     = null!;
+    private Button        btnMessen        = null!;
     private Button        btnUebernehmen   = null!;
     private Button        btnAbbrechen     = null!;
 }
