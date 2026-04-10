@@ -12,3 +12,6 @@ CLAUDE.md
 **/publish/
 
 .fake
+publish*/
+Feldbuch_v*.zip
+.qwen/

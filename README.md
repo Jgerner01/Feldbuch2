@@ -23,7 +23,7 @@
 
 ## Version
 
-Aktuelle Version: **v1.4.1**
+Aktuelle Version: **v1.7.0**
 
 ## Autor
 
