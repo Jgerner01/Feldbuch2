@@ -36,7 +36,7 @@ Diese Anleitung beschreibt die Kopplung eines Bluetooth-Geräts mit der PIN `000
 3. Stellen Sie sicher, dass der Bluetooth-Schalter auf **Ein** steht.
 4. Klicken Sie auf **Gerät hinzufügen** -> **Bluetooth**.
 5. Wählen Sie Ihr Gerät aus der Liste aus.
-6. Geben Sie bei der PIN-Abfrage **0000** ein und bestätigen Sie mit **Verbinden**.
+6. Geben Sie bei der PIN-Abfrage eine gültige Pin ein und bestätigen Sie mit **Verbinden**. Leica benutzt z.B. **0000**. Oft wird auch die **1234** benutzt. Ggf. beim Gerätehersteller nachfragen.
 
 ## 2. Ausgehende COM-Schnittstelle konfigurieren
 
