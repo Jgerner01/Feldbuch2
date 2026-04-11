@@ -21,37 +21,34 @@
 - **Zielrahmen:** `net10.0-windows`
 - **Abhängigkeiten:** `System.IO.Ports`, `System.Management`
 
-## Version
-
-Aktuelle Version: **v1.7.0**
-
 ## Autor
 
 Johann Gerner – © 2026
 
-## Build & Start
+# Anleitung: Bluetooth-Kopplung und COM-Port-Einrichtung (Windows 11)
 
-1. Repository klonen:
-   ```
-   git clone https://github.com/Jgerner01/Feldbuch1.git
-   cd Feldbuch1
-   ```
-2. Solution öffnen: `Feldbuch Universal.slnx` (Visual Studio 2022+)
-3. Projekt bauen und starten (F5)
+Diese Anleitung beschreibt die Kopplung eines Bluetooth-Geräts mit der PIN `0000` und die anschließende manuelle Zuweisung einer ausgehenden COM-Schnittstelle.
 
-> Voraussetzung: .NET 10 SDK und Windows
+## 1. Bluetooth-Gerät koppeln
 
-## Projektstruktur
+1. Öffnen Sie die **Einstellungen** (`Win + I`).
+2. Navigieren Sie zu **Bluetooth & Geräte**.
+3. Stellen Sie sicher, dass der Bluetooth-Schalter auf **Ein** steht.
+4. Klicken Sie auf **Gerät hinzufügen** -> **Bluetooth**.
+5. Wählen Sie Ihr Gerät aus der Liste aus.
+6. Geben Sie bei der PIN-Abfrage **0000** ein und bestätigen Sie mit **Verbinden**.
 
-```
-Feldbuch/           # Hauptprojekt (WinForms)
-  Form1.cs          # Hauptformular
-  FreieStationierung.cs
-  TachymeterVerbindung.cs
-  DxfParser.cs / DxfCanvas.cs
-  GsiParser.cs
-  RtfProtokollGenerator.cs
-  ErrorLogger.cs
-  icons/            # PNG-Icons
-tools/              # Hilfsprogramme (z.B. ExportIcons)
-```
+## 2. Ausgehende COM-Schnittstelle konfigurieren
+
+Da Windows 11 die COM-Ports tiefer im Menü versteckt, folgen Sie diesen Schritten:
+
+1. Scrollen Sie unter **Bluetooth & Geräte** nach unten und klicken Sie auf **Geräte**.
+2. Scrollen Sie ganz nach unten zum Bereich "Verwandte Einstellungen" und klicken Sie auf **Weitere Bluetooth-Einstellungen**.
+3. Ein neues Fenster öffnet sich. Wechseln Sie zum Reiter **COM-Anschlüsse**.
+4. Klicken Sie auf die Schaltfläche **Hinzufügen...**.
+5. Wählen Sie die Option **Ausgehend (der Computer initiiert die Verbindung)**.
+6. Wählen Sie Ihr Gerät aus dem Dropdown-Menü aus und bestätigen Sie mit **OK**.
+7. Notieren Sie sich den zugewiesenen Port (z. B. `COM3`), der nun in der Liste erscheint.
+
+---
+
