@@ -45,7 +45,12 @@ public static class ProjektManager
     /// <summary>Letzte aktive Standpunktnummer im DXF-Viewer.</summary>
     public static string LetzteStandpunktNr   { get; set; } = "";
 
-    // ── Tachymeter-Verbindungseinstellungen ──────────────────────────────────
+    // ── Messgerät-Verbindungseinstellungen ────────────────────────────────────
+    /// <summary>
+    /// True = am COM-Port hängt ein GNSS-Empfänger (NMEA 0183).
+    /// False = Tachymeter (GeoCOM / GSI / Manuell).
+    /// </summary>
+    public static bool              IstGnssGeraet     { get; set; } = false;
     public static TachymeterModell TachymeterModell   { get; set; } = TachymeterModell.Manuell;
     public static string           TachymeterPort     { get; set; } = "";
     public static int              TachymeterBaudRate { get; set; } = 9600;
@@ -140,6 +145,9 @@ public static class ProjektManager
             ResidualVisible    = LadeBool(root, "ResidualVisible",   defaultVal: true);
             LetzteStandpunktNr = root.SelectSingleNode("LetzteStandpunktNr")?.InnerText?.Trim() ?? "";
 
+            // Messgerät-Typ
+            IstGnssGeraet = root.SelectSingleNode("IstGnssGeraet")?.InnerText?.Trim().ToLower() == "true";
+
             // Tachymeter
             var tachModellText = root.SelectSingleNode("TachymeterModell")?.InnerText?.Trim() ?? "";
             if (Enum.TryParse<TachymeterModell>(tachModellText, out var tm))
@@ -193,6 +201,7 @@ public static class ProjektManager
             Append(doc, root, "NeupunkteVisible",     NeupunkteVisible.ToString().ToLower());
             Append(doc, root, "ResidualVisible",      ResidualVisible.ToString().ToLower());
             Append(doc, root, "LetzteStandpunktNr",  LetzteStandpunktNr);
+            Append(doc, root, "IstGnssGeraet",      IstGnssGeraet.ToString().ToLower());
             Append(doc, root, "TachymeterModell",   TachymeterModell.ToString());
             Append(doc, root, "TachymeterPort",     TachymeterPort);
             Append(doc, root, "TachymeterBaudRate", TachymeterBaudRate.ToString());

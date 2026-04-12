@@ -14,6 +14,10 @@ partial class FormTachymeterKommunikation
 
     private void InitializeComponent()
     {
+        grpGeraetTyp       = new GroupBox();
+        rdoTachymeter      = new RadioButton();
+        rdoGnss            = new RadioButton();
+
         grpModell          = new GroupBox();
         lblModell          = new Label();
         cboModell          = new ComboBox();
@@ -47,8 +51,8 @@ partial class FormTachymeterKommunikation
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(520, 600);  // Vergrößert für Bluetooth-Liste
-        Text            = "Tachymeter Kommunikation";
+        ClientSize      = new Size(520, 656);
+        Text            = "Messgerät – Kommunikation";
         StartPosition   = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox     = false;
@@ -58,9 +62,30 @@ partial class FormTachymeterKommunikation
         var fontNormal = new Font("Segoe UI", 9.5F);
         var fontLabel  = new Font("Segoe UI", 9.5F);
 
-        // ═══ GroupBox: Tachymeter-Gerät ═══════════════════════════════════════
-        grpModell.Text     = "Tachymeter-Gerät";
-        grpModell.Location = new Point(12, 12);
+        // ═══ GroupBox: Gerätetyp ══════════════════════════════════════════════
+        grpGeraetTyp.Text     = "Gerätetyp";
+        grpGeraetTyp.Location = new Point(12, 12);
+        grpGeraetTyp.Size     = new Size(494, 56);
+        grpGeraetTyp.Font     = fontNormal;
+
+        rdoTachymeter.Text     = "Tachymeter / Totalstation";
+        rdoTachymeter.Location = new Point(20, 22);
+        rdoTachymeter.Size     = new Size(210, 24);
+        rdoTachymeter.Font     = fontNormal;
+        rdoTachymeter.Checked  = true;
+        rdoTachymeter.CheckedChanged += rdoGeraetTyp_CheckedChanged;
+
+        rdoGnss.Text     = "GNSS-Empfänger (NMEA 0183)";
+        rdoGnss.Location = new Point(250, 22);
+        rdoGnss.Size     = new Size(230, 24);
+        rdoGnss.Font     = fontNormal;
+        rdoGnss.CheckedChanged += rdoGeraetTyp_CheckedChanged;
+
+        grpGeraetTyp.Controls.AddRange([rdoTachymeter, rdoGnss]);
+
+        // ═══ GroupBox: Messgerät-Modell ═══════════════════════════════════════
+        grpModell.Text     = "Gerät / Protokoll";
+        grpModell.Location = new Point(12, 80);
         grpModell.Size     = new Size(494, 64);
         grpModell.Font     = fontNormal;
 
@@ -80,7 +105,7 @@ partial class FormTachymeterKommunikation
 
         // ═══ GroupBox: Bluetooth / Schnittstelle ══════════════════════════════
         grpBluetooth.Text     = "Bluetooth / Schnittstelle";
-        grpBluetooth.Location = new Point(12, 88);
+        grpBluetooth.Location = new Point(12, 156);
         grpBluetooth.Size     = new Size(494, 140);
         grpBluetooth.Font     = fontNormal;
 
@@ -132,7 +157,7 @@ partial class FormTachymeterKommunikation
 
         // ═══ GroupBox: Bluetooth-Geräte ═══════════════════════════════════════
         grpBluetoothGeraete.Text     = "Bluetooth-Geräte (gekoppelt)";
-        grpBluetoothGeraete.Location = new Point(12, 238);
+        grpBluetoothGeraete.Location = new Point(12, 306);
         grpBluetoothGeraete.Size     = new Size(494, 140);
         grpBluetoothGeraete.Font     = fontNormal;
 
@@ -167,7 +192,7 @@ partial class FormTachymeterKommunikation
 
         // ═══ GroupBox: Kommunikationsparameter ════════════════════════════════
         grpParameter.Text     = "Kommunikationsparameter";
-        grpParameter.Location = new Point(12, 388);
+        grpParameter.Location = new Point(12, 456);
         grpParameter.Size     = new Size(494, 130);
         grpParameter.Font     = fontNormal;
 
@@ -247,20 +272,20 @@ partial class FormTachymeterKommunikation
 
         // ═══ OK / Abbrechen ═══════════════════════════════════════════════════
         btnOK.Text      = "OK";
-        btnOK.Location  = new Point(310, 528);
+        btnOK.Location  = new Point(310, 596);
         btnOK.Size      = new Size(90, 34);
         btnOK.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnOK.Click    += btnOK_Click;
 
         btnAbbrechen.Text      = "Abbrechen";
-        btnAbbrechen.Location  = new Point(410, 528);
+        btnAbbrechen.Location  = new Point(410, 596);
         btnAbbrechen.Size      = new Size(94, 34);
         btnAbbrechen.Font      = new Font("Segoe UI", 10F);
         btnAbbrechen.Click    += btnAbbrechen_Click;
 
         Controls.AddRange(
         [
-            grpModell, grpBluetooth, grpBluetoothGeraete, grpParameter,
+            grpGeraetTyp, grpModell, grpBluetooth, grpBluetoothGeraete, grpParameter,
             btnOK, btnAbbrechen
         ]);
 
@@ -268,6 +293,10 @@ partial class FormTachymeterKommunikation
         CancelButton = btnAbbrechen;
         ResumeLayout(false);
     }
+
+    private GroupBox     grpGeraetTyp;
+    private RadioButton  rdoTachymeter;
+    private RadioButton  rdoGnss;
 
     private GroupBox grpModell;
     private Label    lblModell;

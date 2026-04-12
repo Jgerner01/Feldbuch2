@@ -262,6 +262,11 @@ public partial class FormTachymeterKommunikation : Form
 
     private void LadeAktuelleEinstellungen()
     {
+        // Gerätetyp
+        rdoGnss.Checked        = ProjektManager.IstGnssGeraet;
+        rdoTachymeter.Checked  = !ProjektManager.IstGnssGeraet;
+        AktualisiereGeraetTypUI();
+
         // Modell
         var idx = Array.IndexOf(TachymeterVerbindung.AlleModelle, TachymeterVerbindung.Modell);
         cboModell.SelectedIndex = idx >= 0 ? idx : 0;
@@ -284,6 +289,31 @@ public partial class FormTachymeterKommunikation : Form
 
         // Parameter-Gruppe nur bei Manuell bearbeitbar
         AktualisiereParameterFelder();
+    }
+
+    // ── Gerätetyp-Umschalten ──────────────────────────────────────────────────
+
+    private void rdoGeraetTyp_CheckedChanged(object? sender, EventArgs e)
+    {
+        AktualisiereGeraetTypUI();
+    }
+
+    private void AktualisiereGeraetTypUI()
+    {
+        bool istGnss = rdoGnss.Checked;
+        // Tachymeter-spezifische Felder ausgrauen wenn GNSS gewählt
+        grpModell.Enabled    = !istGnss;
+        grpParameter.Enabled = !istGnss;
+        if (istGnss)
+        {
+            grpModell.Text    = "Gerät / Protokoll  (nicht relevant für GNSS)";
+            grpParameter.Text = "Kommunikationsparameter  (9600 Baud, 8N1 für NMEA)";
+        }
+        else
+        {
+            grpModell.Text    = "Gerät / Protokoll";
+            grpParameter.Text = "Kommunikationsparameter";
+        }
     }
 
     // ── Ereignisse ────────────────────────────────────────────────────────────
@@ -390,6 +420,9 @@ public partial class FormTachymeterKommunikation : Form
 
     private void btnOK_Click(object? sender, EventArgs e)
     {
+        // Gerätetyp speichern
+        ProjektManager.IstGnssGeraet = rdoGnss.Checked;
+
         // Einstellungen übernehmen (ohne Verbindungsaufbau)
         if (cboModell.SelectedIndex >= 0)
             TachymeterVerbindung.Modell = TachymeterVerbindung.AlleModelle[cboModell.SelectedIndex];

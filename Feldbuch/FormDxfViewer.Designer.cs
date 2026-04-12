@@ -15,6 +15,8 @@ partial class FormDxfViewer
         canvas              = new DxfCanvas();
         pnlTop              = new Panel();
         btnPrismenkonstante = new Button();
+        btnEdmToggle        = new Button();
+        btnLaserpointer     = new Button();
         pnlLampe            = new Panel();
         lblLampeInfo        = new Label();
         sep1                = new Label();
@@ -79,9 +81,37 @@ partial class FormDxfViewer
         IconLoader.Apply(btnPrismenkonstante, "toolbar_prisma.png");
         new ToolTip().SetToolTip(btnPrismenkonstante, "Prismenkonstante");
 
-        // ── Signal-Lampe ──────────────────────────────────────────────────────
+        // ── EDM-Umschalter (Prisma ↔ Reflektorlos) ───────────────────────────
+        btnEdmToggle.Text      = "";
+        btnEdmToggle.Size      = new Size(36, 36);
+        btnEdmToggle.Location  = new Point(btnPrismenkonstante.Right + 4, 5);
+        btnEdmToggle.FlatStyle = FlatStyle.Flat;
+        btnEdmToggle.BackColor = Color.FromArgb(60, 95, 160);
+        btnEdmToggle.ForeColor = Color.White;
+        btnEdmToggle.FlatAppearance.BorderColor = Color.FromArgb(80, 115, 185);
+        btnEdmToggle.FlatAppearance.BorderSize  = 1;
+        btnEdmToggle.Cursor    = Cursors.Hand;
+        btnEdmToggle.Click    += btnEdmToggle_Click;
+        IconLoader.Apply(btnEdmToggle, "toolbar_edm_prisma.png");
+        new ToolTip().SetToolTip(btnEdmToggle, "EDM-Modus: Prisma / Reflektorlos");
+
+        // ── Laserpointer ─────────────────────────────────────────────────────
+        btnLaserpointer.Text      = "";
+        btnLaserpointer.Size      = new Size(36, 36);
+        btnLaserpointer.Location  = new Point(btnEdmToggle.Right + 4, 5);
+        btnLaserpointer.FlatStyle = FlatStyle.Flat;
+        btnLaserpointer.BackColor = Color.FromArgb(60, 95, 160);
+        btnLaserpointer.ForeColor = Color.White;
+        btnLaserpointer.FlatAppearance.BorderColor = Color.FromArgb(80, 115, 185);
+        btnLaserpointer.FlatAppearance.BorderSize  = 1;
+        btnLaserpointer.Cursor    = Cursors.Hand;
+        btnLaserpointer.Click    += btnLaserpointer_Click;
+        IconLoader.Apply(btnLaserpointer, "toolbar_laser.png");
+        new ToolTip().SetToolTip(btnLaserpointer, "Laserpointer ein/aus");
+
+        // ── Signal-Lampe (wird rechts dynamisch positioniert) ────────────────
         pnlLampe.Size      = new Size(26, 26);
-        pnlLampe.Location  = new Point(btnPrismenkonstante.Right + 6, 10);
+        pnlLampe.Location  = new Point(btnLaserpointer.Right + 80, 10); // Platzhalter
         pnlLampe.BackColor = Color.Transparent;
         pnlLampe.Cursor    = Cursors.Default;
         pnlLampe.Paint    += PnlLampe_Paint;
@@ -221,7 +251,8 @@ partial class FormDxfViewer
 
         pnlTop.Controls.AddRange(new Control[]
         {
-            btnPrismenkonstante, pnlLampe, lblLampeInfo,
+            btnPrismenkonstante, btnEdmToggle, btnLaserpointer,
+            pnlLampe, lblLampeInfo,
             sep1, btnModus,
             lblSP, txtStandpunktNr, lblInstrH, txtInstrHoehe,
             sep2, btnMessung,
@@ -386,6 +417,8 @@ partial class FormDxfViewer
     private DxfCanvas        canvas              = null!;
     private Panel            pnlTop              = null!;
     private Button           btnPrismenkonstante = null!;
+    private Button           btnEdmToggle        = null!;
+    private Button           btnLaserpointer     = null!;
     private Panel            pnlLampe            = null!;
     private Label            lblLampeInfo        = null!;
     private Label            sep1                = null!;

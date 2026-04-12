@@ -22,12 +22,29 @@ public partial class FormDxfViewer : Form
     // Warnung bei Messung ohne gültige Stationierung bereits gezeigt
     private bool _stationierungsWarnungGezeigt = false;
 
-    // GeoCOM-Zustandsmaschine (analog FormTestmessungen)
-    private enum MessungZustand { Bereit, WarteMessen, WarteErgebnis }
-    private MessungZustand _messungZustand = MessungZustand.Bereit;
-    private int            _parser_letzterRpc = 0;
+    // GeoCOM-Zustandsmaschine
+    // Sequenz: DoMeasure → GetSimpleMea → GetAngle1 → GetAtmCorr → GetEdmMode → GetPrismCorr → Verarbeitung
+    private enum MessungZustand
+    {
+        Bereit,
+        WarteMessen,       // DoMeasure gesendet
+        WarteErgebnis,     // GetSimpleMea gesendet  – Hz/V/Dist
+        WarteKompensator,  // GetAngle1 gesendet      – Kompensator (CrossIncline, LengthIncline)
+        WarteAtmKorr,      // GetAtmCorr gesendet     – PPM, Druck, Temperatur
+        WarteEdmModus,     // GetEdmMode gesendet     – EDM-Modus (Prisma/Folie/RL)
+        WartePrisma        // GetPrismCorr gesendet   – Prismenkonstante [mm]
+    }
+    private MessungZustand    _messungZustand    = MessungZustand.Bereit;
+    private int               _parser_letzterRpc = 0;
+    private TachymeterMessung? _sammlung          = null;   // akkumulierte Messung über alle Schritte
     private readonly GeoCOMParser _parser = new();
     private readonly StringBuilder _zeilenPuffer = new();
+
+    // ── EDM / Laser-Zustand ───────────────────────────────────────────────────
+    private bool    _edmIstPrisma        = true;   // false = Reflektorlos
+    private bool    _laserAktiv          = false;
+    private decimal _prismaKonstante_mm  = 0m;     // Letzte Auswahl aus FormPrismenkonstante
+    private string  _prismaName          = "GPR1 Standard";
 
     // Punktnummer-Auto-Increment
     private int _neupunktZaehler;
@@ -94,6 +111,10 @@ public partial class FormDxfViewer : Form
 
         // Signallampe aktualisieren
         AktualisiereSignallampe();
+
+        // EDM- und Laser-Button initialisieren
+        AktualisiereEdmButton();
+        AktualisiereLaserButton();
 
         // Messmodus initialisieren
         AktualisiereModus();
@@ -303,6 +324,78 @@ public partial class FormDxfViewer : Form
                 : "Messmodus: Stationierung (Klick zum Wechseln)");
     }
 
+    // ── EDM-Modus umschalten: Prisma ↔ Reflektorlos ─────────────────────────
+    private void btnEdmToggle_Click(object? sender, EventArgs e)
+    {
+        _edmIstPrisma = !_edmIstPrisma;
+        AktualisiereEdmButton();
+
+        if (!TachymeterVerbindung.IstVerbunden) return;
+
+        if (_edmIstPrisma)
+        {
+            // Prisma-Modus setzen + gespeicherte Prismenkonstante übertragen
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,17021,0:0"); // BAP_SetTargetType = Reflektor
+            double pk_m = (double)_prismaKonstante_mm / 1000.0;
+            TachymeterVerbindung.GeoCOM_Senden(
+                $"%R1Q,{GeoCOMParser.RPC_TMC_SetPrismCorr},0:{pk_m.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+        else
+        {
+            // Reflektorlos: BAP_SetTargetType = 1, PrismCorr = +0,0344 m (Leica-Konvention)
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,17021,0:1"); // BAP_SetTargetType = RL
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2024,0:0.0344");
+        }
+    }
+
+    private void AktualisiereEdmButton()
+    {
+        if (_edmIstPrisma)
+        {
+            btnEdmToggle.BackColor = Color.FromArgb(60, 95, 160);
+            btnEdmToggle.FlatAppearance.BorderColor = Color.FromArgb(80, 115, 185);
+            IconLoader.Apply(btnEdmToggle, "toolbar_edm_prisma.png");
+            new ToolTip().SetToolTip(btnEdmToggle,
+                $"EDM: Prisma ({_prismaName}, {_prismaKonstante_mm:+0.0;-0.0;0.0} mm) – Klick → Reflektorlos");
+        }
+        else
+        {
+            btnEdmToggle.BackColor = Color.FromArgb(150, 70, 20);
+            btnEdmToggle.FlatAppearance.BorderColor = Color.FromArgb(200, 100, 40);
+            IconLoader.Apply(btnEdmToggle, "toolbar_edm_rl.png");
+            new ToolTip().SetToolTip(btnEdmToggle,
+                "EDM: Reflektorlos (+34,4 mm, Leica-Konvention) – Klick → Prisma");
+        }
+    }
+
+    // ── Laserpointer ein/aus ──────────────────────────────────────────────────
+    private void btnLaserpointer_Click(object? sender, EventArgs e)
+    {
+        _laserAktiv = !_laserAktiv;
+        AktualisiereLaserButton();
+
+        if (!TachymeterVerbindung.IstVerbunden) return;
+        // EDM_Laserpointer: 0 = aus, 1 = ein
+        TachymeterVerbindung.GeoCOM_Senden(
+            $"%R1Q,{GeoCOMParser.RPC_EDM_Laserpointer},0:{(_laserAktiv ? 1 : 0)}");
+    }
+
+    private void AktualisiereLaserButton()
+    {
+        if (_laserAktiv)
+        {
+            btnLaserpointer.BackColor = Color.FromArgb(180, 55, 15);
+            btnLaserpointer.FlatAppearance.BorderColor = Color.FromArgb(240, 90, 30);
+            new ToolTip().SetToolTip(btnLaserpointer, "Laserpointer AN – Klick zum Ausschalten");
+        }
+        else
+        {
+            btnLaserpointer.BackColor = Color.FromArgb(60, 95, 160);
+            btnLaserpointer.FlatAppearance.BorderColor = Color.FromArgb(80, 115, 185);
+            new ToolTip().SetToolTip(btnLaserpointer, "Laserpointer AUS – Klick zum Einschalten");
+        }
+    }
+
     // ── Tachymeter-Messung auslösen ──────────────────────────────────────────
     private void btnMessung_Click(object? sender, EventArgs e)
     {
@@ -346,7 +439,9 @@ public partial class FormDxfViewer : Form
 
     private void MessungAbschliessen()
     {
-        _messungZustand = MessungZustand.Bereit;
+        _messungZustand    = MessungZustand.Bereit;
+        _sammlung          = null;
+        _parser_letzterRpc = 0;
         if (InvokeRequired) BeginInvoke(() => btnMessung.Enabled = true);
         else                 btnMessung.Enabled = true;
     }
@@ -377,6 +472,7 @@ public partial class FormDxfViewer : Form
         var messung    = GeoCOMParser.ParseAntwort(zeile, rpcKontext);
         if (messung == null) return;
 
+        // ── Schritt 1: DoMeasure-Bestätigung ──────────────────────────────────
         if (_messungZustand == MessungZustand.WarteMessen
             && rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure)
         {
@@ -384,36 +480,109 @@ public partial class FormDxfViewer : Form
             {
                 lblStatus.Text = $"Messfehler: {messung.Bemerkung}";
                 MessungAbschliessen();
+                return;
             }
-            else
-            {
-                _messungZustand    = MessungZustand.WarteErgebnis;
-                _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetSimpleMea;
-                TachymeterVerbindung.GeoCOM_Senden("%R1Q,2108,0:5000,1");
-            }
+            _messungZustand    = MessungZustand.WarteErgebnis;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetSimpleMea;
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2108,0:5000,1");
+            return;
         }
-        else if (_messungZustand == MessungZustand.WarteErgebnis
+
+        // ── Schritt 2: Hz/V/Dist ──────────────────────────────────────────────
+        if (_messungZustand == MessungZustand.WarteErgebnis
             && rpcKontext == GeoCOMParser.RPC_TMC_GetSimpleMea)
         {
-            MessungAbschliessen();
-
             if (messung.IstFehler)
             {
                 lblStatus.Text = $"Messung fehlgeschlagen: {messung.Bemerkung}";
+                MessungAbschliessen();
                 return;
             }
             if (!messung.IstVollmessung)
             {
                 lblStatus.Text = "Unvollständige Messung (Hz/V/D fehlen).";
+                MessungAbschliessen();
                 return;
             }
-
             // Zielhöhe aus Eingabefeld übernehmen
             if (double.TryParse(txtZielhoehe.Text.Replace(',', '.'),
                 NumberStyles.Any, CultureInfo.InvariantCulture, out double zh))
                 messung.Zielhoehe_m = zh;
 
-            VerarbeiteMiessung(messung);
+            // Sammlung starten – Folgeschritte reichern an
+            _sammlung          = messung;
+            _messungZustand    = MessungZustand.WarteKompensator;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetAngle1;
+            lblStatus.Text     = "Messung OK – Kompensator …";
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2003,0:1");
+            return;
+        }
+
+        // ── Schritt 3: Kompensator (CrossIncline / LengthIncline) ─────────────
+        if (_messungZustand == MessungZustand.WarteKompensator
+            && rpcKontext == GeoCOMParser.RPC_TMC_GetAngle1)
+        {
+            if (!messung.IstFehler && _sammlung != null)
+            {
+                _sammlung.KreuzNeigung_rad  = messung.KreuzNeigung_rad;
+                _sammlung.LaengsNeigung_rad = messung.LaengsNeigung_rad;
+            }
+            _messungZustand    = MessungZustand.WarteAtmKorr;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetAtmCorr;
+            lblStatus.Text     = "Kompensator OK – Atmosph. Korrektur …";
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2029,0:");
+            return;
+        }
+
+        // ── Schritt 4: Atmosphärische Korrektur (PPM/Druck/Temp) ─────────────
+        if (_messungZustand == MessungZustand.WarteAtmKorr
+            && rpcKontext == GeoCOMParser.RPC_TMC_GetAtmCorr)
+        {
+            if (!messung.IstFehler && _sammlung != null)
+            {
+                _sammlung.Atm_Lambda_m     = messung.Atm_Lambda_m;
+                _sammlung.Atm_Druck_mbar   = messung.Atm_Druck_mbar;
+                _sammlung.Atm_TempTrock_C  = messung.Atm_TempTrock_C;
+                _sammlung.Atm_TempFeucht_C = messung.Atm_TempFeucht_C;
+                _sammlung.Atm_PPM          = messung.Atm_PPM;
+            }
+            _messungZustand    = MessungZustand.WarteEdmModus;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetEdmMode;
+            lblStatus.Text     = "AtmKorr OK – EDM-Modus …";
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2021,0:");
+            return;
+        }
+
+        // ── Schritt 5: EDM-Modus ─────────────────────────────────────────────
+        if (_messungZustand == MessungZustand.WarteEdmModus
+            && rpcKontext == GeoCOMParser.RPC_TMC_GetEdmMode)
+        {
+            if (!messung.IstFehler && _sammlung != null)
+            {
+                _sammlung.EdmModus    = messung.EdmModus;
+                _sammlung.EdmModusRoh = messung.EdmModusRoh;
+            }
+            _messungZustand    = MessungZustand.WartePrisma;
+            _parser_letzterRpc = GeoCOMParser.RPC_TMC_GetPrismCorr;
+            lblStatus.Text     = "EDM-Modus OK – Prismenkonstante …";
+            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2023,0:");
+            return;
+        }
+
+        // ── Schritt 6: Prismenkonstante – Sequenz abschließen ─────────────────
+        if (_messungZustand == MessungZustand.WartePrisma
+            && rpcKontext == GeoCOMParser.RPC_TMC_GetPrismCorr)
+        {
+            if (!messung.IstFehler && _sammlung != null)
+                _sammlung.Prismenkonstante_mm = messung.Prismenkonstante_mm;
+
+            var vollstaendig = _sammlung;
+            _sammlung = null;
+            MessungAbschliessen();
+
+            if (vollstaendig != null)
+                VerarbeiteMiessung(vollstaendig);
+            return;
         }
     }
 
@@ -424,6 +593,14 @@ public partial class FormDxfViewer : Form
         double instrH  = LadeInstrumentenHoehe();
         string spNr    = txtStandpunktNr.Text.Trim();
         if (string.IsNullOrEmpty(spNr)) spNr = "SP01";
+
+        // ── Lückenloses Tagesprotokoll ────────────────────────────────────────
+        // Jede Messung sofort sichern – unabhängig von Modus und Ergebnis.
+        string protokollNr = _istNeupunktModus && string.IsNullOrEmpty(punktNr)
+            ? _neupunktZaehler.ToString() : punktNr;
+        MessdatenProtokoll.Schreibe(
+            _istNeupunktModus ? "Neupunkt" : "Stationierung",
+            spNr, instrH, protokollNr, code, messung);
 
         if (_istNeupunktModus)
         {
@@ -466,21 +643,10 @@ public partial class FormDxfViewer : Form
             }
             else
             {
-                // Rohdaten speichern (keine Koordinaten)
-                var dummy = new NeupunktErgebnis
-                {
-                    PunktNr      = punktNr,
-                    Code         = code,
-                    R            = 0, H = 0, Hoehe = 0,
-                    Ist3D        = false,
-                    HzOrientiert = rohdaten.Hz_gon,  HzRoh = rohdaten.Hz_gon,
-                    V_gon        = rohdaten.V_gon,
-                    Strecke_m    = rohdaten.Strecke_m,
-                    Zielhoehe_m  = rohdaten.Zielhoehe_m,
-                    Zeitstempel  = rohdaten.Zeitstempel,
-                    StandpunktNr = spNr
-                };
-                NeupunkteManager.HinzufuegenOderErsetzen(rohdaten, dummy);
+                // Keine gültige Stationierung – Rohdaten wurden in CSV/Protokoll gespeichert.
+                // Kein Overlay-Eintrag: R=0/H=0 würden bei echten Koordinatensystemen
+                // (Gauss-Krüger) einen GDI+-Overflow beim Zeichnen verursachen.
+                statusInfo = $"NP {punktNr} gespeichert (keine Stationierung – nur Rohdaten)";
             }
 
             lblStatus.Text = statusInfo;
@@ -791,6 +957,8 @@ public partial class FormDxfViewer : Form
     }
 
     // ── Toolbar: rechtsbündige Positionierung ─────────────────────────────────
+    // Layout (von rechts): Code – Nr – Zielhoehe – Messen | sep2 | SP – IH – Modus – Lampe | sep1
+    // Layout (von links, fest): Prismenkonstante – EdmToggle – Laserpointer
     private void PositioniereToolbarFelder()
     {
         int cy = (pnlTop.Height - 24) / 2;
@@ -812,20 +980,36 @@ public partial class FormDxfViewer : Form
         lblSP.Location           = new Point(r - lblSP.Width, cy);           r -= lblSP.Width + 4;
         txtInstrHoehe.Location   = new Point(r - txtInstrHoehe.Width, cy);   r -= txtInstrHoehe.Width + 4;
         lblInstrH.Location       = new Point(r - lblInstrH.Width, cy);       r -= lblInstrH.Width + 8;
-        btnModus.Location        = new Point(r - btnModus.Width, 3);         r -= btnModus.Width + 6;
-        sep1.Location            = new Point(r, 6);                          r -= sep1.Width + 8;
+        btnModus.Location        = new Point(r - btnModus.Width, 3);         r -= btnModus.Width + 8;
 
-        // Signallampe links neben Prismenkonstante
-        pnlLampe.Location    = new Point(btnPrismenkonstante.Right + 6, 6);
-        lblLampeInfo.Location = new Point(pnlLampe.Right + 3, cy - 2);
+        // Signallampe rechts, direkt links neben sep1
+        lblLampeInfo.Location = new Point(r - lblLampeInfo.Width, cy - 2); r -= lblLampeInfo.Width + 4;
+        pnlLampe.Location     = new Point(r - pnlLampe.Width,  (pnlTop.Height - pnlLampe.Height) / 2);
+        r -= pnlLampe.Width + 6;
+
+        sep1.Location = new Point(r, 6);
+        // (Linke Seite: btnPrismenkonstante, btnEdmToggle, btnLaserpointer – feste Positionen)
     }
 
     // ── Prismenkonstante ──────────────────────────────────────────────────────
     private void btnPrismenkonstante_Click(object? sender, EventArgs e)
     {
-        using var form = new FormPrismenkonstante();
-        if (form.ShowDialog(this) == DialogResult.OK)
-            lblStatus.Text = $"Prismenkonstante: {form.GewähltePrismenkonstante:+0.0;-0.0;0.0} mm";
+        using var form = new FormPrismenkonstante(_prismaKonstante_mm);
+        if (form.ShowDialog(this) != DialogResult.OK) return;
+
+        _prismaKonstante_mm = form.GewähltePrismenkonstante;
+        _prismaName         = form.GewählterPrismaName;
+        AktualisiereEdmButton(); // Tooltip mit neuem Prismanamen aktualisieren
+
+        // Prismenkonstante ans Gerät senden (nur wenn Prisma-Modus aktiv)
+        if (TachymeterVerbindung.IstVerbunden && _edmIstPrisma)
+        {
+            double pk_m = (double)_prismaKonstante_mm / 1000.0;
+            TachymeterVerbindung.GeoCOM_Senden(
+                $"%R1Q,{GeoCOMParser.RPC_TMC_SetPrismCorr},0:{pk_m.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+
+        lblStatus.Text = $"Prisma: {form.GewählterPrismaName}  {form.GewähltePrismenkonstante:+0.0;-0.0;0.0} mm";
     }
 
     // ── NEU: DXF-Inhalt löschen ───────────────────────────────────────────────
@@ -967,6 +1151,13 @@ public partial class FormDxfViewer : Form
     // ── Zoom beim Schließen speichern ─────────────────────────────────────────
     private void OnFormClosed(object? sender, FormClosedEventArgs e)
     {
+        // Laserpointer beim Schließen sicherheitshalber ausschalten
+        if (_laserAktiv && TachymeterVerbindung.IstVerbunden)
+        {
+            try { TachymeterVerbindung.GeoCOM_Senden($"%R1Q,{GeoCOMParser.RPC_EDM_Laserpointer},0:0"); }
+            catch { }
+        }
+
         TachymeterVerbindung.DatenEmpfangen -= OnTachymeterDaten;
 
         if (!string.IsNullOrEmpty(_aktuellerDxfPfad))

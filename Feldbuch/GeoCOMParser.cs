@@ -32,6 +32,8 @@ public class GeoCOMParser : ITachymeterDatenParser
     public const int RPC_TMC_GetAtmCorr   = 2029;  // atmosphärische Korrektur lesen
     public const int RPC_BAP_SetTargetType = 17021; // Zieltyp setzen: 0=Reflektor (IR), 1=Reflektorlos (RL)
     public const int RPC_BAP_GetTargetType = 17022; // Zieltyp abfragen
+    public const int RPC_TMC_GetPrismCorr = 2023;  // Prismenkonstante lesen [m]
+    public const int RPC_TMC_SetPrismCorr = 2024;  // Prismenkonstante setzen [m]
     public const int RPC_TMC_GetAngle     = 2107;
     public const int RPC_TMC_GetSimpleMea = 2108;
     public const int RPC_TMC_GetFullMeas  = 2167;
@@ -151,6 +153,7 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_TMC_GetSimpleMea => ParseVollmessung(m, daten),
             RPC_TMC_GetFullMeas  => ParseVollmessungErweitert(m, daten),
             RPC_TMC_GetEdmMode   => ParseEdmModus(m, daten),
+            RPC_TMC_GetPrismCorr => ParsePrismkorrektur(m, daten),
             RPC_BAP_GetTargetType => ParseZieltyp(m, daten),
             RPC_COM_GetSWBaud    => ParseBaudrate(m, daten),
 
@@ -159,6 +162,7 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_TMC_DoMeasure      or
             RPC_TMC_SetEdmMode     or
             RPC_TMC_SetAtmCorr     or
+            RPC_TMC_SetPrismCorr   or
             RPC_BAP_SetTargetType  or
             RPC_COM_SetSWBaud      or
             RPC_EDM_Laserpointer   => ParseStatus(m, daten, rpcKontext),
@@ -274,6 +278,20 @@ public class GeoCOMParser : ITachymeterDatenParser
             m.EdmModusRoh = modus;
             m.EdmModus    = EdmModusAusCode(modus);
             m.Bemerkung   = $"EDM-Modus {modus}: {EdmModusText(modus)}";
+        }
+        return m;
+    }
+
+    // ── Prismenkonstante (TMC_GetPrismCorr, RPC 2023) ────────────────────────
+    // Antwort: RC, PrismCorr_m [double, Meter – negativ bei Standard-Leica-Prisma]
+    // Gerät speichert Prismenkonstante in Metern (z.B. -0.034 m = -34 mm).
+    private static TachymeterMessung ParsePrismkorrektur(TachymeterMessung m, string[] d)
+    {
+        m.Typ = MessungsTyp.Status;
+        if (d.Length >= 1 && TryParseDouble(d[0], out double pk_m))
+        {
+            m.Prismenkonstante_mm = pk_m * 1000.0;   // m → mm
+            m.Bemerkung = $"Prismenkonstante: {m.Prismenkonstante_mm:+0.0;-0.0;+0.0} mm";
         }
         return m;
     }

@@ -438,6 +438,34 @@ public class DxfCanvas : Panel
         return Math.Sqrt(dx * dx + dy * dy);
     }
 
+    // ── Zeichenbereich-Prüfung ────────────────────────────────────────────────
+    // GDI+ verwendet intern 28.4-Fixpoint-Arithmetik und bricht mit OverflowException
+    // ab sobald Koordinaten ±8 Mio Pixel überschreiten.
+    // Bei Gauss-Krüger-Koordinaten (~4.500.000 / ~5.200.000) und Scale > 1
+    // passiert das für Punkte in Koordinatenursprungsnähe (R=0, H=0).
+    // Entitäten deren Bildschirmprojektion außerhalb des sicheren Bereichs liegt
+    // werden komplett übersprungen.
+    const float DrawLimit = 100_000f;
+
+    bool IsDrawable(DxfEntity entity)
+    {
+        try
+        {
+            var b  = entity.GetBounds();
+            var p1 = ToScreen(b.MinX, b.MinY);
+            var p2 = ToScreen(b.MaxX, b.MaxY);
+            if (!float.IsFinite(p1.X) || !float.IsFinite(p1.Y) ||
+                !float.IsFinite(p2.X) || !float.IsFinite(p2.Y)) return false;
+            float xMin = Math.Min(p1.X, p2.X);
+            float xMax = Math.Max(p1.X, p2.X);
+            float yMin = Math.Min(p1.Y, p2.Y);
+            float yMax = Math.Max(p1.Y, p2.Y);
+            return xMax > -DrawLimit && xMin < Width  + DrawLimit
+                && yMax > -DrawLimit && yMin < Height + DrawLimit;
+        }
+        catch { return false; }
+    }
+
     // ── Zeichnen ──────────────────────────────────────────────────────────────
     protected override void OnPaint(PaintEventArgs e)
     {
@@ -477,8 +505,11 @@ public class DxfCanvas : Panel
             else
                 pen = defPen;
 
-            try { entity.Draw(g, pen, ToScreen, Scale); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.Draw: {ex.Message}"); }
+            if (IsDrawable(entity))
+            {
+                try { entity.Draw(g, pen, ToScreen, Scale); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.Draw: {ex.Message}"); }
+            }
 
             if (ownPen) pen.Dispose();
         }
@@ -491,8 +522,11 @@ public class DxfCanvas : Panel
                 if (entity is not DxfInsert ins) continue;
                 bool isSel = entity == Selected;
                 Pen  pen   = isSel ? selPen : defPen;
-                try { ins.Draw(g, pen, ToScreen, Scale); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawInsert: {ex.Message}"); }
+                if (IsDrawable(ins))
+                {
+                    try { ins.Draw(g, pen, ToScreen, Scale); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawInsert: {ex.Message}"); }
+                }
             }
         }
 
@@ -502,8 +536,11 @@ public class DxfCanvas : Panel
         {
             bool isSel = entity == Selected;
             Pen  pen   = isSel ? selPen : defPen;
-            try { entity.Draw(g, pen, ToScreen, Scale); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawImport: {ex.Message}"); }
+            if (IsDrawable(entity))
+            {
+                try { entity.Draw(g, pen, ToScreen, Scale); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawImport: {ex.Message}"); }
+            }
         }
 
         // Feldbuch-Overlay (Standpunkte, Neupunkte aus JSON) – immer ganz vorne
@@ -511,8 +548,11 @@ public class DxfCanvas : Panel
         {
             bool isSel = entity == Selected;
             Pen  pen   = isSel ? selPen : defPen;
-            try { entity.Draw(g, pen, ToScreen, Scale); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawOverlay: {ex.Message}"); }
+            if (IsDrawable(entity))
+            {
+                try { entity.Draw(g, pen, ToScreen, Scale); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawOverlay: {ex.Message}"); }
+            }
         }
 
         // Gemessene Neupunkte (blau, schaltbar)
@@ -522,8 +562,11 @@ public class DxfCanvas : Panel
             {
                 bool isSel = entity == Selected;
                 Pen  pen   = isSel ? selPen : defPen;
-                try { entity.Draw(g, pen, ToScreen, Scale); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawNeupunkte: {ex.Message}"); }
+                if (IsDrawable(entity))
+                {
+                    try { entity.Draw(g, pen, ToScreen, Scale); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawNeupunkte: {ex.Message}"); }
+                }
             }
         }
 
@@ -532,8 +575,11 @@ public class DxfCanvas : Panel
         {
             foreach (var entity in ResidualEntities)
             {
-                try { entity.Draw(g, defPen, ToScreen, Scale); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawResidual: {ex.Message}"); }
+                if (IsDrawable(entity))
+                {
+                    try { entity.Draw(g, defPen, ToScreen, Scale); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawResidual: {ex.Message}"); }
+                }
             }
         }
 
@@ -542,8 +588,11 @@ public class DxfCanvas : Panel
         {
             foreach (var m in PunktMarker)
             {
-                try { m.Draw(g, defPen, ToScreen, Scale); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawPunktMarker: {ex.Message}"); }
+                if (IsDrawable(m))
+                {
+                    try { m.Draw(g, defPen, ToScreen, Scale); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawPunktMarker: {ex.Message}"); }
+                }
             }
         }
 
