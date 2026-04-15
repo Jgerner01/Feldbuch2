@@ -49,6 +49,12 @@ public partial class FormDxfViewer : Form
     // Punktnummer-Auto-Increment
     private int _neupunktZaehler;
 
+    // ── Digitalisier-Modus ────────────────────────────────────────────────────
+    private bool         _digitalisiermodus  = false;
+    private int          _digitalisierZaehler = 1;
+    private string       _digitalisierKorPfad = "";   // z.B. C:\Projekt\punkte.kor
+    private ImportLayer? _digitalisierLayer   = null;
+
     // ── Konstruktor ───────────────────────────────────────────────────────────
     public FormDxfViewer()
     {
@@ -84,7 +90,7 @@ public partial class FormDxfViewer : Form
         canvas.ResidualVisible  = ProjektManager.ResidualVisible;
 
         // Events
-        canvas.PointPicked       += OnPointPicked;
+        canvas.PointPicked       += OnPointPicked!;
         canvas.RectangleSelected += OnRectangleSelected;
         FormClosed               += OnFormClosed;
         Activated                += OnFormActivated;
@@ -197,9 +203,11 @@ public partial class FormDxfViewer : Form
         new ToolTip().SetToolTip(_chkPunktMarker, "DXF-Punktnummern ein-/ausblenden");
 
         // Vor Neupunkte/Residual einfügen
+        // WICHTIG: erst Add(), dann SetChildIndex() – SetChildIndex wirft sonst
+        // "child ist kein untergeordnetes Steuerelement"
+        flpLayers.Controls.Add(_chkPunktMarker);
         int idx = flpLayers.Controls.IndexOf(_chkNeupunkte);
         if (idx >= 0) flpLayers.Controls.SetChildIndex(_chkPunktMarker, idx);
-        else flpLayers.Controls.Add(_chkPunktMarker);
     }
 
     // ── Signallampe ───────────────────────────────────────────────────────────
@@ -851,11 +859,11 @@ public partial class FormDxfViewer : Form
 
     private void BaueCheckboxen()
     {
-        // Import-Layer-Checkboxen neu aufbauen, Neupunkte+Residual-Checkboxen erhalten
-        // Alle bisherigen Checkboxen entfernen außer _chkNeupunkte + _chkResidual
+        // Import-Layer-Checkboxen neu aufbauen, feste Checkboxen erhalten
+        // _chkPunktMarker ebenfalls schützen – er wird separat durch BauePunktMarkerCheckbox verwaltet
         var zuEntfernen = flpLayers.Controls
             .OfType<CheckBox>()
-            .Where(c => c != _chkNeupunkte && c != _chkResidual)
+            .Where(c => c != _chkNeupunkte && c != _chkResidual && c != _chkPunktMarker)
             .ToList();
         foreach (var c in zuEntfernen) flpLayers.Controls.Remove(c);
 
@@ -900,16 +908,23 @@ public partial class FormDxfViewer : Form
         using var dlg = new OpenFileDialog
         {
             Title  = "KOR- oder CSV-Datei importieren",
-            Filter = "KOR / CSV|*.kor;*.csv|KOR-Datei|*.kor|CSV-Datei|*.csv|Alle Dateien|*.*"
+            Filter = "KOR / CSV|*.kor;*-kor.csv;*.csv|KOR-Datei|*.kor|KOR-CSV (*-kor.csv)|*-kor.csv|CSV-Datei|*.csv|Alle Dateien|*.*"
         };
         if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        string datei = dlg.FileName;
+        string ext   = Path.GetExtension(datei).ToLowerInvariant();
+        string name  = Path.GetFileName(datei);
+
+        // Erkennung: ist es eine -kor.csv (Begleit-CSV einer Digitalisierung)?
+        bool istKorCsv = name.EndsWith("-kor.csv", StringComparison.OrdinalIgnoreCase);
+
         List<ImportPunkt> punkte;
-        string ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
         try
         {
-            punkte = ext == ".csv"
-                ? ImportPunkteManager.LeseCsv(dlg.FileName)
-                : ImportPunkteManager.LeseKor(dlg.FileName);
+            punkte = (ext == ".csv" || istKorCsv)
+                ? ImportPunkteManager.LeseCsv(datei)
+                : ImportPunkteManager.LeseKor(datei);
         }
         catch (Exception ex)
         {
@@ -917,12 +932,177 @@ public partial class FormDxfViewer : Form
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
+
+        // Auto-Erkennung: beim Import einer .kor-Datei auch die Begleit-CSV prüfen.
+        // Die -kor.csv hat eine Kopfzeile und einen Code-Spalte – sie ist vollständiger.
+        // Wenn sie existiert und mehr Punkte enthält, wird sie bevorzugt.
+        if (ext == ".kor" && !istKorCsv)
+        {
+            string csvBegleit = GetKorCsvPfad(datei);
+            if (File.Exists(csvBegleit))
+            {
+                try
+                {
+                    var csvPunkte = ImportPunkteManager.LeseCsv(csvBegleit);
+                    if (csvPunkte.Count >= punkte.Count)
+                    {
+                        // CSV bevorzugen (vollständiger, hat Kopfzeile + Code)
+                        punkte = csvPunkte;
+                        datei  = csvBegleit;   // für Layer-Name und Status
+                        name   = Path.GetFileName(csvBegleit);
+                    }
+                }
+                catch { /* Fehler in Begleit-CSV ignorieren, KOR bleibt */ }
+            }
+        }
+
         var (added, dupl) = ImportPunkteManager.AddRange(punkte);
-        AddImportLayer(dlg.FileName, punkte);
+        AddImportLayer(datei, punkte);
         canvas.FitToView();
-        string msg = $"{added} Punkte importiert aus {Path.GetFileName(dlg.FileName)}";
+        string msg = $"{added} Punkte importiert aus {name}";
         if (dupl > 0) msg += $"  ({dupl} Duplikat(e) übersprungen)";
         lblStatus.Text = msg;
+    }
+
+    // ── Digitalisierung ───────────────────────────────────────────────────────
+    private void btnDigitalisierung_Click(object? sender, EventArgs e)
+    {
+        if (_digitalisiermodus)
+        {
+            // Modus deaktivieren
+            _digitalisiermodus = false;
+            UpdateDigitalisierButton();
+            lblStatus.Text = $"Digitalisierung beendet – {GetKorCsvPfad(_digitalisierKorPfad)} und {Path.GetFileName(_digitalisierKorPfad)} gespeichert";
+            return;
+        }
+
+        // Ausgabedatei bestimmen (nur beim ersten Start oder wenn keine Datei gesetzt)
+        if (string.IsNullOrEmpty(_digitalisierKorPfad))
+        {
+            string projektDir = ProjektManager.ProjektVerzeichnis;
+            string dateiName = ProjektManager.ProjektName + "-dig.kor";
+            string korPfad = Path.Combine(projektDir, dateiName);
+
+            // Prüfen ob bereits eine KOR-Datei existiert
+            if (File.Exists(korPfad))
+            {
+                // Bestehende Datei verwenden – keinen Dialog zeigen
+                _digitalisierKorPfad = korPfad;
+
+                // Nächste freie Punktnummer ermitteln
+                _digitalisierZaehler = NaechstePunktNr(korPfad);
+
+                _digitalisierLayer = null;
+            }
+            else
+            {
+                // Keine bestehende Datei – Benutzer fragen
+                using var dlg = new SaveFileDialog
+                {
+                    Title            = "Digitalisierte Punkte speichern als …",
+                    Filter           = "KOR-Datei|*.kor|Alle Dateien|*.*",
+                    DefaultExt       = "kor",
+                    InitialDirectory = Directory.Exists(projektDir) ? projektDir : "",
+                    FileName         = dateiName
+                };
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                _digitalisierKorPfad = dlg.FileName;
+
+                // KOR-Header-Kommentar schreiben (nur bei neuer Datei)
+                File.WriteAllText(_digitalisierKorPfad,
+                    $"% Digitalisierte Punkte  {DateTime.Now:yyyy-MM-dd HH:mm}\n",
+                    System.Text.Encoding.UTF8);
+
+                // CSV-Header schreiben (Muster-kor.csv-Format, nur bei neuer Datei)
+                string csvPfad = GetKorCsvPfad(_digitalisierKorPfad);
+                var csvHeader = new System.Text.StringBuilder();
+                csvHeader.AppendLine("# METADATA");
+                csvHeader.AppendLine($"Projekt: {ProjektManager.ProjektName}");
+                csvHeader.AppendLine("Sensor: Digitalisierung");
+                csvHeader.AppendLine("Bearbeiter: ");
+                csvHeader.AppendLine($"Datum: {DateTime.Now:yyyy-MM-dd}");
+                csvHeader.AppendLine("---");
+                csvHeader.AppendLine("# DATENTYP");
+                csvHeader.AppendLine("Koordinaten");
+                csvHeader.AppendLine("# DATEN");
+                csvHeader.AppendLine("PunktNr; X; Y; Z; Code");
+                File.WriteAllText(csvPfad, csvHeader.ToString(), System.Text.Encoding.UTF8);
+
+                _digitalisierZaehler = 1;
+                _digitalisierLayer   = null;
+            }
+        }
+
+        _digitalisiermodus = true;
+        UpdateDigitalisierButton();
+        lblStatus.Text = $"Digitalisierung aktiv  → {Path.GetFileName(_digitalisierKorPfad)}  [Klick = Punkt]";
+    }
+
+    /// <summary>Ermittelt die nächste freie Punktnummer aus einer bestehenden KOR-Datei.</summary>
+    private int NaechstePunktNr(string korPfad)
+    {
+        int maxNr = 0;
+        try
+        {
+            foreach (var line in File.ReadLines(korPfad, System.Text.Encoding.UTF8))
+            {
+                if (line.StartsWith("%")) continue; // Kommentarzeilen überspringen
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                // KOR-Format: {nr,-8}{x,16}{y,16}{z,10}    {code}
+                string nrStr = line.Substring(0, Math.Min(8, line.Length)).Trim();
+                if (int.TryParse(nrStr, out int nr) && nr > maxNr)
+                    maxNr = nr;
+            }
+        }
+        catch { /* Im Fehlerfall bei 1 beginnen */ }
+
+        return maxNr > 0 ? maxNr + 1 : 1;
+    }
+
+    private void UpdateDigitalisierButton()
+    {
+        if (_digitalisiermodus)
+        {
+            btnDigitalisierung.BackColor = Color.FromArgb(36, 120, 60);
+            btnDigitalisierung.ForeColor = Color.White;
+            btnDigitalisierung.FlatAppearance.BorderColor = Color.FromArgb(20, 90, 40);
+        }
+        else
+        {
+            btnDigitalisierung.BackColor = Color.FromArgb(68, 74, 92);
+            btnDigitalisierung.ForeColor = Color.FromArgb(200, 230, 210);
+            btnDigitalisierung.FlatAppearance.BorderColor = Color.FromArgb(85, 92, 115);
+        }
+    }
+
+    /// <summary>Schreibt einen digitalisierten Punkt parallel in .kor und -kor.csv.</summary>
+    private void SchreibeDigitalisierPunkt(string nr, double r, double h, double hoehe, string code)
+    {
+        if (string.IsNullOrEmpty(_digitalisierKorPfad)) return;
+        var ic = CultureInfo.InvariantCulture;
+
+        // KOR-Zeile: exaktes Format wie CsvDatenDatei.ExportiereKor
+        // {nr,-8}{x,16}{y,16}{z,10}    {code}
+        string x = r    .ToString("F3", ic);
+        string y = h    .ToString("F3", ic);
+        string z = hoehe.ToString("F3", ic);
+        string korZeile = $"{nr,-8}{x,16}{y,16}{z,10}    {code}";
+        File.AppendAllText(_digitalisierKorPfad, korZeile + "\n", System.Text.Encoding.UTF8);
+
+        // CSV-Zeile: Muster-kor.csv-Format  →  "PunktNr; X; Y; Z; Code"
+        string csvZeile = $"{nr}; {x}; {y}; {z}; {code}";
+        string csvPfad  = GetKorCsvPfad(_digitalisierKorPfad);
+        File.AppendAllText(csvPfad, csvZeile + "\n", System.Text.Encoding.UTF8);
+    }
+
+    /// <summary>Gibt den Pfad der Begleit-CSV zu einer .kor-Datei zurück.</summary>
+    private static string GetKorCsvPfad(string korPfad)
+    {
+        if (string.IsNullOrEmpty(korPfad)) return "";
+        string dir      = Path.GetDirectoryName(korPfad) ?? "";
+        string baseName = Path.GetFileNameWithoutExtension(korPfad);
+        return Path.Combine(dir, baseName + "-kor.csv");
     }
 
     // ── JSON einlesen ─────────────────────────────────────────────────────────
@@ -1259,8 +1439,40 @@ public partial class FormDxfViewer : Form
     }
 
     // ── Picking / Koordinatenanzeige ──────────────────────────────────────────
-    private void OnPointPicked(double x, double y, DxfEntity? entity)
+    private void OnPointPicked(double x, double y, DxfEntity? entity, bool isClick)
     {
+        // ── Digitalisier-Modus: nur bei echtem Klick (nicht bei Mausbewegung) ─
+        if (_digitalisiermodus)
+        {
+            if (!isClick) return;   // Hover ignorieren
+            string nr   = txtPunktNr.Text.Trim();
+            string code = txtCode.Text.Trim();
+            if (string.IsNullOrEmpty(nr)) nr = _digitalisierZaehler.ToString();
+
+            SchreibeDigitalisierPunkt(nr, x, y, 0.0, code);
+
+            // Overlay aktualisieren
+            if (_digitalisierLayer == null)
+            {
+                _digitalisierLayer = new ImportLayer("Digitalisierung");
+                canvas.ImportLayers.Add(_digitalisierLayer);
+                BaueCheckboxen();
+            }
+            _digitalisierLayer.Entities.Add(new OverlayImportPunkt(nr, x, y, 0.0));
+            canvas.Invalidate();
+
+            lblStatus.Text = $"Dig. {nr}: R={x:F3}  H={y:F3}" +
+                             (string.IsNullOrEmpty(code) ? "" : $"  Code={code}");
+
+            // Punktnummer hochzählen
+            if (int.TryParse(nr, out int n))
+            {
+                _digitalisierZaehler = n + 1;
+                txtPunktNr.Text = _digitalisierZaehler.ToString();
+            }
+            return;
+        }
+
         string snapHinweis = canvas.SnapActive ? " [SNAP]" : "";
         if (entity != null)
         {

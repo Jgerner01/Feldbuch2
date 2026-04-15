@@ -15,13 +15,15 @@ public class DatenPanelControl : UserControl
     public bool IstGeaendert => _geaendert;
 
     // ── Controls ──────────────────────────────────────────────────────────────
-    Label        _lblDatei    = null!;
-    TextBox      _txtProjekt  = null!, _txtSensor  = null!,
-                 _txtBearb    = null!, _txtDatum   = null!;
-    RadioButton  _rdoKor      = null!, _rdoDat     = null!;
-    DataGridView _grid        = null!;
-    Panel        _pnlStp      = null!;
-    TextBox      _txtStpNr    = null!, _txtStpH = null!, _txtStpCode = null!;
+    Label           _lblDatei    = null!;
+    TextBox         _txtProjekt  = null!, _txtSensor  = null!,
+                    _txtBearb    = null!, _txtDatum   = null!;
+    RadioButton     _rdoKor      = null!, _rdoDat     = null!;
+    DataGridView    _grid        = null!;
+    Panel           _pnlStp      = null!;
+    TextBox         _txtStpNr    = null!, _txtStpH = null!, _txtStpCode = null!;
+    ContextMenuStrip? _colHeaderMenu;
+    int             _colHeaderClickedIndex = -1;
 
     // ── Konstruktor ───────────────────────────────────────────────────────────
     public DatenPanelControl() => BaueUI();
@@ -206,6 +208,9 @@ public class DatenPanelControl : UserControl
         _grid.CellValueChanged += (_, _) => _geaendert = true;
         _grid.RowsAdded        += (_, _) => _geaendert = true;
         _grid.RowsRemoved      += (_, _) => _geaendert = true;
+
+        // ColumnHeader-Kontextmenü (rechte Maustaste)
+        _grid.ColumnHeaderMouseClick += Grid_ColumnHeaderMouseClick;
 
         grpDaten.Controls.Add(_grid);
         grpDaten.Controls.Add(pnlBtnRow);
@@ -564,6 +569,206 @@ public class DatenPanelControl : UserControl
             for (int i = 0; i < z.Count && i < _grid.Columns.Count; i++)
                 _grid.Rows[idx].Cells[i].Value = z[i];
         }
+        _geaendert = true;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // ColumnHeader-Kontextmenü – Werte für alle Zeilen setzen/addieren
+    // ═════════════════════════════════════════════════════════════════════════
+
+    void Grid_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Right) return;
+        _colHeaderClickedIndex = e.ColumnIndex;
+
+        var col = _grid.Columns[e.ColumnIndex];
+        var colName = col.HeaderText;
+
+        // Menü erstellen (falls noch nicht existent)
+        _colHeaderMenu = new ContextMenuStrip();
+
+        // Menüpunkt: Alle Zellen setzen (=)
+        var itemSet = new ToolStripMenuItem($"  =  Alle auf Wert setzen…");
+        itemSet.Font = new Font("Segoe UI", 9F);
+        itemSet.Click += (_, _) => AlleZellenSetzen(colName, e.ColumnIndex);
+
+        // Menüpunkt: Alle Zellen addieren (+)
+        var itemAdd = new ToolStripMenuItem($"  +  Zu allen addieren…");
+        itemAdd.Font = new Font("Segoe UI", 9F);
+        itemAdd.Click += (_, _) => AlleZellenAddieren(colName, e.ColumnIndex);
+
+        _colHeaderMenu.Items.Add(itemSet);
+        _colHeaderMenu.Items.Add(itemAdd);
+
+        // Menü an der Cursor-Position anzeigen
+        var pt = _grid.PointToClient(Cursor.Position);
+        _colHeaderMenu.Show(_grid, pt);
+    }
+
+    void AlleZellenSetzen(string spaltenName, int colIndex)
+    {
+        if (_datei == null || _grid.Columns.Count == 0) return;
+
+        using var dlg = new Form
+        {
+            Text = $"Spalte '{spaltenName}' – Alle Werte setzen",
+            Size = new Size(380, 145),
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MaximizeBox = false, MinimizeBox = false,
+            AcceptButton = null, CancelButton = null
+        };
+
+        var lbl = new Label
+        {
+            Text = $"Wert für alle {_grid.RowCount - 1} Zeilen:",
+            Location = new Point(14, 14),
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F)
+        };
+
+        var txt = new TextBox
+        {
+            Location = new Point(14, 42),
+            Size = new Size(336, 24),
+            Font = new Font("Consolas", 10F),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
+        };
+
+        var btnOk = new Button
+        {
+            Text = "Setzen (=)",
+            DialogResult = DialogResult.OK,
+            Location = new Point(150, 76),
+            Size = new Size(96, 28),
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(52, 88, 155),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand
+        };
+
+        var btnAbb = new Button
+        {
+            Text = "Abbrechen",
+            DialogResult = DialogResult.Cancel,
+            Location = new Point(254, 76),
+            Size = new Size(96, 28),
+            Font = new Font("Segoe UI", 9F)
+        };
+
+        dlg.Controls.AddRange([lbl, txt, btnOk, btnAbb]);
+        dlg.AcceptButton = btnOk;
+        dlg.CancelButton = btnAbb;
+        txt.Focus();
+
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        string wert = txt.Text.Trim();
+        if (string.IsNullOrEmpty(wert)) return;
+
+        int dataRows = 0;
+        foreach (DataGridViewRow row in _grid.Rows)
+        {
+            if (row.IsNewRow) continue;
+            row.Cells[colIndex].Value = wert;
+            dataRows++;
+        }
+
+        _geaendert = true;
+    }
+
+    void AlleZellenAddieren(string spaltenName, int colIndex)
+    {
+        if (_datei == null || _grid.Columns.Count == 0) return;
+
+        using var dlg = new Form
+        {
+            Text = $"Spalte '{spaltenName}' – Wert addieren",
+            Size = new Size(380, 145),
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MaximizeBox = false, MinimizeBox = false,
+            AcceptButton = null, CancelButton = null
+        };
+
+        var lbl = new Label
+        {
+            Text = $"Wert zum Addieren (+) für alle Zeilen:",
+            Location = new Point(14, 14),
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9F)
+        };
+
+        var txt = new TextBox
+        {
+            Location = new Point(14, 42),
+            Size = new Size(336, 24),
+            Font = new Font("Consolas", 10F),
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top
+        };
+
+        var btnOk = new Button
+        {
+            Text = "Addieren (+)",
+            DialogResult = DialogResult.OK,
+            Location = new Point(150, 76),
+            Size = new Size(96, 28),
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(36, 108, 68),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand
+        };
+
+        var btnAbb = new Button
+        {
+            Text = "Abbrechen",
+            DialogResult = DialogResult.Cancel,
+            Location = new Point(254, 76),
+            Size = new Size(96, 28),
+            Font = new Font("Segoe UI", 9F)
+        };
+
+        dlg.Controls.AddRange([lbl, txt, btnOk, btnAbb]);
+        dlg.AcceptButton = btnOk;
+        dlg.CancelButton = btnAbb;
+        txt.Focus();
+
+        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+        string eingabe = txt.Text.Trim();
+        if (string.IsNullOrEmpty(eingabe)) return;
+
+        if (!double.TryParse(eingabe, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double addWert))
+        {
+            MessageBox.Show($"'{eingabe}' ist keine gültige Zahl.", "Fehler",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        int dataRows = 0;
+        foreach (DataGridViewRow row in _grid.Rows)
+        {
+            if (row.IsNewRow) continue;
+            var zelle = row.Cells[colIndex];
+            string alt = zelle.Value?.ToString()?.Trim() ?? "";
+            if (double.TryParse(alt, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out double altWert))
+            {
+                double neu = altWert + addWert;
+                // Formatierung beibehalten: 3 Dezimalstellen für Koordinaten
+                zelle.Value = neu.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                // Wenn alte Zelle keine Zahl, einfach den Addier-Wert setzen
+                zelle.Value = addWert.ToString("F3", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            dataRows++;
+        }
+
         _geaendert = true;
     }
 }
