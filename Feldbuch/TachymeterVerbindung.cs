@@ -4,14 +4,20 @@ namespace Feldbuch;
 
 public enum TachymeterModell
 {
+    // ── Leica GeoCOM-Protokoll ────────────────────────────────────────────────
+    LeicaGeoCOM,              // 38400 Baud
+    LeicaGeoCOMStandard,      // 9600 Baud (sicherer Fallback)
     LeicaTCR307,
     LeicaTS06,
     LeicaTS11,
     TrimbleS3,
-    TopconGPT3000,
-    SokkiaSET,
-    LeicaGeoCOM,
-    LeicaGeoCOMStandard,
+    // ── Sokkia SDR-Format ─────────────────────────────────────────────────────
+    SokkiaSDR,                // Sokkia SET-Reihe, SDR33-ASCII-Format
+    // ── Topcon-Protokoll ──────────────────────────────────────────────────────
+    TopconGTS,                // Topcon GTS/GPT-Reihe, CR-Trigger
+    // ── GNSS ──────────────────────────────────────────────────────────────────
+    GnssNmea,                 // GNSS-Empfänger, NMEA 0183
+    // ── Manuell ───────────────────────────────────────────────────────────────
     Manuell
 }
 
@@ -376,44 +382,47 @@ public static class TachymeterVerbindung
     public static (int Baud, int Bits, Parity Par, StopBits Stop) GetPreset(TachymeterModell m) =>
         m switch
         {
-            TachymeterModell.LeicaTCR307   => (9600,  8, Parity.None, StopBits.One),
-            TachymeterModell.LeicaTS06     => (9600,  8, Parity.None, StopBits.One),
-            TachymeterModell.LeicaTS11     => (9600,  8, Parity.None, StopBits.One),
-            TachymeterModell.TrimbleS3     => (9600,  8, Parity.None, StopBits.One),
-            TachymeterModell.TopconGPT3000 => (9600,  8, Parity.None, StopBits.One),
-            TachymeterModell.SokkiaSET     => (9600,  8, Parity.None, StopBits.One),
             // GeoCOM 38400 Baud (COM_SetSWBaudrate Code 5) – schnelle Kommunikation
             TachymeterModell.LeicaGeoCOM         => (38400, 8, Parity.None, StopBits.One),
             // GeoCOM 9600 Baud (COM_SetSWBaudrate Code 3) – sicherer Fallback
             TachymeterModell.LeicaGeoCOMStandard => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.LeicaTCR307         => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.LeicaTS06           => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.LeicaTS11           => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.TrimbleS3           => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.SokkiaSDR           => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.TopconGTS           => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.GnssNmea            => (4800,  8, Parity.None, StopBits.One),
             _                                    => (9600,  8, Parity.None, StopBits.One)
         };
 
     // ── Anzeigetexte ──────────────────────────────────────────────────────────
     public static string ModellAnzeige(TachymeterModell m) => m switch
     {
-        TachymeterModell.LeicaTCR307   => "Leica TCR307",
-        TachymeterModell.LeicaTS06     => "Leica TS06",
-        TachymeterModell.LeicaTS11     => "Leica TS11",
-        TachymeterModell.TrimbleS3     => "Trimble S3",
-        TachymeterModell.TopconGPT3000 => "Topcon GPT-3000",
-        TachymeterModell.SokkiaSET     => "Sokkia SET",
-        TachymeterModell.LeicaGeoCOM         => "GeoCOM (Leica TPS1200)  –  38400 Baud",
-        TachymeterModell.LeicaGeoCOMStandard => "GeoCOM Standard (Leica TPS1200)  –  9600 Baud",
+        TachymeterModell.LeicaGeoCOM         => "Leica GeoCOM (TPS1200)  –  38400 Baud",
+        TachymeterModell.LeicaGeoCOMStandard => "Leica GeoCOM Standard (TPS1200)  –  9600 Baud",
+        TachymeterModell.LeicaTCR307         => "Leica TCR307",
+        TachymeterModell.LeicaTS06           => "Leica TS06",
+        TachymeterModell.LeicaTS11           => "Leica TS11",
+        TachymeterModell.TrimbleS3           => "Trimble S3",
+        TachymeterModell.SokkiaSDR           => "Sokkia SDR  (SET-Reihe)",
+        TachymeterModell.TopconGTS           => "Topcon GTS/GPT",
+        TachymeterModell.GnssNmea            => "GNSS  (NMEA 0183)",
         TachymeterModell.Manuell             => "Manuell",
-        _                              => m.ToString()
+        _                                    => m.ToString()
     };
 
     public static TachymeterModell[] AlleModelle =>
     [
+        TachymeterModell.LeicaGeoCOM,
+        TachymeterModell.LeicaGeoCOMStandard,
         TachymeterModell.LeicaTCR307,
         TachymeterModell.LeicaTS06,
         TachymeterModell.LeicaTS11,
         TachymeterModell.TrimbleS3,
-        TachymeterModell.TopconGPT3000,
-        TachymeterModell.SokkiaSET,
-        TachymeterModell.LeicaGeoCOM,
-        TachymeterModell.LeicaGeoCOMStandard,
+        TachymeterModell.SokkiaSDR,
+        TachymeterModell.TopconGTS,
+        TachymeterModell.GnssNmea,
         TachymeterModell.Manuell,
     ];
 }

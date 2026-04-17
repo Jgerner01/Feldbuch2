@@ -31,6 +31,12 @@ public static class ProjektManager
     /// <summary>Erweiterte Protokollierung (Eingabedaten, Rohmessungen) (Platzhalter).</summary>
     public static bool ErweiterteProtokollierung { get; set; } = false;
 
+    // ── Koordinatentransformation ─────────────────────────────────────────────
+    /// <summary>Fester Maßstab m=1 bei Koordinatentransformation.</summary>
+    public static bool TransformFesterMassstab { get; set; } = false;
+    /// <summary>Letzter verwendeter Transformationstyp (ComboBox-Index).</summary>
+    public static int  TransformTypIndex       { get; set; } = 0;
+
     // ── Neupunkt-/Messzähler & DXF-Viewer-Optionen ───────────────────────────
     /// <summary>Aktueller Neupunkt-Zähler (auto-increment im DXF-Viewer).</summary>
     public static int    NeupunktZaehler       { get; set; } = 1;
@@ -50,7 +56,8 @@ public static class ProjektManager
     /// True = am COM-Port hängt ein GNSS-Empfänger (NMEA 0183).
     /// False = Tachymeter (GeoCOM / GSI / Manuell).
     /// </summary>
-    public static bool              IstGnssGeraet     { get; set; } = false;
+    /// <summary>True wenn GNSS-Empfänger ausgewählt ist (abgeleitet aus TachymeterModell).</summary>
+    public static bool IstGnssGeraet => TachymeterModell == TachymeterModell.GnssNmea;
     public static TachymeterModell TachymeterModell   { get; set; } = TachymeterModell.Manuell;
     public static string           TachymeterPort     { get; set; } = "";
     public static int              TachymeterBaudRate { get; set; } = 9600;
@@ -128,6 +135,9 @@ public static class ProjektManager
                 ProjektVerzeichnis = verz;
             }
 
+            TransformFesterMassstab   = LadeBool(root, "TransformFesterMassstab",  defaultVal: false);
+            if (int.TryParse(root.SelectSingleNode("TransformTypIndex")?.InnerText, out var tti)) TransformTypIndex = tti;
+
             ProtokollAktiv            = LadeBool(root, "ProtokollAktiv",           defaultVal: true);
             AutoBackup                = LadeBool(root, "AutoBackup",               defaultVal: false);
             KoordinatenTooltip        = LadeBool(root, "KoordinatenTooltip",       defaultVal: true);
@@ -145,13 +155,21 @@ public static class ProjektManager
             ResidualVisible    = LadeBool(root, "ResidualVisible",   defaultVal: true);
             LetzteStandpunktNr = root.SelectSingleNode("LetzteStandpunktNr")?.InnerText?.Trim() ?? "";
 
-            // Messgerät-Typ
-            IstGnssGeraet = root.SelectSingleNode("IstGnssGeraet")?.InnerText?.Trim().ToLower() == "true";
-
-            // Tachymeter
+            // Tachymeter-Modell (mit Migration alter Enum-Namen)
             var tachModellText = root.SelectSingleNode("TachymeterModell")?.InnerText?.Trim() ?? "";
+            // Migration: alte Enum-Namen auf neue abbilden
+            tachModellText = tachModellText switch
+            {
+                "SokkiaSET"    => "SokkiaSDR",
+                "TopconGPT3000" => "TopconGTS",
+                _ => tachModellText
+            };
             if (Enum.TryParse<TachymeterModell>(tachModellText, out var tm))
                 TachymeterModell = tm;
+            // Migration: altes IstGnssGeraet-Flag auf neues GnssNmea-Modell übertragen
+            if (TachymeterModell != TachymeterModell.GnssNmea
+                && root.SelectSingleNode("IstGnssGeraet")?.InnerText?.Trim().ToLower() == "true")
+                TachymeterModell = TachymeterModell.GnssNmea;
             TachymeterPort     = root.SelectSingleNode("TachymeterPort")    ?.InnerText?.Trim() ?? "";
             if (int.TryParse(root.SelectSingleNode("TachymeterBaudRate")?.InnerText, out var baud)) TachymeterBaudRate = baud;
             if (int.TryParse(root.SelectSingleNode("TachymeterDataBits")?.InnerText, out var bits)) TachymeterDataBits = bits;
@@ -190,6 +208,8 @@ public static class ProjektManager
 
             Append(doc, root, "LetztesProjektName",          ProjektName);
             Append(doc, root, "LetztesProjektVerzeichnis",  ProjektVerzeichnis);
+            Append(doc, root, "TransformFesterMassstab", TransformFesterMassstab.ToString().ToLower());
+            Append(doc, root, "TransformTypIndex",      TransformTypIndex.ToString());
             Append(doc, root, "ProtokollAktiv",             ProtokollAktiv.ToString().ToLower());
             Append(doc, root, "AutoBackup",                 AutoBackup.ToString().ToLower());
             Append(doc, root, "KoordinatenTooltip",         KoordinatenTooltip.ToString().ToLower());
@@ -201,7 +221,6 @@ public static class ProjektManager
             Append(doc, root, "NeupunkteVisible",     NeupunkteVisible.ToString().ToLower());
             Append(doc, root, "ResidualVisible",      ResidualVisible.ToString().ToLower());
             Append(doc, root, "LetzteStandpunktNr",  LetzteStandpunktNr);
-            Append(doc, root, "IstGnssGeraet",      IstGnssGeraet.ToString().ToLower());
             Append(doc, root, "TachymeterModell",   TachymeterModell.ToString());
             Append(doc, root, "TachymeterPort",     TachymeterPort);
             Append(doc, root, "TachymeterBaudRate", TachymeterBaudRate.ToString());

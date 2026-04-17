@@ -128,20 +128,22 @@ public partial class FormPrismenkonstante : Form
         var p = _prismen[idx];
         bool aktiv = (idx == _ausgewaehltIndex);
 
-        // Zeichenfläche
-        var r = btn.ClientRectangle;
-        int iconH = 38;
+        // Zeichenfläche – Größen proportional zur Button-Höhe skalieren
+        var r     = btn.ClientRectangle;
+        int iconH = Math.Max(38, r.Height * 45 / 100);   // ~45 % der Button-Höhe
+        float nameFontSize = Math.Max(9f, r.Height * 0.047f);
+        float descFontSize = Math.Max(8f, r.Height * 0.040f);
 
         if (p.Name.Contains("360") || p.Name.Contains("GRZ"))
-            Zeichne360Prisma(g, r.Width / 2, 8, iconH, aktiv);
+            Zeichne360Prisma(g, r.Width / 2, 10, iconH, aktiv);
         else if (p.Name.Contains("Mini") || p.Name.Contains("GMP"))
-            ZeichneMiniPrisma(g, r.Width / 2, 8, iconH, aktiv);
+            ZeichneMiniPrisma(g, r.Width / 2, 10, iconH, aktiv);
         else
-            ZeichneStandardPrisma(g, r.Width / 2, 8, iconH, aktiv);
+            ZeichneStandardPrisma(g, r.Width / 2, 10, iconH, aktiv);
 
         // Prisma-Name
-        var nameFont = new Font("Segoe UI", 7.5f, FontStyle.Bold);
-        var descFont = new Font("Segoe UI", 6.5f);
+        var nameFont = new Font("Segoe UI", nameFontSize, FontStyle.Bold);
+        var descFont = new Font("Segoe UI", descFontSize);
         Color textCol = aktiv ? Color.White : Color.FromArgb(200, 215, 240);
 
         // Name oben

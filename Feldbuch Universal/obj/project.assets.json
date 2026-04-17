@@ -8510,26 +8510,20 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\jgerner\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\jgerner.PERS\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\jgerner\\source\\repos\\Feldbuch Universal\\Feldbuch Universal\\Feldbuch Universal.csproj",
+      "projectUniqueName": "c:\\Users\\jgerner.PERS\\Feldbuch2\\Feldbuch2\\Feldbuch Universal\\Feldbuch Universal.csproj",
       "projectName": "Feldbuch Universal",
-      "projectPath": "C:\\Users\\jgerner\\source\\repos\\Feldbuch Universal\\Feldbuch Universal\\Feldbuch Universal.csproj",
-      "packagesPath": "C:\\Users\\jgerner\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\jgerner\\source\\repos\\Feldbuch Universal\\Feldbuch Universal\\obj\\",
+      "projectPath": "c:\\Users\\jgerner.PERS\\Feldbuch2\\Feldbuch2\\Feldbuch Universal\\Feldbuch Universal.csproj",
+      "packagesPath": "C:\\Users\\jgerner.PERS\\.nuget\\packages\\",
+      "outputPath": "c:\\Users\\jgerner.PERS\\Feldbuch2\\Feldbuch2\\Feldbuch Universal\\obj\\",
       "projectStyle": "PackageReference",
       "crossTargeting": true,
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\jgerner\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\jgerner.PERS\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0-android",
@@ -8538,7 +8532,6 @@
         "net10.0-windows10.0.19041.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },

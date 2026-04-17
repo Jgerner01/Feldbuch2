@@ -47,6 +47,7 @@ partial class FormDxfViewer
         btnImportJson       = new Button();
         btnLoeschen         = new Button();
         btnPunktIndexReset  = new Button();
+        btnDigitalisierung  = new Button();
         pnlStatus           = new Panel();
         lblStatus           = new Label();
         flpLayers           = new FlowLayoutPanel();
@@ -375,12 +376,18 @@ partial class FormDxfViewer
         SideBtn(btnPunktIndexReset, "↻", fntIco, sy, ss, colBase, Color.FromArgb(200, 210, 230), colBorder);
         btnPunktIndexReset.Click += btnPunktIndexReset_Click;
         new ToolTip().SetToolTip(btnPunktIndexReset, "Punkt-Index zurücksetzen (neu nummerieren)");
+        sy += ss + sp;
+
+        SideBtn(btnDigitalisierung, "✎", fntIco, sy, ss, colBase, Color.FromArgb(200, 230, 210), colBorder);
+        btnDigitalisierung.Click += btnDigitalisierung_Click;
+        new ToolTip().SetToolTip(btnDigitalisierung, "Digitalisierung: Klick → Punkt in KOR/CSV schreiben");
 
         pnlSide.Controls.AddRange(new Control[]
         {
             btnOpen, btnZoomIn, btnZoomOut, btnFit,
             btnSnap, btnPunkte, btnDxfToggle, btnExportDxf,
-            btnNeu, btnImportKorCsv, btnImportJson, btnLoeschen, btnPunktIndexReset
+            btnNeu, btnImportKorCsv, btnImportJson, btnLoeschen,
+            btnPunktIndexReset, btnDigitalisierung
         });
 
         // ══ Canvas ════════════════════════════════════════════════════════════
@@ -449,6 +456,7 @@ partial class FormDxfViewer
     private Button           btnImportJson       = null!;
     private Button           btnLoeschen         = null!;
     private Button           btnPunktIndexReset  = null!;
+    private Button           btnDigitalisierung  = null!;
     private Panel            pnlStatus           = null!;
     private Label            lblStatus           = null!;
     private FlowLayoutPanel  flpLayers           = null!;

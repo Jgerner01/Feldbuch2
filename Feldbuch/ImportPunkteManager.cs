@@ -75,7 +75,30 @@ public static class ImportPunkteManager
 
     // ── Laden: KOR-Datei (.kor) ───────────────────────────────────────────────
     // Format: PunktNr  R  H  Hoehe  (Leerzeichen-getrennt, Kommentare mit %)
+    // Auto-Erkennung: wenn eine Begleit-CSV ({base}-kor.csv) existiert und
+    // mehr oder gleich viele Punkte hat, wird diese bevorzugt verwendet.
     public static List<ImportPunkt> LeseKor(string path)
+    {
+        // Begleit-CSV prüfen (erzeugt durch Digitalisier-Funktion)
+        string dir     = Path.GetDirectoryName(path) ?? "";
+        string baseName = Path.GetFileNameWithoutExtension(path);
+        string csvBegleit = Path.Combine(dir, baseName + "-kor.csv");
+        if (File.Exists(csvBegleit))
+        {
+            try
+            {
+                var csvErgebnis = LeseCsv(csvBegleit);
+                var korErgebnis = LeseKorRoh(path);
+                // CSV bevorzugen wenn mindestens gleich vollständig
+                return csvErgebnis.Count >= korErgebnis.Count ? csvErgebnis : korErgebnis;
+            }
+            catch { /* Fehler ignorieren, Fallback auf KOR */ }
+        }
+        return LeseKorRoh(path);
+    }
+
+    // ── Internes Lesen der rohen .kor-Datei (ohne Begleit-CSV-Logik) ─────────
+    private static List<ImportPunkt> LeseKorRoh(string path)
     {
         var result = new List<ImportPunkt>();
         string quelle = Path.GetFileName(path);

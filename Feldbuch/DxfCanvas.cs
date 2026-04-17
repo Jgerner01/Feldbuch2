@@ -76,7 +76,8 @@ public class DxfCanvas : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool PunktMarkerVisible { get; set; } = true;
 
-    public event Action<double, double, DxfEntity?>?           PointPicked;
+    // isClick=true: ausgelöst durch Mausklick (MouseUp); false: Mausbewegung (Hover)
+    public event Action<double, double, DxfEntity?, bool>?     PointPicked;
     public event Action<double, double, double, double>?       RectangleSelected;
 
     // Delete-Modus: Auswahlrechteck statt Pan
@@ -313,13 +314,13 @@ public class DxfCanvas : Panel
             if (hovered != null)
             {
                 _snapPoint = hovered.GetSnapPoint(wx, wy);
-                PointPicked?.Invoke(_snapPoint.Value.x, _snapPoint.Value.y, null);
+                PointPicked?.Invoke(_snapPoint.Value.x, _snapPoint.Value.y, null, false);
                 Invalidate();
                 return;
             }
         }
         if (_snapPoint != null) { _snapPoint = null; Invalidate(); }
-        PointPicked?.Invoke(wx, wy, null);
+        PointPicked?.Invoke(wx, wy, null, false);
     }
 
     void OnMouseUp(object? s, MouseEventArgs e)
@@ -351,7 +352,7 @@ public class DxfCanvas : Panel
             Selected = Pick(e.X, e.Y);
             var (wx, wy) = ToWorld(e.X, e.Y);
             var pt = ResolvePoint(Selected, wx, wy);
-            PointPicked?.Invoke(pt.x, pt.y, Selected);
+            PointPicked?.Invoke(pt.x, pt.y, Selected, true);
             Invalidate();
         }
     }
@@ -417,7 +418,7 @@ public class DxfCanvas : Panel
                             Selected = Pick(canPt.X, canPt.Y);
                             var (wx, wy) = ToWorld(canPt.X, canPt.Y);
                             var pt = ResolvePoint(Selected, wx, wy);
-                            PointPicked?.Invoke(pt.x, pt.y, Selected);
+                            PointPicked?.Invoke(pt.x, pt.y, Selected, true);
                             Invalidate();
                         }
                         _touches.Remove(id);

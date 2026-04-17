@@ -15,8 +15,8 @@ partial class FormTachymeterKommunikation
     private void InitializeComponent()
     {
         grpGeraetTyp       = new GroupBox();
-        rdoTachymeter      = new RadioButton();
-        rdoGnss            = new RadioButton();
+        lblGeraetTyp       = new Label();
+        cboGeraetTyp       = new ComboBox();
 
         grpModell          = new GroupBox();
         lblModell          = new Label();
@@ -51,7 +51,7 @@ partial class FormTachymeterKommunikation
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(520, 656);
+        ClientSize      = new Size(1200, 800);
         Text            = "Messgerät – Kommunikation";
         StartPosition   = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -59,90 +59,93 @@ partial class FormTachymeterKommunikation
         MinimizeBox     = false;
         AutoScaleMode   = AutoScaleMode.Font;
 
-        var fontNormal = new Font("Segoe UI", 9.5F);
-        var fontLabel  = new Font("Segoe UI", 9.5F);
+        var fontNormal = new Font("Segoe UI", 11F);
+        var fontLabel  = new Font("Segoe UI", 11F);
+        var fontBold   = new Font("Segoe UI", 11F, FontStyle.Bold);
+
+        // ─────────────────────────────────────────────────────────────────────
+        // LINKE SPALTE  (x: 12..584)
+        // ─────────────────────────────────────────────────────────────────────
 
         // ═══ GroupBox: Gerätetyp ══════════════════════════════════════════════
         grpGeraetTyp.Text     = "Gerätetyp";
         grpGeraetTyp.Location = new Point(12, 12);
-        grpGeraetTyp.Size     = new Size(494, 56);
+        grpGeraetTyp.Size     = new Size(572, 72);
         grpGeraetTyp.Font     = fontNormal;
 
-        rdoTachymeter.Text     = "Tachymeter / Totalstation";
-        rdoTachymeter.Location = new Point(20, 22);
-        rdoTachymeter.Size     = new Size(210, 24);
-        rdoTachymeter.Font     = fontNormal;
-        rdoTachymeter.Checked  = true;
-        rdoTachymeter.CheckedChanged += rdoGeraetTyp_CheckedChanged;
+        lblGeraetTyp.Text      = "Typ:";
+        lblGeraetTyp.Location  = new Point(16, 28);
+        lblGeraetTyp.Size      = new Size(50, 30);
+        lblGeraetTyp.Font      = fontLabel;
+        lblGeraetTyp.TextAlign = ContentAlignment.MiddleLeft;
 
-        rdoGnss.Text     = "GNSS-Empfänger (NMEA 0183)";
-        rdoGnss.Location = new Point(250, 22);
-        rdoGnss.Size     = new Size(230, 24);
-        rdoGnss.Font     = fontNormal;
-        rdoGnss.CheckedChanged += rdoGeraetTyp_CheckedChanged;
+        cboGeraetTyp.Location      = new Point(72, 25);
+        cboGeraetTyp.Size          = new Size(480, 32);
+        cboGeraetTyp.DropDownStyle = ComboBoxStyle.DropDownList;
+        cboGeraetTyp.Font          = fontNormal;
+        cboGeraetTyp.SelectedIndexChanged += cboGeraetTyp_SelectedIndexChanged;
 
-        grpGeraetTyp.Controls.AddRange([rdoTachymeter, rdoGnss]);
+        grpGeraetTyp.Controls.AddRange([lblGeraetTyp, cboGeraetTyp]);
 
-        // ═══ GroupBox: Messgerät-Modell ═══════════════════════════════════════
+        // ═══ GroupBox: Gerät / Protokoll ══════════════════════════════════════
         grpModell.Text     = "Gerät / Protokoll";
-        grpModell.Location = new Point(12, 80);
-        grpModell.Size     = new Size(494, 64);
+        grpModell.Location = new Point(12, 96);
+        grpModell.Size     = new Size(572, 76);
         grpModell.Font     = fontNormal;
 
-        lblModell.Text     = "Gerät:";
-        lblModell.Location = new Point(14, 28);
-        lblModell.Size     = new Size(60, 24);
+        lblModell.Text     = "Modell:";
+        lblModell.Location = new Point(16, 28);
+        lblModell.Size     = new Size(68, 30);
         lblModell.Font     = fontLabel;
         lblModell.TextAlign = ContentAlignment.MiddleLeft;
 
-        cboModell.Location     = new Point(80, 25);
-        cboModell.Size         = new Size(396, 26);
+        cboModell.Location      = new Point(90, 25);
+        cboModell.Size          = new Size(462, 32);
         cboModell.DropDownStyle = ComboBoxStyle.DropDownList;
-        cboModell.Font         = fontNormal;
+        cboModell.Font          = fontNormal;
         cboModell.SelectedIndexChanged += cboModell_SelectedIndexChanged;
 
         grpModell.Controls.AddRange([lblModell, cboModell]);
 
         // ═══ GroupBox: Bluetooth / Schnittstelle ══════════════════════════════
         grpBluetooth.Text     = "Bluetooth / Schnittstelle";
-        grpBluetooth.Location = new Point(12, 156);
-        grpBluetooth.Size     = new Size(494, 140);
+        grpBluetooth.Location = new Point(12, 184);
+        grpBluetooth.Size     = new Size(572, 170);
         grpBluetooth.Font     = fontNormal;
 
         lblSchnittstelle.Text      = "Schnittstelle:";
-        lblSchnittstelle.Location  = new Point(14, 32);
-        lblSchnittstelle.Size      = new Size(100, 24);
+        lblSchnittstelle.Location  = new Point(16, 38);
+        lblSchnittstelle.Size      = new Size(120, 32);
         lblSchnittstelle.Font      = fontLabel;
         lblSchnittstelle.TextAlign = ContentAlignment.MiddleLeft;
 
-        cboBtPort.Location      = new Point(120, 29);
-        cboBtPort.Size          = new Size(280, 26);
+        cboBtPort.Location      = new Point(142, 34);
+        cboBtPort.Size          = new Size(280, 32);
         cboBtPort.DropDownStyle = ComboBoxStyle.DropDownList;
         cboBtPort.Font          = fontNormal;
 
         btnBtAktualisieren.Text      = "↻ Aktualisieren";
-        btnBtAktualisieren.Location  = new Point(368, 28);
-        btnBtAktualisieren.Size      = new Size(108, 28);
-        btnBtAktualisieren.Font      = new Font("Segoe UI", 9F);
+        btnBtAktualisieren.Location  = new Point(430, 32);
+        btnBtAktualisieren.Size      = new Size(128, 36);
+        btnBtAktualisieren.Font      = new Font("Segoe UI", 10F);
         btnBtAktualisieren.FlatStyle = FlatStyle.Flat;
         btnBtAktualisieren.Click    += btnBtAktualisieren_Click;
 
-        // Status-Indikator (kleine farbige Kreisfläche)
-        lblStatusIndikator.Location  = new Point(20, 78);
-        lblStatusIndikator.Size      = new Size(16, 16);
-        lblStatusIndikator.BackColor = Color.FromArgb(200, 50, 50);
+        lblStatusIndikator.Location    = new Point(20, 96);
+        lblStatusIndikator.Size        = new Size(18, 18);
+        lblStatusIndikator.BackColor   = Color.FromArgb(200, 50, 50);
         lblStatusIndikator.BorderStyle = BorderStyle.FixedSingle;
 
         lblStatusText.Text      = "Getrennt";
-        lblStatusText.Location  = new Point(44, 74);
-        lblStatusText.Size      = new Size(220, 24);
-        lblStatusText.Font      = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+        lblStatusText.Location  = new Point(46, 90);
+        lblStatusText.Size      = new Size(280, 30);
+        lblStatusText.Font      = fontBold;
         lblStatusText.ForeColor = Color.FromArgb(160, 40, 40);
 
         btnVerbinden.Text      = "Verbinden";
-        btnVerbinden.Location  = new Point(358, 70);
-        btnVerbinden.Size      = new Size(118, 34);
-        btnVerbinden.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
+        btnVerbinden.Location  = new Point(394, 82);
+        btnVerbinden.Size      = new Size(164, 48);
+        btnVerbinden.Font      = new Font("Segoe UI", 12F, FontStyle.Bold);
         btnVerbinden.BackColor = Color.FromArgb(60, 100, 160);
         btnVerbinden.ForeColor = Color.White;
         btnVerbinden.FlatStyle = FlatStyle.Flat;
@@ -157,31 +160,31 @@ partial class FormTachymeterKommunikation
 
         // ═══ GroupBox: Bluetooth-Geräte ═══════════════════════════════════════
         grpBluetoothGeraete.Text     = "Bluetooth-Geräte (gekoppelt)";
-        grpBluetoothGeraete.Location = new Point(12, 306);
-        grpBluetoothGeraete.Size     = new Size(494, 140);
+        grpBluetoothGeraete.Location = new Point(12, 368);
+        grpBluetoothGeraete.Size     = new Size(572, 356);
         grpBluetoothGeraete.Font     = fontNormal;
 
-        lstBluetoothGeraete.Location    = new Point(14, 28);
-        lstBluetoothGeraete.Size        = new Size(462, 70);
-        lstBluetoothGeraete.Font        = new Font("Segoe UI", 9F);
-        lstBluetoothGeraete.BorderStyle = BorderStyle.FixedSingle;
+        lstBluetoothGeraete.Location      = new Point(14, 34);
+        lstBluetoothGeraete.Size          = new Size(544, 240);
+        lstBluetoothGeraete.Font          = new Font("Segoe UI", 10F);
+        lstBluetoothGeraete.BorderStyle   = BorderStyle.FixedSingle;
         lstBluetoothGeraete.SelectionMode = SelectionMode.One;
         lstBluetoothGeraete.SelectedIndexChanged += lstBluetoothGeraete_SelectedIndexChanged;
 
         btnGeraetKoppeln.Text      = "+ Neues Gerät koppeln";
-        btnGeraetKoppeln.Location  = new Point(14, 104);
-        btnGeraetKoppeln.Size      = new Size(180, 28);
-        btnGeraetKoppeln.Font      = new Font("Segoe UI", 9F, FontStyle.Bold);
+        btnGeraetKoppeln.Location  = new Point(14, 284);
+        btnGeraetKoppeln.Size      = new Size(220, 52);
+        btnGeraetKoppeln.Font      = new Font("Segoe UI", 11F, FontStyle.Bold);
         btnGeraetKoppeln.BackColor = Color.FromArgb(50, 120, 70);
         btnGeraetKoppeln.ForeColor = Color.White;
         btnGeraetKoppeln.FlatStyle = FlatStyle.Flat;
         btnGeraetKoppeln.FlatAppearance.BorderColor = Color.FromArgb(35, 95, 52);
         btnGeraetKoppeln.Click    += btnGeraetKoppeln_Click;
 
-        lblKoppelnInfo.Text      = "Klicke auf 'Neues Gerät koppeln' um den Windows Bluetooth-Assistenten zu öffnen.";
-        lblKoppelnInfo.Location  = new Point(210, 108);
-        lblKoppelnInfo.Size      = new Size(266, 24);
-        lblKoppelnInfo.Font      = new Font("Segoe UI", 8F, FontStyle.Italic);
+        lblKoppelnInfo.Text      = "Öffnet Windows Bluetooth-Einstellungen.";
+        lblKoppelnInfo.Location  = new Point(244, 298);
+        lblKoppelnInfo.Size      = new Size(314, 26);
+        lblKoppelnInfo.Font      = new Font("Segoe UI", 9F, FontStyle.Italic);
         lblKoppelnInfo.ForeColor = Color.FromArgb(100, 100, 100);
         lblKoppelnInfo.TextAlign = ContentAlignment.MiddleLeft;
 
@@ -190,55 +193,59 @@ partial class FormTachymeterKommunikation
             lstBluetoothGeraete, btnGeraetKoppeln, lblKoppelnInfo
         ]);
 
+        // ─────────────────────────────────────────────────────────────────────
+        // RECHTE SPALTE  (x: 600..1188)
+        // ─────────────────────────────────────────────────────────────────────
+
         // ═══ GroupBox: Kommunikationsparameter ════════════════════════════════
         grpParameter.Text     = "Kommunikationsparameter";
-        grpParameter.Location = new Point(12, 456);
-        grpParameter.Size     = new Size(494, 130);
+        grpParameter.Location = new Point(600, 12);
+        grpParameter.Size     = new Size(588, 220);
         grpParameter.Font     = fontNormal;
 
         var lblInfo = new Label
         {
             Text      = "Voreinstellungen werden automatisch je nach Geräteauswahl gesetzt.",
-            Location  = new Point(14, 16),
-            Size      = new Size(462, 18),
-            Font      = new Font("Segoe UI", 8F, FontStyle.Italic),
+            Location  = new Point(16, 20),
+            Size      = new Size(556, 22),
+            Font      = new Font("Segoe UI", 9F, FontStyle.Italic),
             ForeColor = Color.FromArgb(100, 100, 100)
         };
 
         lblBaudrate.Text      = "Baudrate:";
-        lblBaudrate.Location  = new Point(14, 44);
-        lblBaudrate.Size      = new Size(80, 24);
+        lblBaudrate.Location  = new Point(16, 58);
+        lblBaudrate.Size      = new Size(100, 32);
         lblBaudrate.Font      = fontLabel;
         lblBaudrate.TextAlign = ContentAlignment.MiddleLeft;
 
-        cboBaudrate.Location      = new Point(100, 42);
-        cboBaudrate.Size          = new Size(100, 26);
+        cboBaudrate.Location      = new Point(120, 56);
+        cboBaudrate.Size          = new Size(130, 32);
         cboBaudrate.DropDownStyle = ComboBoxStyle.DropDownList;
         cboBaudrate.Font          = fontNormal;
         cboBaudrate.Items.AddRange(["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"]);
         cboBaudrate.SelectedItem  = "9600";
 
         lblDatenbits.Text      = "Datenbits:";
-        lblDatenbits.Location  = new Point(220, 44);
-        lblDatenbits.Size      = new Size(80, 24);
+        lblDatenbits.Location  = new Point(270, 58);
+        lblDatenbits.Size      = new Size(100, 32);
         lblDatenbits.Font      = fontLabel;
         lblDatenbits.TextAlign = ContentAlignment.MiddleLeft;
 
-        cboDatenbits.Location      = new Point(300, 42);
-        cboDatenbits.Size          = new Size(70, 26);
+        cboDatenbits.Location      = new Point(374, 56);
+        cboDatenbits.Size          = new Size(80, 32);
         cboDatenbits.DropDownStyle = ComboBoxStyle.DropDownList;
         cboDatenbits.Font          = fontNormal;
         cboDatenbits.Items.AddRange(["7", "8"]);
         cboDatenbits.SelectedItem  = "8";
 
         lblParitaet.Text      = "Parität:";
-        lblParitaet.Location  = new Point(14, 78);
-        lblParitaet.Size      = new Size(80, 24);
+        lblParitaet.Location  = new Point(16, 110);
+        lblParitaet.Size      = new Size(100, 32);
         lblParitaet.Font      = fontLabel;
         lblParitaet.TextAlign = ContentAlignment.MiddleLeft;
 
-        cboParitaet.Location      = new Point(100, 76);
-        cboParitaet.Size          = new Size(90, 26);
+        cboParitaet.Location      = new Point(120, 108);
+        cboParitaet.Size          = new Size(120, 32);
         cboParitaet.DropDownStyle = ComboBoxStyle.DropDownList;
         cboParitaet.Font          = fontNormal;
         cboParitaet.Items.AddRange([
@@ -249,13 +256,13 @@ partial class FormTachymeterKommunikation
         cboParitaet.SelectedItem = Parity.None.ToString();
 
         lblStoppbits.Text      = "Stoppbits:";
-        lblStoppbits.Location  = new Point(220, 78);
-        lblStoppbits.Size      = new Size(80, 24);
+        lblStoppbits.Location  = new Point(270, 110);
+        lblStoppbits.Size      = new Size(100, 32);
         lblStoppbits.Font      = fontLabel;
         lblStoppbits.TextAlign = ContentAlignment.MiddleLeft;
 
-        cboStoppbits.Location      = new Point(300, 76);
-        cboStoppbits.Size          = new Size(70, 26);
+        cboStoppbits.Location      = new Point(374, 108);
+        cboStoppbits.Size          = new Size(80, 32);
         cboStoppbits.DropDownStyle = ComboBoxStyle.DropDownList;
         cboStoppbits.Font          = fontNormal;
         cboStoppbits.Items.AddRange(["1", "1.5", "2"]);
@@ -272,20 +279,21 @@ partial class FormTachymeterKommunikation
 
         // ═══ OK / Abbrechen ═══════════════════════════════════════════════════
         btnOK.Text      = "OK";
-        btnOK.Location  = new Point(310, 596);
-        btnOK.Size      = new Size(90, 34);
-        btnOK.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
+        btnOK.Location  = new Point(922, 744);
+        btnOK.Size      = new Size(130, 48);
+        btnOK.Font      = new Font("Segoe UI", 12F, FontStyle.Bold);
         btnOK.Click    += btnOK_Click;
 
         btnAbbrechen.Text      = "Abbrechen";
-        btnAbbrechen.Location  = new Point(410, 596);
-        btnAbbrechen.Size      = new Size(94, 34);
-        btnAbbrechen.Font      = new Font("Segoe UI", 10F);
+        btnAbbrechen.Location  = new Point(1062, 744);
+        btnAbbrechen.Size      = new Size(130, 48);
+        btnAbbrechen.Font      = new Font("Segoe UI", 12F);
         btnAbbrechen.Click    += btnAbbrechen_Click;
 
         Controls.AddRange(
         [
-            grpGeraetTyp, grpModell, grpBluetooth, grpBluetoothGeraete, grpParameter,
+            grpGeraetTyp, grpModell, grpBluetooth, grpBluetoothGeraete,
+            grpParameter,
             btnOK, btnAbbrechen
         ]);
 
@@ -294,9 +302,9 @@ partial class FormTachymeterKommunikation
         ResumeLayout(false);
     }
 
-    private GroupBox     grpGeraetTyp;
-    private RadioButton  rdoTachymeter;
-    private RadioButton  rdoGnss;
+    private GroupBox grpGeraetTyp;
+    private Label    lblGeraetTyp;
+    private ComboBox cboGeraetTyp;
 
     private GroupBox grpModell;
     private Label    lblModell;

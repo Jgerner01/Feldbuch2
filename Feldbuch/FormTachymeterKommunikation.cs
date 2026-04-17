@@ -9,6 +9,7 @@ public partial class FormTachymeterKommunikation : Form
     public FormTachymeterKommunikation()
     {
         InitializeComponent();
+        LadeGeraetTypen();
         LadeModelle();
         LadeComPorts();
         LadeBluetoothGeraete();
@@ -18,9 +19,21 @@ public partial class FormTachymeterKommunikation : Form
 
     // ── Initialisierung ───────────────────────────────────────────────────────
 
+    private void LadeGeraetTypen()
+    {
+        cboGeraetTyp.BeginUpdate();
+        cboGeraetTyp.Items.Clear();
+        foreach (var m in TachymeterVerbindung.AlleModelle)
+            cboGeraetTyp.Items.Add(TachymeterVerbindung.ModellAnzeige(m));
+        cboGeraetTyp.EndUpdate();
+    }
+
     private void LadeModelle()
     {
+        // cboModell ist der bisherige Präzisions-Sub-Selektor (z.B. für GeoCOM 38400/9600)
+        // – wird aktuell durch cboGeraetTyp ersetzt; bleibt als Alias für AlleModelle
         cboModell.BeginUpdate();
+        cboModell.Items.Clear();
         foreach (var m in TachymeterVerbindung.AlleModelle)
             cboModell.Items.Add(TachymeterVerbindung.ModellAnzeige(m));
         cboModell.EndUpdate();
@@ -49,7 +62,6 @@ public partial class FormTachymeterKommunikation : Form
             }
         }
 
-        // Gespeicherten Port vorauswählen
         var gespeichert = TachymeterVerbindung.Port;
         if (!string.IsNullOrEmpty(gespeichert))
         {
@@ -71,10 +83,6 @@ public partial class FormTachymeterKommunikation : Form
 
     // ── Bluetooth-Geräteverwaltung ────────────────────────────────────────────
 
-    /// <summary>
-    /// Lädt bereits gekoppelte Bluetooth-Geräte und zeigt sie in der Liste an.
-    /// Erkennt Geräte über die Bluetooth-Device-Klasse in WMI.
-    /// </summary>
     private void LadeBluetoothGeraete()
     {
         lstBluetoothGeraete.BeginUpdate();
@@ -82,7 +90,6 @@ public partial class FormTachymeterKommunikation : Form
 
         try
         {
-            // Gekoppelte Bluetooth-Geräte über Win32_PnPEntity ermitteln
             using var searcher = new ManagementObjectSearcher(
                 "SELECT Name, DeviceID, ClassGuid FROM Win32_PnPEntity " +
                 "WHERE ClassGuid='{e0cbf06c-cd8b-4647-bb8a-263b43f0f974}'");
@@ -95,7 +102,6 @@ public partial class FormTachymeterKommunikation : Form
                     geraete.Add(name);
             }
 
-            // Zusätzlich: COM-Ports die über Bluetooth bereitgestellt werden
             var btComPorts = new List<string>();
             using var comSearcher = new ManagementObjectSearcher(
                 "SELECT Name, DeviceID FROM Win32_PnPEntity WHERE Name LIKE '%(COM%)'");
@@ -104,12 +110,11 @@ public partial class FormTachymeterKommunikation : Form
                 var name = obj["Name"]?.ToString();
                 if (!string.IsNullOrEmpty(name) && name.Contains("Bluetooth", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Extrahiere COM-Port aus Name
                     var start = name.LastIndexOf('(');
                     var end = name.LastIndexOf(')');
                     if (start >= 0 && end > start)
                     {
-                        var port = name[(start + 1)..end].Trim();
+                        var port  = name[(start + 1)..end].Trim();
                         var label = name[..start].Trim();
                         btComPorts.Add($"{port} – {label}");
                     }
@@ -136,25 +141,19 @@ public partial class FormTachymeterKommunikation : Form
         lstBluetoothGeraete.EndUpdate();
     }
 
-    /// <summary>
-    /// Öffnet den Windows Bluetooth-Pairing-Assistenten zum Koppeln neuer Geräte.
-    /// </summary>
     private void btnGeraetKoppeln_Click(object? sender, EventArgs e)
     {
         try
         {
-            // Windows 10/11: Bluetooth-Einstellungen öffnen
             Process.Start(new ProcessStartInfo
             {
                 FileName = "ms-settings:bluetooth",
                 UseShellExecute = true
             });
-
             lblKoppelnInfo.Text = "Füge ein Gerät in den Windows-Einstellungen hinzu. Klicke dann auf 'Aktualisieren'.";
         }
-        catch (Exception)
+        catch
         {
-            // Fallback: Systemsteuerung Bluetooth
             try
             {
                 Process.Start(new ProcessStartInfo
@@ -177,16 +176,11 @@ public partial class FormTachymeterKommunikation : Form
         }
     }
 
-    /// <summary>
-    /// Aktualisiert alle Listen (COM-Ports und Bluetooth-Geräte).
-    /// </summary>
     private void btnBtAktualisieren_Click(object? sender, EventArgs e)
     {
         var vorher = cboBtPort.Text;
         LadeComPorts();
         LadeBluetoothGeraete();
-
-        // Port-Auswahl wiederherstellen, falls noch vorhanden
         for (int i = 0; i < cboBtPort.Items.Count; i++)
         {
             if (cboBtPort.Items[i]!.ToString()!.StartsWith(
@@ -196,25 +190,19 @@ public partial class FormTachymeterKommunikation : Form
                 break;
             }
         }
-
         lblKoppelnInfo.Text = "Listen aktualisiert.";
     }
 
-    /// <summary>
-    /// Übernimmt den ausgewählten Bluetooth-COM-Port aus der Geräte-Liste.
-    /// </summary>
     private void lstBluetoothGeraete_SelectedIndexChanged(object? sender, EventArgs e)
     {
         if (lstBluetoothGeraete.SelectedItem is not string auswahl) return;
         if (!auswahl.StartsWith("🔌 ")) return;
 
-        // COM-Port aus Eintrag extrahieren
-        var ohneIcon = auswahl.Substring(2);
+        var ohneIcon = auswahl[2..];
         var port = ohneIcon.Split(' ', '–', '-')[0].Trim();
 
         if (port.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
         {
-            // Suche passenden Eintrag in cboBtPort
             for (int i = 0; i < cboBtPort.Items.Count; i++)
             {
                 if (cboBtPort.Items[i]!.ToString()!.StartsWith(port,
@@ -228,7 +216,6 @@ public partial class FormTachymeterKommunikation : Form
         }
     }
 
-    /// <summary>Liefert eine Map COM-Port → Anzeigename via WMI.</summary>
     private static Dictionary<string, string> HoleFriendlyNames()
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -240,13 +227,11 @@ public partial class FormTachymeterKommunikation : Form
             {
                 var name = obj["Name"]?.ToString();
                 if (string.IsNullOrEmpty(name)) continue;
-
-                // Name enthält z. B. "Standard Serial over Bluetooth link (COM5)"
                 var start = name.LastIndexOf('(');
                 var end   = name.LastIndexOf(')');
                 if (start >= 0 && end > start)
                 {
-                    var port = name[(start + 1)..end].Trim();
+                    var port  = name[(start + 1)..end].Trim();
                     var label = name[..start].Trim();
                     result[port] = label;
                 }
@@ -254,21 +239,18 @@ public partial class FormTachymeterKommunikation : Form
         }
         catch (Exception ex)
         {
-            // WMI nicht verfügbar – Fallback auf nur Port-Namen
-            System.Diagnostics.Debug.WriteLine($"FormTachymeterKommunikation: WMI nicht verfügbar: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"FormTachymeterKommunikation: WMI: {ex.Message}");
         }
         return result;
     }
 
     private void LadeAktuelleEinstellungen()
     {
-        // Gerätetyp
-        rdoGnss.Checked        = ProjektManager.IstGnssGeraet;
-        rdoTachymeter.Checked  = !ProjektManager.IstGnssGeraet;
-        AktualisiereGeraetTypUI();
-
-        // Modell
+        // Gerätetyp-ComboBox auswählen
         var idx = Array.IndexOf(TachymeterVerbindung.AlleModelle, TachymeterVerbindung.Modell);
+        cboGeraetTyp.SelectedIndex = idx >= 0 ? idx : 0;
+
+        // Modell-ComboBox synchron halten
         cboModell.SelectedIndex = idx >= 0 ? idx : 0;
 
         // Baudrate
@@ -277,7 +259,7 @@ public partial class FormTachymeterKommunikation : Form
 
         // Datenbits
         cboDatenbits.SelectedItem = TachymeterVerbindung.DataBits.ToString();
-        if (cboDatenbits.SelectedIndex < 0) cboDatenbits.SelectedIndex = 1; // "8"
+        if (cboDatenbits.SelectedIndex < 0) cboDatenbits.SelectedIndex = 1;
 
         // Parität
         cboParitaet.SelectedItem = TachymeterVerbindung.Parität.ToString();
@@ -287,42 +269,20 @@ public partial class FormTachymeterKommunikation : Form
         cboStoppbits.SelectedItem = StopBitsAnzeige(TachymeterVerbindung.StopBits);
         if (cboStoppbits.SelectedIndex < 0) cboStoppbits.SelectedIndex = 0;
 
-        // Parameter-Gruppe nur bei Manuell bearbeitbar
         AktualisiereParameterFelder();
     }
 
-    // ── Gerätetyp-Umschalten ──────────────────────────────────────────────────
+    // ── Gerätetyp-Auswahl ─────────────────────────────────────────────────────
 
-    private void rdoGeraetTyp_CheckedChanged(object? sender, EventArgs e)
+    private void cboGeraetTyp_SelectedIndexChanged(object? sender, EventArgs e)
     {
-        AktualisiereGeraetTypUI();
-    }
+        if (cboGeraetTyp.SelectedIndex < 0) return;
+        var modell = TachymeterVerbindung.AlleModelle[cboGeraetTyp.SelectedIndex];
 
-    private void AktualisiereGeraetTypUI()
-    {
-        bool istGnss = rdoGnss.Checked;
-        // Tachymeter-spezifische Felder ausgrauen wenn GNSS gewählt
-        grpModell.Enabled    = !istGnss;
-        grpParameter.Enabled = !istGnss;
-        if (istGnss)
-        {
-            grpModell.Text    = "Gerät / Protokoll  (nicht relevant für GNSS)";
-            grpParameter.Text = "Kommunikationsparameter  (9600 Baud, 8N1 für NMEA)";
-        }
-        else
-        {
-            grpModell.Text    = "Gerät / Protokoll";
-            grpParameter.Text = "Kommunikationsparameter";
-        }
-    }
+        // Modell-Combobox synchron halten (gleicher Index, da identische Listen)
+        cboModell.SelectedIndex = cboGeraetTyp.SelectedIndex;
 
-    // ── Ereignisse ────────────────────────────────────────────────────────────
-
-    private void cboModell_SelectedIndexChanged(object? sender, EventArgs e)
-    {
-        if (cboModell.SelectedIndex < 0) return;
-        var modell = TachymeterVerbindung.AlleModelle[cboModell.SelectedIndex];
-
+        // Kommunikationsparameter auto-befüllen (außer Manuell)
         if (modell != TachymeterModell.Manuell)
         {
             var (baud, bits, par, stop) = TachymeterVerbindung.GetPreset(modell);
@@ -333,12 +293,42 @@ public partial class FormTachymeterKommunikation : Form
         }
 
         AktualisiereParameterFelder();
+        AktualisiereGeraetTypUI();
+    }
+
+    private void cboModell_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        // Wenn cboModell separat bedient wird, cboGeraetTyp synchronisieren
+        if (cboModell.SelectedIndex == cboGeraetTyp.SelectedIndex) return;
+        cboGeraetTyp.SelectedIndex = cboModell.SelectedIndex;
+    }
+
+    private void AktualisiereGeraetTypUI()
+    {
+        if (cboGeraetTyp.SelectedIndex < 0) return;
+        var modell = TachymeterVerbindung.AlleModelle[cboGeraetTyp.SelectedIndex];
+        bool istGnss = modell == TachymeterModell.GnssNmea;
+        bool istManuell = modell == TachymeterModell.Manuell;
+
+        grpModell.Enabled    = !istGnss;
+        grpParameter.Enabled = !istGnss || istManuell;
+
+        if (istGnss)
+        {
+            grpModell.Text    = "Gerät / Protokoll  (nicht relevant für GNSS)";
+            grpParameter.Text = "Kommunikationsparameter  (typisch: 4800 Baud, 8N1 für NMEA)";
+        }
+        else
+        {
+            grpModell.Text    = "Gerät / Protokoll";
+            grpParameter.Text = "Kommunikationsparameter";
+        }
     }
 
     private void AktualisiereParameterFelder()
     {
-        var manuell = cboModell.SelectedIndex >= 0 &&
-                      TachymeterVerbindung.AlleModelle[cboModell.SelectedIndex]
+        var manuell = cboGeraetTyp.SelectedIndex >= 0 &&
+                      TachymeterVerbindung.AlleModelle[cboGeraetTyp.SelectedIndex]
                           == TachymeterModell.Manuell;
         cboBaudrate.Enabled  = manuell;
         cboDatenbits.Enabled = manuell;
@@ -346,11 +336,12 @@ public partial class FormTachymeterKommunikation : Form
         cboStoppbits.Enabled = manuell;
     }
 
+    // ── Verbinden / Trennen ───────────────────────────────────────────────────
+
     private void btnAktualisieren_Click(object? sender, EventArgs e)
     {
         var vorher = cboBtPort.Text;
         LadeComPorts();
-        // Port-Auswahl wiederherstellen, falls noch vorhanden
         for (int i = 0; i < cboBtPort.Items.Count; i++)
         {
             if (cboBtPort.Items[i]!.ToString()!.StartsWith(
@@ -420,12 +411,9 @@ public partial class FormTachymeterKommunikation : Form
 
     private void btnOK_Click(object? sender, EventArgs e)
     {
-        // Gerätetyp speichern
-        ProjektManager.IstGnssGeraet = rdoGnss.Checked;
-
-        // Einstellungen übernehmen (ohne Verbindungsaufbau)
-        if (cboModell.SelectedIndex >= 0)
-            TachymeterVerbindung.Modell = TachymeterVerbindung.AlleModelle[cboModell.SelectedIndex];
+        // Gerätetyp (= Modell) speichern
+        if (cboGeraetTyp.SelectedIndex >= 0)
+            TachymeterVerbindung.Modell = TachymeterVerbindung.AlleModelle[cboGeraetTyp.SelectedIndex];
 
         if (PortAusEintrag(cboBtPort.Text, out var port))
             TachymeterVerbindung.Port = port;

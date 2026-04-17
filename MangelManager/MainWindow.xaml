@@ -1,0 +1,469 @@
+<Window x:Class="MangelManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:MangelManager.Models"
+        xmlns:conv="clr-namespace:MangelManager.Converters"
+        Title="Baustellen-Mängelverwaltung"
+        Height="760" Width="1150"
+        MinHeight="600" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#F0F2F5">
+
+    <Window.Resources>
+        <Style x:Key="ToolbarBtn" TargetType="Button">
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Background" Value="#1E88E5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#1565C0"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#B0BEC5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DangerBtn" TargetType="Button" BasedOn="{StaticResource ToolbarBtn}">
+            <Setter Property="Background" Value="#E53935"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#B71C1C"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#B0BEC5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SuccessBtn" TargetType="Button" BasedOn="{StaticResource ToolbarBtn}">
+            <Setter Property="Background" Value="#43A047"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2E7D32"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#B0BEC5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#546E7A"/>
+            <Setter Property="Margin" Value="0,6,0,2"/>
+        </Style>
+
+        <Style x:Key="InputBox" TargetType="TextBox">
+            <Setter Property="Padding" Value="5,4"/>
+            <Setter Property="BorderBrush" Value="#CFD8DC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style x:Key="ComboStyle" TargetType="ComboBox">
+            <Setter Property="Padding" Value="5,4"/>
+            <Setter Property="BorderBrush" Value="#CFD8DC"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <!-- ListBox item template -->
+        <DataTemplate x:Key="MangelItemTemplate">
+            <Border Margin="2" Padding="8,6" BorderThickness="0,0,0,1" BorderBrush="#E0E0E0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding MangelNummer}" FontWeight="Bold" FontSize="12" Foreground="#1565C0"/>
+                        <TextBlock Text="{Binding Titel}" FontSize="13" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <TextBlock Text="{Binding Gewerk}" FontSize="11" Foreground="#78909C"/>
+                            <TextBlock Text=" | " FontSize="11" Foreground="#78909C"/>
+                            <TextBlock Text="{Binding Ort}" FontSize="11" Foreground="#78909C"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Top" Margin="6,0,0,0">
+                        <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="SemiBold" Foreground="#E53935"
+                                   HorizontalAlignment="Right"/>
+                        <TextBlock Text="{Binding Prioritaet}" FontSize="11" Foreground="#FB8C00"
+                                   HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Background="#1565C0" Padding="8,6">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="+ Neu" Command="{Binding NeuCommand}" Style="{StaticResource SuccessBtn}"/>
+                <Button Content="Speichern" Command="{Binding SpeichernCommand}" Style="{StaticResource ToolbarBtn}"/>
+                <Button Content="Löschen" Command="{Binding LoeschenCommand}" Style="{StaticResource DangerBtn}"/>
+                <Separator Width="1" Margin="6,0" Background="#3E8EDA"/>
+                <Button Content="Aktualisieren" Command="{Binding LadenCommand}" Style="{StaticResource ToolbarBtn}"/>
+                <Button Content="PDF Export" Click="PdfExport_Click" Style="{StaticResource ToolbarBtn}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Filter Bar -->
+        <Border DockPanel.Dock="Top" Background="#E3F2FD" Padding="8,6" BorderThickness="0,0,0,1" BorderBrush="#BBDEFB">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="13"/>
+                <TextBox Text="{Binding Suchbegriff, UpdateSourceTrigger=PropertyChanged}"
+                         Width="180" Padding="5,4" BorderBrush="#90CAF9" FontSize="13"
+                         VerticalContentAlignment="Center"/>
+                <TextBlock Text="Status:" VerticalAlignment="Center" Margin="12,0,6,0" FontSize="13"/>
+                <ComboBox SelectedValue="{Binding FilterStatus}" SelectedValuePath="Tag"
+                          Width="130" Style="{StaticResource ComboStyle}">
+                    <ComboBoxItem Content="-- Alle --" Tag="{x:Null}" IsSelected="True"/>
+                    <ComboBoxItem Content="Offen"          Tag="{x:Static models:MangelStatus.Offen}"/>
+                    <ComboBoxItem Content="In Bearbeitung" Tag="{x:Static models:MangelStatus.InBearbeitung}"/>
+                    <ComboBoxItem Content="Erledigt"       Tag="{x:Static models:MangelStatus.Erledigt}"/>
+                    <ComboBoxItem Content="Abgelehnt"      Tag="{x:Static models:MangelStatus.Abgelehnt}"/>
+                </ComboBox>
+                <TextBlock Text="Priorität:" VerticalAlignment="Center" Margin="12,0,6,0" FontSize="13"/>
+                <ComboBox SelectedValue="{Binding FilterPrioritaet}" SelectedValuePath="Tag"
+                          Width="110" Style="{StaticResource ComboStyle}">
+                    <ComboBoxItem Content="-- Alle --" Tag="{x:Null}" IsSelected="True"/>
+                    <ComboBoxItem Content="Niedrig"  Tag="{x:Static models:MangelPrioritaet.Niedrig}"/>
+                    <ComboBoxItem Content="Mittel"   Tag="{x:Static models:MangelPrioritaet.Mittel}"/>
+                    <ComboBoxItem Content="Hoch"     Tag="{x:Static models:MangelPrioritaet.Hoch}"/>
+                    <ComboBoxItem Content="Kritisch" Tag="{x:Static models:MangelPrioritaet.Kritisch}"/>
+                </ComboBox>
+                <TextBlock Text="Gewerk:" VerticalAlignment="Center" Margin="12,0,6,0" FontSize="13"/>
+                <ComboBox ItemsSource="{Binding Gewerke}" SelectedItem="{Binding FilterGewerk}"
+                          Width="140" Style="{StaticResource ComboStyle}"/>
+                <Button Content="Filtern" Command="{Binding FilternCommand}" Style="{StaticResource ToolbarBtn}"
+                        Margin="10,0,0,0"/>
+                <Button Content="Zurücksetzen" Click="FilterReset_Click" Style="{StaticResource ToolbarBtn}"
+                        Background="#78909C"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320" MinWidth="220"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*" MinWidth="400"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: Mängelliste -->
+            <DockPanel Grid.Column="0">
+                <Border DockPanel.Dock="Top" Background="#ECEFF1" Padding="8,6">
+                    <TextBlock Text="{Binding Maengel.Count, StringFormat='Mängel: {0}'}"
+                               FontWeight="Bold" FontSize="13" Foreground="#37474F"/>
+                </Border>
+                <ListBox ItemsSource="{Binding Maengel}"
+                         SelectedItem="{Binding AusgewaehlterMangel, Mode=TwoWay}"
+                         ItemTemplate="{StaticResource MangelItemTemplate}"
+                         Background="White"
+                         BorderThickness="0,0,1,0"
+                         BorderBrush="#CFD8DC"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#E3F2FD"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#F5F5F5"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                          Background="#CFD8DC" ResizeBehavior="PreviousAndNext"/>
+
+            <!-- Right: Detail -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" Background="White">
+                <StackPanel Margin="16">
+
+                    <!-- Placeholder wenn kein Mangel gewählt -->
+                    <TextBlock Text="Keinen Mangel ausgewählt. Wählen Sie einen Eintrag aus der Liste oder erstellen Sie einen neuen."
+                               Foreground="#90A4AE" FontSize="14" TextWrapping="Wrap"
+                               Margin="0,40,0,0" HorizontalAlignment="Center" TextAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AusgewaehlterMangel}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Detail-Formular -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding AusgewaehlterMangel}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+
+                        <!-- Mangelnummer (readonly) -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Mangelnummer" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.MangelNummer}"
+                                         IsReadOnly="True" Background="#F5F5F5" Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Erfasst am" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.ErfasstAm, StringFormat='dd.MM.yyyy HH:mm'}"
+                                         IsReadOnly="True" Background="#F5F5F5" Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Titel -->
+                        <TextBlock Text="Titel *" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding AusgewaehlterMangel.Titel, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource InputBox}" Margin="0,0,0,4"/>
+
+                        <!-- Beschreibung -->
+                        <TextBlock Text="Beschreibung" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding AusgewaehlterMangel.Beschreibung, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource InputBox}" MinHeight="70"
+                                 AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,0,4"/>
+
+                        <!-- Gewerk / Ort -->
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Gewerk" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.Gewerk, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Ort" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.Ort, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Etage / Raum -->
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Etage" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.Etage, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Raum" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.Raum, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Status / Priorität -->
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Status" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox SelectedValue="{Binding AusgewaehlterMangel.Status}"
+                                          SelectedValuePath="Tag" Style="{StaticResource ComboStyle}">
+                                    <ComboBoxItem Content="Offen"          Tag="{x:Static models:MangelStatus.Offen}"/>
+                                    <ComboBoxItem Content="In Bearbeitung" Tag="{x:Static models:MangelStatus.InBearbeitung}"/>
+                                    <ComboBoxItem Content="Erledigt"       Tag="{x:Static models:MangelStatus.Erledigt}"/>
+                                    <ComboBoxItem Content="Abgelehnt"      Tag="{x:Static models:MangelStatus.Abgelehnt}"/>
+                                </ComboBox>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Priorität" Style="{StaticResource FieldLabel}"/>
+                                <ComboBox SelectedValue="{Binding AusgewaehlterMangel.Prioritaet}"
+                                          SelectedValuePath="Tag" Style="{StaticResource ComboStyle}">
+                                    <ComboBoxItem Content="Niedrig"  Tag="{x:Static models:MangelPrioritaet.Niedrig}"/>
+                                    <ComboBoxItem Content="Mittel"   Tag="{x:Static models:MangelPrioritaet.Mittel}"/>
+                                    <ComboBoxItem Content="Hoch"     Tag="{x:Static models:MangelPrioritaet.Hoch}"/>
+                                    <ComboBoxItem Content="Kritisch" Tag="{x:Static models:MangelPrioritaet.Kritisch}"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Fälligkeit / Erledigt am -->
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Fällig am" Style="{StaticResource FieldLabel}"/>
+                                <DatePicker SelectedDate="{Binding AusgewaehlterMangel.FaelligAm}"
+                                            Background="White" BorderBrush="#CFD8DC" FontSize="13"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Erledigt am" Style="{StaticResource FieldLabel}"/>
+                                <DatePicker SelectedDate="{Binding AusgewaehlterMangel.ErledigtAm}"
+                                            Background="White" BorderBrush="#CFD8DC" FontSize="13"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Erfasser / Zuständig -->
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="Erfasser" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.Erfasser, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Zuständig" Style="{StaticResource FieldLabel}"/>
+                                <TextBox Text="{Binding AusgewaehlterMangel.Zustaendig, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource InputBox}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Bemerkung -->
+                        <TextBlock Text="Bemerkung" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding AusgewaehlterMangel.Bemerkung, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource InputBox}" MinHeight="50"
+                                 AcceptsReturn="True" TextWrapping="Wrap" Margin="0,0,0,4"/>
+
+                        <!-- Fotos -->
+                        <Border Background="#F5F5F5" BorderBrush="#CFD8DC" BorderThickness="1"
+                                CornerRadius="4" Padding="8" Margin="0,8,0,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="Fotos" FontWeight="Bold" FontSize="13" Foreground="#546E7A"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding AusgewaehlterMangel.Fotos.Count, StringFormat=' ({0})'}"
+                                               FontSize="13" Foreground="#78909C" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Foto hinzufügen" Command="{Binding FotoHinzufuegenCommand}"
+                                            Style="{StaticResource ToolbarBtn}" Margin="0,0,8,0"/>
+                                    <Button Content="Foto aufnehmen" Command="{Binding KameraAufnahmeCommand}"
+                                            Style="{StaticResource ToolbarBtn}" Margin="0,0,8,0"
+                                            Background="#9C27B0" Foreground="White"/>
+                                    <Button Content="Letztes Foto löschen" Command="{Binding FotoLoeschenCommand}"
+                                            Style="{StaticResource DangerBtn}"/>
+                                </StackPanel>
+                                <ItemsControl ItemsSource="{Binding AusgewaehlterMangel.Fotos}" Margin="0,6,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="4" BorderBrush="#CFD8DC" BorderThickness="1"
+                                                    CornerRadius="3" Cursor="Hand">
+                                                <Border.ToolTip>
+                                                    <ToolTip>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Beschreibung}"
+                                                                       FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                                            <TextBlock Text="{Binding ErstelltAm, StringFormat='Aufgenommen: {0:dd.MM.yyyy HH:mm}'}"
+                                                                       FontSize="11" Foreground="#546E7A"/>
+                                                        </StackPanel>
+                                                    </ToolTip>
+                                                </Border.ToolTip>
+                                                <Grid Width="80" Height="80">
+                                                    <Image Source="{Binding Dateipfad,
+                                                               Converter={x:Static conv:ImagePfadConverter.Instance}}"
+                                                           Stretch="UniformToFill"
+                                                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    <!-- Kamera-Badge für Kameraaufnahmen -->
+                                                    <Border VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                                                            Background="#80000000" CornerRadius="2,0,0,0"
+                                                            Padding="3,1">
+                                                        <TextBlock FontSize="9" Foreground="White"
+                                                                   Text="{Binding ErstelltAm, StringFormat='{}{0:HH:mm}'}"/>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Schnell-Status-Änderung -->
+                        <Border Background="#EDE7F6" BorderBrush="#CE93D8" BorderThickness="1"
+                                CornerRadius="4" Padding="8" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Status direkt setzen:" FontWeight="SemiBold"
+                                           FontSize="12" Foreground="#6A1B9A" Margin="0,0,0,6"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Offen" Margin="0,0,6,0" Padding="10,4"
+                                            Style="{StaticResource ToolbarBtn}" Background="#EF5350"
+                                            Command="{Binding StatusAendernCommand}"
+                                            CommandParameter="{x:Static models:MangelStatus.Offen}"/>
+                                    <Button Content="In Bearbeitung" Margin="0,0,6,0" Padding="10,4"
+                                            Style="{StaticResource ToolbarBtn}" Background="#FB8C00"
+                                            Command="{Binding StatusAendernCommand}"
+                                            CommandParameter="{x:Static models:MangelStatus.InBearbeitung}"/>
+                                    <Button Content="Erledigt" Margin="0,0,6,0" Padding="10,4"
+                                            Style="{StaticResource SuccessBtn}"
+                                            Command="{Binding StatusAendernCommand}"
+                                            CommandParameter="{x:Static models:MangelStatus.Erledigt}"/>
+                                    <Button Content="Abgelehnt" Padding="10,4"
+                                            Style="{StaticResource ToolbarBtn}" Background="#78909C"
+                                            Command="{Binding StatusAendernCommand}"
+                                            CommandParameter="{x:Static models:MangelStatus.Abgelehnt}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Speichern -->
+                        <Button Content="Mangel speichern" Command="{Binding SpeichernCommand}"
+                                Style="{StaticResource SuccessBtn}"
+                                Padding="16,8" Margin="0,16,0,16"
+                                HorizontalAlignment="Right" FontSize="14"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</Window>

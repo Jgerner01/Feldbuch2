@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(powershell.exe -NoProfile -Command \"Get-ChildItem 'I:\\\\Daten' -Filter '*.doc' -ErrorAction SilentlyContinue | Select-Object -First 10 Name\")",
+      "Bash(powershell.exe -NoProfile -Command \"if \\(Test-Path 'F:\\\\Rechnungen'\\) { Get-ChildItem 'F:\\\\Rechnungen' | Select-Object -First 10 Name } else { 'F:\\\\Rechnungen nicht vorhanden' }\")"
     ]
   }
 }

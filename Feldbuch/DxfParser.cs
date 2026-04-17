@@ -372,17 +372,84 @@ public static class DxfReader
         return ParseEntities(groups);
     }
 
-    static IEnumerable<(int code, string val)> ReadGroups(string path)
+    // Liest Gruppencode-Paare (code / Wert) robust:
+    // • UTF-8 mit BOM-Erkennung, Fallback auf Windows-1252 bei ungültigem UTF-8
+    // • Ungültige/unvollständige Zeilen werden übersprungen
+    static List<(int code, string val)> ReadGroups(string path)
     {
-        using var r = new System.IO.StreamReader(path, System.Text.Encoding.UTF8,
-            detectEncodingFromByteOrderMarks: true);
-        while (!r.EndOfStream)
+        var result = new List<(int, string)>();
+
+        // Encoding bestimmen: UTF-8 bevorzugt, bei Problemen CP-1252 (typisch für ältere AutoCAD-Versionen)
+        System.Text.Encoding encoding = DetectEncoding(path);
+
+        try
         {
-            string? c = r.ReadLine()?.Trim();
-            string? v = r.ReadLine()?.Trim() ?? "";
-            if (c == null) break;
-            if (int.TryParse(c, out int code)) yield return (code, v);
+            using var r = new System.IO.StreamReader(path, encoding);
+            while (!r.EndOfStream)
+            {
+                string? codeLine = r.ReadLine()?.Trim();
+                if (codeLine == null) break;
+                string valLine = r.ReadLine()?.Trim() ?? "";
+
+                if (int.TryParse(codeLine,
+                        System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out int code))
+                    result.Add((code, valLine));
+                // unbekannte Zeilen (keine gültige Gruppennummer) werden einfach übersprungen
+            }
         }
+        catch (System.IO.IOException ex)
+        {
+            throw new System.IO.IOException(
+                $"DXF-Datei konnte nicht geöffnet werden: {ex.Message}", ex);
+        }
+        catch (System.Text.DecoderFallbackException)
+        {
+            // Letzte Rettung: Datei als Latin-1 lesen (verliert keine Bytes, aber Umlaute sind u.U. falsch)
+            result.Clear();
+            using var r = new System.IO.StreamReader(path,
+                System.Text.Encoding.GetEncoding(28591));   // ISO-8859-1
+            while (!r.EndOfStream)
+            {
+                string? codeLine = r.ReadLine()?.Trim();
+                if (codeLine == null) break;
+                string valLine = r.ReadLine()?.Trim() ?? "";
+                if (int.TryParse(codeLine,
+                        System.Globalization.NumberStyles.Integer,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out int code))
+                    result.Add((code, valLine));
+            }
+        }
+
+        return result;
+    }
+
+    // Erkennt die Zeichenkodierung anhand BOM und Heuristik
+    static System.Text.Encoding DetectEncoding(string path)
+    {
+        try
+        {
+            var bom = new byte[3];
+            using var fs = System.IO.File.OpenRead(path);
+            int read = fs.Read(bom, 0, 3);
+
+            // UTF-8 BOM: EF BB BF
+            if (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
+                return System.Text.Encoding.UTF8;
+
+            // UTF-16 LE BOM: FF FE
+            if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)
+                return System.Text.Encoding.Unicode;
+        }
+        catch { /* Im Fehlerfall mit UTF-8 weitermachen */ }
+
+        // Kein BOM: UTF-8 ohne Fehlwurf (Replacement-Character bei ungültigen Bytes)
+        // Damit werden sowohl reine ASCII- als auch UTF-8-DXF-Dateien korrekt gelesen.
+        return new System.Text.UTF8Encoding(
+            encoderShouldEmitUTF8Identifier: false,
+            throwOnInvalidBytes: false);
     }
 
     static List<DxfEntity> ParseEntities(List<(int code, string val)> groups)
@@ -411,7 +478,9 @@ public static class DxfReader
                 // sammle alle Gruppen bis zur nächsten code-0-Zeile
                 while (i < groups.Count && groups[i].code != 0) i++;
                 var props = groups.Skip(start).Take(i - start).ToList();
-                var entity = ParseEntity(type, props);
+                DxfEntity? entity = null;
+                try { entity = ParseEntity(type, props); }
+                catch { /* fehlerhafte Einzelentität überspringen, Rest weiter lesen */ }
                 if (entity != null) result.Add(entity);
             }
             else i++;

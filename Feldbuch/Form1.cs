@@ -174,6 +174,12 @@ public partial class Form1 : Form
         form.ShowDialog(this);
     }
 
+    private void btnBerechnungen_Click(object? sender, EventArgs e)
+    {
+        using var form = new FormKoordTransformation();
+        form.ShowDialog(this);
+    }
+
     private void btnProtokolle_Click(object? sender, EventArgs e)
     {
         string startDir = ProjektManager.IstGeladen

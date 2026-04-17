@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Protokollsteuerdatei: Koordinatentransformation
+  Wird vom RtfProtokollGenerator gelesen.
+
+  Farben (cf-Indizes, Reihenfolge = Index):
+    cf1 = Blau      (Überschriften)
+    cf2 = Orange    (Residuum 1–3 cm)
+    cf3 = Rot       (Residuum 3–9 cm)
+    cf4 = Tiefrot   (Residuum > 9 cm, fett)
+
+  Benannte Tabellen (name=):
+    BenutztePasspunkte      – aktive Passpunkte mit Koordinaten und Residuen
+    NichtBenutztePasspunkte – deaktivierte Passpunkte (nur Koordinaten)
+    TransformiertePunkte    – alle transformierten Quellpunkte
+
+  Bedingte Felder/Tabellen (zeigenWenn=):
+    Ist3D            – "1" bei 3D-Transformation
+    HatNichtBenutzte – "1" wenn deaktivierte Passpunkte vorhanden
+-->
+<Protokoll modul="KoordTransformation">
+
+  <!-- A4 Querformat, enge Seitenränder für breite Tabellen -->
+  <Seite breite="297" hoehe="210" randLinks="15" randRechts="15" randOben="18" randUnten="18" querformat="true"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <!-- cf1=Blau  cf2=Orange  cf3=Rot  cf4=Tiefrot -->
+  <Farben>
+    <Farbe r="42"  g="72"  b="130"/>
+    <Farbe r="200" g="100" b="0"/>
+    <Farbe r="180" g="30"  b="30"/>
+    <Farbe r="140" g="0"   b="0"/>
+  </Farben>
+
+  <Inhalt>
+
+    <!-- ── Titelzeile: großer blauer Titel + Typ/Maßstab normal ──────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="9" abstandNach="40">
+      <Feld text="Koordinatentransformation   " groesse="14" fett="true" farbe="1"/>
+      <Feld var="TypUndMassstab"/>
+    </Abschnitt>
+
+    <!-- ── Metazeile: Bearbeiter / Projekt / Zeitpunkt ───────────────────── -->
+    <Abschnitt typ="Zeile" schrift="0" groesse="9" abstandNach="60">
+      <Feld var="Bearbeiter" label="Bearbeiter: "/>
+      <Feld text="     Projekt: "/>
+      <Feld var="Projekt"/>
+      <Feld text="     Zeitpunkt: "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Trennlinie" schrift="0" groesse="8"/>
+
+    <!-- ── Transformationsparameter ──────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="10" fett="true" farbe="1" abstandNach="20">
+      <Feld text="Transformationsparameter"/>
+    </Abschnitt>
+    <Abschnitt typ="Monoblock" var="Parameter" schrift="1" groesse="8" abstandNach="0"/>
+
+    <Abschnitt typ="Trennlinie" schrift="0" groesse="8"/>
+
+    <!-- ── Gütekriterien ─────────────────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="10" fett="true" farbe="1" abstandNach="20">
+      <Feld text="Gütekriterien"/>
+    </Abschnitt>
+    <Abschnitt typ="Zeile" schrift="0" groesse="9" abstandNach="60">
+      <Feld var="Gueteinfo"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Trennlinie" schrift="0" groesse="8"/>
+
+    <!-- ── Benutzte identische Punkte ────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="10" fett="true" farbe="1" abstandNach="20">
+      <Feld text="Benutzte identische Punkte"/>
+    </Abschnitt>
+    <!--
+      Spalten: PunktNr | X-Aus | Y-Aus | [Z-Aus] | X-Ziel | Y-Ziel | [Z-Ziel] | vX | vY | [vZ] | vGes
+      2D: 12+11+11 + 11+11 + 7+7+8 + 7 Lücken = 85 Zeichen
+      3D: 85 + 9+9+7 + 3 Lücken = 113 Zeichen  (passt auf A4 Quer bei 9pt)
+    -->
+    <Abschnitt typ="Tabelle" name="BenutztePasspunkte" schrift="1" groesse="9" kopfFett="true" ampel="true">
+      <Spalte var="PunktNr" header="PunktNr"    breite="12" ausrichtung="L"/>
+      <Spalte var="XAus"    header="X-Aus[m]"   breite="11" ausrichtung="R"/>
+      <Spalte var="YAus"    header="Y-Aus[m]"   breite="11" ausrichtung="R"/>
+      <Spalte var="ZAus"    header="Z-Aus[m]"   breite="9"  ausrichtung="R" zeigenWenn="Ist3D"/>
+      <Spalte var="XZiel"   header="X-Ziel[m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="YZiel"   header="Y-Ziel[m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="ZZiel"   header="Z-Ziel[m]"  breite="9"  ausrichtung="R" zeigenWenn="Ist3D"/>
+      <Spalte var="vX"      header="vX[cm]"     breite="7"  ausrichtung="R"/>
+      <Spalte var="vY"      header="vY[cm]"     breite="7"  ausrichtung="R"/>
+      <Spalte var="vZ"      header="vZ[cm]"     breite="7"  ausrichtung="R" zeigenWenn="Ist3D"/>
+      <Spalte var="vGes"    header="vGes[cm]"   breite="8"  ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Trennlinie" schrift="0" groesse="8"/>
+
+    <!-- ── Nicht benutzte identische Punkte (bedingt) ────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="10" fett="true" farbe="1" abstandNach="20" zeigenWenn="HatNichtBenutzte">
+      <Feld text="Nicht benutzte identische Punkte"/>
+    </Abschnitt>
+    <Abschnitt typ="Tabelle" name="NichtBenutztePasspunkte" schrift="1" groesse="9" kopfFett="true" zeigenWenn="HatNichtBenutzte">
+      <Spalte var="PunktNr" header="PunktNr"    breite="12" ausrichtung="L"/>
+      <Spalte var="XAus"    header="X-Aus[m]"   breite="11" ausrichtung="R"/>
+      <Spalte var="YAus"    header="Y-Aus[m]"   breite="11" ausrichtung="R"/>
+      <Spalte var="ZAus"    header="Z-Aus[m]"   breite="9"  ausrichtung="R" zeigenWenn="Ist3D"/>
+      <Spalte var="XZiel"   header="X-Ziel[m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="YZiel"   header="Y-Ziel[m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="ZZiel"   header="Z-Ziel[m]"  breite="9"  ausrichtung="R" zeigenWenn="Ist3D"/>
+    </Abschnitt>
+    <Abschnitt typ="Trennlinie" schrift="0" groesse="8" zeigenWenn="HatNichtBenutzte"/>
+
+    <!-- ── Transformierte Quellpunkte ────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="10" fett="true" farbe="1" abstandNach="20">
+      <Feld text="Transformierte Quellpunkte (Ergebnis)"/>
+    </Abschnitt>
+    <Abschnitt typ="Tabelle" name="TransformiertePunkte" schrift="1" groesse="9" kopfFett="true">
+      <Spalte var="PunktNr" header="PunktNr"    breite="12" ausrichtung="L"/>
+      <Spalte var="X"       header="X (R) [m]"  breite="14" ausrichtung="R"/>
+      <Spalte var="Y"       header="Y (H) [m]"  breite="14" ausrichtung="R"/>
+      <Spalte var="Z"       header="Z (H) [m]"  breite="12" ausrichtung="R" zeigenWenn="Ist3D"/>
+      <Spalte var="Typ"     header="Typ"         breite="10" ausrichtung="L"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

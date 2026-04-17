@@ -28,6 +28,7 @@ partial class Form1
         btnKonvertierung      = new Button();
         btnProtokolle         = new Button();
         btnDatenManager       = new Button();
+        btnBerechnungen       = new Button();
         grpOptionen           = new GroupBox();
         chkProtokoll          = new CheckBox();
         chkAutoBackup         = new CheckBox();
@@ -47,7 +48,7 @@ partial class Form1
         var btnFontBig = new Font("Segoe UI", 11F, FontStyle.Bold);
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(460, 682);
+        ClientSize      = new Size(460, 730);
         Text            = "Feldbuch";
         StartPosition   = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -160,11 +161,18 @@ partial class Form1
         y += bh + 8;
 
         btnDatenManager.Text     = "Daten-Manager";
-        btnDatenManager.Size     = new Size(w, bh);
+        btnDatenManager.Size     = new Size(half, bh);
         btnDatenManager.Location = new Point(x, y);
         btnDatenManager.Font     = btnFont;
         GrauButton(btnDatenManager);
         btnDatenManager.Click   += btnDatenManager_Click;
+
+        btnBerechnungen.Text     = "Berechnungen";
+        btnBerechnungen.Size     = new Size(half, bh);
+        btnBerechnungen.Location = new Point(x + half + gap, y);
+        btnBerechnungen.Font     = btnFont;
+        GrauButton(btnBerechnungen);
+        btnBerechnungen.Click   += btnBerechnungen_Click;
         y += bh + 14;
 
         // ─── Optionen ─────────────────────────────────────────────────────────
@@ -198,14 +206,14 @@ partial class Form1
             lblSekProjekt, btnProjekt, btnProjektdaten,
             lblSekFeldarbeit, btnDxfViewer, btnFreieStationierung, btnTachymeterKommunikation,
             btnTestmessungen,
-            lblSekDaten, btnKonvertierung, btnProtokolle, btnDatenManager,
+            lblSekDaten, btnKonvertierung, btnProtokolle, btnDatenManager, btnBerechnungen,
             grpOptionen
         });
 
         // ── Info-Button (unten links) ─────────────────────────────────────────
         btnInfo.Text      = "?";
         btnInfo.Size      = new Size(30, 30);
-        btnInfo.Location  = new Point(10, 646);
+        btnInfo.Location  = new Point(10, 694);
         btnInfo.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnInfo.FlatStyle = FlatStyle.Flat;
         btnInfo.ForeColor = Color.FromArgb(100, 100, 120);
@@ -304,6 +312,7 @@ partial class Form1
     private Button    btnKonvertierung             = null!;
     private Button    btnProtokolle                = null!;
     private Button    btnDatenManager              = null!;
+    private Button    btnBerechnungen              = null!;
     private Button    btnInfo                     = null!;
     private GroupBox  grpOptionen                 = null!;
     private CheckBox  chkProtokoll                = null!;
