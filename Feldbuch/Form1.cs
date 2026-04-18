@@ -176,7 +176,7 @@ public partial class Form1 : Form
 
     private void btnBerechnungen_Click(object? sender, EventArgs e)
     {
-        using var form = new FormKoordTransformation();
+        using var form = new FormBerechnungsAuswahl();
         form.ShowDialog(this);
     }
 

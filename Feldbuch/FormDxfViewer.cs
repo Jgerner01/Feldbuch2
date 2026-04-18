@@ -1571,6 +1571,12 @@ public partial class FormDxfViewer : Form
             PunktIndexZuruecksetzen();
     }
 
+    private void btnAbsteckung_Click(object? sender, EventArgs e)
+    {
+        using var form = new FormAbsteckungAuswahl();
+        form.ShowDialog(this);
+    }
+
     private void UpdateLoeschenButton()
     {
         if (canvas.DeleteModeActive)

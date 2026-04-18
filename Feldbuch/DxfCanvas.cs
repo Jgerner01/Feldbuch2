@@ -182,6 +182,34 @@ public class DxfCanvas : Panel
         (sx - Width  / 2.0) / Scale + PanX,
         -(sy - Height / 2.0) / Scale + PanY);
 
+    // ── Zoom-Begrenzung (2:1 bei Meter-Koordinaten) ───────────────────────────
+    // MaxScale = 0 → keine Begrenzung
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public double MaxScale { get; set; } = 0;
+
+    // Wird ausgelöst wenn Scale oder Pan sich ändern (für Maßstab-Anzeige)
+    public event Action? ScaleChanged;
+
+    // Maßstab als Text, z.B. "1:500" oder "2:1"
+    public string GetMaßstabText()
+    {
+        float dpi = 96f;
+        try { using var gr = CreateGraphics(); dpi = gr.DpiX; } catch { }
+        double pixelSize_m = 0.0254 / dpi;
+        double m = 1.0 / (Scale * pixelSize_m);
+        if (m >= 1.0) return $"1:{NiceRound(m)}";
+        else          return $"{1.0 / m:F1}:1";
+    }
+
+    static long NiceRound(double v)
+    {
+        if (v < 10)    return (long)Math.Round(v);
+        if (v < 100)   return (long)(Math.Round(v / 5) * 5);
+        if (v < 1000)  return (long)(Math.Round(v / 10) * 10);
+        if (v < 10000) return (long)(Math.Round(v / 50) * 50);
+        return           (long)(Math.Round(v / 100) * 100);
+    }
+
     // ── Zoom-Operationen ──────────────────────────────────────────────────────
     public void ZoomIn()  => ApplyZoom(1.5,  Width / 2, Height / 2);
     public void ZoomOut() => ApplyZoom(1.0/1.5, Width / 2, Height / 2);
@@ -189,10 +217,12 @@ public class DxfCanvas : Panel
     public void ApplyZoom(double factor, int sx, int sy)
     {
         var (wx, wy) = ToWorld(sx, sy);
-        Scale = Math.Clamp(Scale * factor, 1e-9, 1e9);
+        double maxS = MaxScale > 0 ? MaxScale : 1e9;
+        Scale = Math.Clamp(Scale * factor, 1e-9, maxS);
         PanX  = wx - (sx - Width  / 2.0) / Scale;
         PanY  = wy + (sy - Height / 2.0) / Scale;
         Invalidate();
+        ScaleChanged?.Invoke();
     }
 
     public void FitToView()
@@ -217,6 +247,7 @@ public class DxfCanvas : Panel
         PanX  = bb.CenterX;
         PanY  = bb.CenterY;
         Invalidate();
+        ScaleChanged?.Invoke();
     }
 
     // ── Picking ───────────────────────────────────────────────────────────────

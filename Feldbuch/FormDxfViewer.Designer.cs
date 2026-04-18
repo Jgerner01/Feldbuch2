@@ -48,6 +48,7 @@ partial class FormDxfViewer
         btnLoeschen         = new Button();
         btnPunktIndexReset  = new Button();
         btnDigitalisierung  = new Button();
+        btnAbsteckung       = new Button();
         pnlStatus           = new Panel();
         lblStatus           = new Label();
         flpLayers           = new FlowLayoutPanel();
@@ -382,12 +383,17 @@ partial class FormDxfViewer
         btnDigitalisierung.Click += btnDigitalisierung_Click;
         new ToolTip().SetToolTip(btnDigitalisierung, "Digitalisierung: Klick → Punkt in KOR/CSV schreiben");
 
+        sy += ss + sp;
+        SideBtn(btnAbsteckung, "⊕A", fntSm, sy, ss, Color.FromArgb(50, 110, 60), Color.White, Color.FromArgb(30, 80, 40));
+        btnAbsteckung.Click += btnAbsteckung_Click;
+        new ToolTip().SetToolTip(btnAbsteckung, "Absteckung");
+
         pnlSide.Controls.AddRange(new Control[]
         {
             btnOpen, btnZoomIn, btnZoomOut, btnFit,
             btnSnap, btnPunkte, btnDxfToggle, btnExportDxf,
             btnNeu, btnImportKorCsv, btnImportJson, btnLoeschen,
-            btnPunktIndexReset, btnDigitalisierung
+            btnPunktIndexReset, btnDigitalisierung, btnAbsteckung
         });
 
         // ══ Canvas ════════════════════════════════════════════════════════════
@@ -457,6 +463,7 @@ partial class FormDxfViewer
     private Button           btnLoeschen         = null!;
     private Button           btnPunktIndexReset  = null!;
     private Button           btnDigitalisierung  = null!;
+    private Button           btnAbsteckung       = null!;
     private Panel            pnlStatus           = null!;
     private Label            lblStatus           = null!;
     private FlowLayoutPanel  flpLayers           = null!;
