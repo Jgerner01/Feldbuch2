@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Schnurgeruest">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <Farben>
+    <Farbe r="42" g="72" b="130"/>
+  </Farben>
+
+  <Inhalt>
+
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Schnurger&#252;st"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="Standpunkt" label="Standpunkt:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="60">
+      <Feld var="Abstand" label="Schnurger&#252;st-Abstand:  "/>
+      <Feld text="     "/>
+      <Feld var="AnzahlEcken" label="Geb&#228;udeecken:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="false">
+      <Spalte var="PunktNr" header="PunktNr"    breite="14" ausrichtung="L"/>
+      <Spalte var="R"       header="R [m]"      breite="16" ausrichtung="R"/>
+      <Spalte var="H"       header="H [m]"      breite="16" ausrichtung="R"/>
+      <Spalte var="Hz"      header="Hz [gon]"   breite="14" ausrichtung="R"/>
+      <Spalte var="s"       header="s [m]"      breite="12" ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <Abschnitt typ="Zeile" schrift="0" groesse="8">
+      <Feld var="LageplanHinweis"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

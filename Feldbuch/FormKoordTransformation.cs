@@ -167,7 +167,8 @@ public partial class FormKoordTransformation : Form
         }
 
         // Ziel nach PunktNr-Reihenfolge der Quelle sortieren – nur Passpunkte
-        var zDict  = z.ToDictionary(p => p.PunktNr, StringComparer.OrdinalIgnoreCase);
+        var zDict  = z.GroupBy(p => p.PunktNr, StringComparer.OrdinalIgnoreCase)
+                      .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var zNeu   = new List<TransformPunkt>();
         var gefunden   = new List<string>();
         var nichtGefunden = new List<string>();
@@ -236,7 +237,8 @@ public partial class FormKoordTransformation : Form
         }
 
         // Auto-Zuordnung nach PunktNr (Passpunkte)
-        var tgtDict = alleTgt.ToDictionary(p => p.PunktNr, StringComparer.OrdinalIgnoreCase);
+        var tgtDict = alleTgt.GroupBy(p => p.PunktNr, StringComparer.OrdinalIgnoreCase)
+                             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var quelle  = alleSrc.Where(p => tgtDict.ContainsKey(p.PunktNr)).ToList();
         var ziel    = quelle .Select(p => tgtDict[p.PunktNr]).ToList();
 

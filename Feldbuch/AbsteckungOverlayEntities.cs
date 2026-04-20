@@ -245,3 +245,125 @@ public class AbsteckAchseEntity : DxfEntity
 
 // ── Raster-Label (Punkt-Nr. im Raster) ───────────────────────────────────────
 // Rasterabsteckung benutzt AbsteckSollPunktEntity direkt – kein extra Typ nötig
+
+// ── Schnurgerüst-Kante (klickbar für Achswahl, per Kante indiziert) ──────────
+public class AbsteckSGKanteEntity : DxfEntity
+{
+    public int KanteIdx { get; }
+    private readonly double _r1, _h1, _r2, _h2;
+    private readonly bool   _isSelected;
+
+    public AbsteckSGKanteEntity(int idx,
+        double r1, double h1, double r2, double h2, bool isSelected)
+    {
+        KanteIdx = idx; _r1 = r1; _h1 = h1; _r2 = r2; _h2 = h2;
+        _isSelected = isSelected;
+        Layer = "SGKante";
+    }
+
+    public override BoundingBox GetBounds() =>
+        new(Math.Min(_r1, _r2), Math.Min(_h1, _h2),
+            Math.Max(_r1, _r2), Math.Max(_h1, _h2));
+
+    public override double DistanceTo(double wx, double wy)
+    {
+        double dR = _r2 - _r1, dH = _h2 - _h1;
+        double len2 = dR * dR + dH * dH;
+        if (len2 < 1e-18)
+            return Math.Sqrt((wx - _r1) * (wx - _r1) + (wy - _h1) * (wy - _h1));
+        double t  = Math.Max(0, Math.Min(1, ((wx - _r1) * dR + (wy - _h1) * dH) / len2));
+        double px = _r1 + t * dR, py = _h1 + t * dH;
+        return Math.Sqrt((wx - px) * (wx - px) + (wy - py) * (wy - py));
+    }
+
+    public override (double x, double y) GetNearestPoint(double wx, double wy)
+    {
+        double d1 = Math.Sqrt((wx-_r1)*(wx-_r1) + (wy-_h1)*(wy-_h1));
+        double d2 = Math.Sqrt((wx-_r2)*(wx-_r2) + (wy-_h2)*(wy-_h2));
+        return d1 <= d2 ? (_r1, _h1) : (_r2, _h2);
+    }
+
+    public override (double x, double y) GetSnapPoint(double wx, double wy)
+        => GetNearestPoint(wx, wy);
+
+    public override string GetInfo() =>
+        $"Gebäudeseite {KanteIdx + 1}  ({_r1:F3}/{_h1:F3}) → ({_r2:F3}/{_h2:F3})";
+
+    public override void Draw(Graphics g, Pen _, Func<double, double, PointF> ts, double scale)
+    {
+        Color col = _isSelected ? Color.OrangeRed : Color.Red;
+        float w   = _isSelected ? 3f : 2f;
+        using var pen = new Pen(col, w);
+        g.DrawLine(pen, ts(_r1, _h1), ts(_r2, _h2));
+
+        if (_isSelected)
+        {
+            double dR = _r2 - _r1, dH = _h2 - _h1;
+            double len = Math.Sqrt(dR * dR + dH * dH);
+            if (len > 1e-9)
+            {
+                // Right normal in world coords (outward for CW polygon)
+                double outnR = dH / len, outnH = -dR / len;
+                double midR  = (_r1 + _r2) / 2, midH = (_h1 + _h2) / 2;
+                // Pixel-adaptive offset
+                double dist  = 25.0 / scale;
+                var outPt = ts(midR + outnR * dist, midH + outnH * dist);
+                var inPt  = ts(midR - outnR * dist, midH - outnH * dist);
+                using var fnt = new Font("Arial", 11f, FontStyle.Bold, GraphicsUnit.Pixel);
+                g.DrawString("+", fnt, Brushes.OrangeRed,     outPt.X - 6f, outPt.Y - 9f);
+                g.DrawString("–", fnt, Brushes.DeepSkyBlue,   inPt.X  - 5f, inPt.Y  - 9f);
+            }
+        }
+    }
+}
+
+// ── Gemessener Punkt (gelber Kreis + Lotstrecke zur Achse) ────────────────────
+public class AbsteckMesspunktEntity : DxfEntity
+{
+    private readonly double  _pR, _pH;
+    private readonly double? _aR1, _aH1, _aR2, _aH2;
+
+    public AbsteckMesspunktEntity(double pR, double pH,
+        double? aR1 = null, double? aH1 = null,
+        double? aR2 = null, double? aH2 = null)
+    {
+        _pR = pR; _pH = pH;
+        _aR1 = aR1; _aH1 = aH1; _aR2 = aR2; _aH2 = aH2;
+        Layer = "GemessenerPunkt";
+    }
+
+    public override BoundingBox GetBounds() => new(_pR - 1, _pH - 1, _pR + 1, _pH + 1);
+    public override double DistanceTo(double wx, double wy) =>
+        Math.Sqrt((wx - _pR) * (wx - _pR) + (wy - _pH) * (wy - _pH));
+    public override (double x, double y) GetNearestPoint(double wx, double wy) => (_pR, _pH);
+    public override (double x, double y) GetSnapPoint(double wx, double wy)    => (_pR, _pH);
+    public override string GetInfo() => $"Messung  R={_pR:F3}  H={_pH:F3}";
+
+    public override void Draw(Graphics g, Pen _, Func<double, double, PointF> ts, double scale)
+    {
+        var c = ts(_pR, _pH);
+        const float r = 7f;
+        g.FillEllipse(Brushes.Yellow, c.X - r, c.Y - r, 2 * r, 2 * r);
+        using var pen = new Pen(Color.DarkGoldenrod, 1.5f);
+        g.DrawEllipse(pen, c.X - r, c.Y - r, 2 * r, 2 * r);
+        using var fnt = new Font("Arial", 8f, FontStyle.Bold, GraphicsUnit.Pixel);
+        g.DrawString("M", fnt, Brushes.DarkGoldenrod, c.X + r + 2f, c.Y - 8f);
+
+        // Lotstrecke zur gewählten Achse
+        if (_aR1.HasValue && _aR2.HasValue)
+        {
+            double dR   = _aR2.Value - _aR1.Value, dH = _aH2!.Value - _aH1!.Value;
+            double len2 = dR * dR + dH * dH;
+            if (len2 > 1e-18)
+            {
+                double t   = Math.Max(0, Math.Min(1,
+                    ((_pR - _aR1.Value) * dR + (_pH - _aH1.Value) * dH) / len2));
+                double lotR = _aR1.Value + t * dR;
+                double lotH = _aH1.Value + t * dH;
+                using var lotPen = new Pen(Color.Goldenrod, 1.5f)
+                    { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash };
+                g.DrawLine(lotPen, c, ts(lotR, lotH));
+            }
+        }
+    }
+}

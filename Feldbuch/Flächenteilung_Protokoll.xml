@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Flächenteilung">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <Farben>
+    <Farbe r="42" g="72" b="130"/>
+  </Farben>
+
+  <Inhalt>
+
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Fl&#228;chenteilung (Abspaltung)"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="Verfahren" label="Verfahren:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="A_gesamt" label="A_gesamt:   "/>
+      <Feld text="    "/>
+      <Feld var="A1_soll"  label="A1 (Soll):  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="A1_ist"   label="A1 (Ist):   "/>
+      <Feld text="    "/>
+      <Feld var="A2"       label="A2:         "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="60">
+      <Feld var="Differenz"   label="&#916;:          "/>
+      <Feld text="    "/>
+      <Feld var="Iterationen" label="Iterationen: "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="false">
+      <Spalte var="Nr"  header="Nr."     breite="8"  ausrichtung="R"/>
+      <Spalte var="R"   header="R [m]"   breite="18" ausrichtung="R"/>
+      <Spalte var="H"   header="H [m]"   breite="18" ausrichtung="R"/>
+      <Spalte var="Art" header="Art"     breite="16" ausrichtung="L"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="0" groesse="8" abstandNach="20">
+      <Feld var="LageplanHinweis"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

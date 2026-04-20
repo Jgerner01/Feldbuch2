@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Rueckwaertsschnitt">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <!-- cf1=Blau  cf2=Orange (5–20 cc)  cf3=Rot (20–60 cc)  cf4=Tiefrot (>60 cc) -->
+  <Farben>
+    <Farbe r="42"  g="72"  b="130"/>
+    <Farbe r="200" g="100" b="0"/>
+    <Farbe r="180" g="30"  b="30"/>
+    <Farbe r="140" g="0"   b="0"/>
+  </Farben>
+
+  <Inhalt>
+
+    <!-- ── Titelzeile ─────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Rückwärtschnitt"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <!-- ── Standpunkt ─────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Standpunktnr" label="Standpunktnr.:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="8"/>
+
+    <!-- ── Beobachtungstabelle ────────────────────────────────────────────── -->
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="true">
+      <Spalte var="PunktNr" header="Punkt"    breite="10" ausrichtung="L"/>
+      <Spalte var="R"       header="R [m]"    breite="12" ausrichtung="R"/>
+      <Spalte var="H"       header="H [m]"    breite="12" ausrichtung="R"/>
+      <Spalte var="HZ"      header="HZ [gon]" breite="11" ausrichtung="R"/>
+      <Spalte var="s"       header="s [m]"    breite="9"  ausrichtung="R"/>
+      <Spalte var="v"       header="v [cc]"   breite="8"  ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <!-- ── Ergebnis ───────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" fett="true" abstandNach="40">
+      <Feld var="R" label="Rechtswert:  " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="H" label="Hochwert:    " einheit=" m"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Orientierung" label="Orientierungsunbekannte:  " einheit=" gon"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" unterlinie="true" abstandNach="60">
+      <Feld var="S0Info"/>
+    </Abschnitt>
+
+    <!-- Kritischer Kreis – nur ausgeben wenn vorhanden -->
+    <Abschnitt typ="Zeile" schrift="0" groesse="9" fett="true" farbe="4" abstandNach="40" zeigenWenn="HatKritKreis">
+      <Feld text="WARNUNG: "/>
+      <Feld var="KritKreis"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

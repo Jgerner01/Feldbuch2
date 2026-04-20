@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Achsabsteckung">
+
+  <Seite breite="297" hoehe="210" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <Farben>
+    <Farbe r="42" g="72" b="130"/>
+  </Farben>
+
+  <Inhalt>
+
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Achsabsteckung"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="Standpunkt" label="Standpunkt:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="AchseA" label="A:  "/>
+      <Feld text="     "/>
+      <Feld var="AchseE" label="E:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="60">
+      <Feld var="Intervall" label="Intervall:  "/>
+      <Feld text="     "/>
+      <Feld var="Offsets" label="Offsets:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="false">
+      <Spalte var="PunktNr"  header="Nr."       breite="8"  ausrichtung="L"/>
+      <Spalte var="Station"  header="Station"   breite="16" ausrichtung="L"/>
+      <Spalte var="R"        header="R [m]"     breite="13" ausrichtung="R"/>
+      <Spalte var="H"        header="H [m]"     breite="13" ausrichtung="R"/>
+      <Spalte var="Abs"      header="Abs. [m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="Ord"      header="Ord. [m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="Hz"       header="Hz [gon]"  breite="13" ausrichtung="R"/>
+      <Spalte var="s"        header="s [m]"     breite="10" ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <Abschnitt typ="Zeile" schrift="0" groesse="8">
+      <Feld var="LageplanHinweis"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

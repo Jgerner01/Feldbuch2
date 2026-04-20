@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Punktabsteckung">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <Farben>
+    <Farbe r="42"  g="72"  b="130"/>
+    <Farbe r="200" g="100" b="0"/>
+    <Farbe r="180" g="30"  b="30"/>
+    <Farbe r="140" g="0"   b="0"/>
+  </Farben>
+
+  <Inhalt>
+
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Punktabsteckung"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="Standpunkt" label="Standpunkt:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="60">
+      <Feld var="AnzahlPunkte" label="Anzahl Sollpunkte:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="false">
+      <Spalte var="PunktNr" header="PunktNr"    breite="12" ausrichtung="L"/>
+      <Spalte var="R"       header="R_soll [m]" breite="14" ausrichtung="R"/>
+      <Spalte var="H"       header="H_soll [m]" breite="14" ausrichtung="R"/>
+      <Spalte var="Hz"      header="Hz [gon]"   breite="13" ausrichtung="R"/>
+      <Spalte var="s"       header="s [m]"      breite="11" ausrichtung="R"/>
+      <Spalte var="Status"  header="Status"     breite="12" ausrichtung="L"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <Abschnitt typ="Zeile" schrift="0" groesse="8" abstandNach="20">
+      <Feld var="LageplanHinweis"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

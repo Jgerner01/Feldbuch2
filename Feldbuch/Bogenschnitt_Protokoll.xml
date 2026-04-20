@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Bogenschnitt">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <!-- cf1=Blau  cf2=Orange (3–10 mm)  cf3=Rot (10–30 mm)  cf4=Tiefrot (>30 mm) -->
+  <Farben>
+    <Farbe r="42"  g="72"  b="130"/>
+    <Farbe r="200" g="100" b="0"/>
+    <Farbe r="180" g="30"  b="30"/>
+    <Farbe r="140" g="0"   b="0"/>
+  </Farben>
+
+  <Inhalt>
+
+    <!-- ── Titelzeile ─────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Bogenschnitt"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <!-- ── Neupunkt ───────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Neupunkt" label="Neupunkt-Nr.:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="8"/>
+
+    <!-- ── Beobachtungstabelle ────────────────────────────────────────────── -->
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="true">
+      <Spalte var="PunktNr" header="Station"    breite="10" ausrichtung="L"/>
+      <Spalte var="R"       header="R [m]"      breite="13" ausrichtung="R"/>
+      <Spalte var="H"       header="H [m]"      breite="13" ausrichtung="R"/>
+      <Spalte var="Strecke" header="s_obs [m]"  breite="12" ausrichtung="R"/>
+      <Spalte var="v"       header="v [mm]"     breite="9"  ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <!-- ── Ergebnis ───────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" fett="true" abstandNach="40">
+      <Feld var="R" label="Rechtswert:  " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="H" label="Hochwert:    " einheit=" m"/>
+    </Abschnitt>
+
+    <!-- Zweite Lösung (nur bei r=0, 2 Stationen) -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20" zeigenWenn="HatZwei">
+      <Feld var="ZweiteLoesung" label="(2. L&#246;sung: "/>
+      <Feld text=")"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" unterlinie="true" abstandNach="80">
+      <Feld var="S0Info"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

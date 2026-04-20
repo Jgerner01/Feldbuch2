@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Hochpunktherablegung">
+
+  <Seite breite="210" hoehe="297" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <!-- cf1=Blau  cf2=Orange (5–20 cc / 3–10 mm)  cf3=Rot (20–60 cc / 10–30 mm)  cf4=Tiefrot (>60 cc / >30 mm) -->
+  <Farben>
+    <Farbe r="42"  g="72"  b="130"/>
+    <Farbe r="200" g="100" b="0"/>
+    <Farbe r="180" g="30"  b="30"/>
+    <Farbe r="140" g="0"   b="0"/>
+  </Farben>
+
+  <Inhalt>
+
+    <!-- ── Titelzeile ─────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Hochpunktherablegung"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <!-- ── Hochpunkt ──────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="PunktNr" label="Hochpunkt-Nr.:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="8"/>
+
+    <!-- ── Beobachtungstabelle ────────────────────────────────────────────── -->
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="true">
+      <Spalte var="PunktNr" header="Station"    breite="10" ausrichtung="L"/>
+      <Spalte var="R"       header="R [m]"      breite="11" ausrichtung="R"/>
+      <Spalte var="H"       header="H [m]"      breite="11" ausrichtung="R"/>
+      <Spalte var="Hoehe"   header="Hoehe [m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="iH"      header="iH [m]"     breite="8"  ausrichtung="R"/>
+      <Spalte var="Hz"      header="Hz [gon]"   breite="10" ausrichtung="R"/>
+      <Spalte var="z"       header="z [gon]"    breite="10" ausrichtung="R"/>
+      <Spalte var="V"       header="V [gon]"    breite="10" ausrichtung="R"/>
+      <Spalte var="zh"      header="zh [m]"     breite="8"  ausrichtung="R"/>
+      <Spalte var="s"       header="s [m]"      breite="9"  ausrichtung="R"/>
+      <Spalte var="vDir"    header="v_Hz [cc]"  breite="9"  ausrichtung="R"/>
+      <Spalte var="HPi"     header="H_P_i [m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="vH"      header="v_H [mm]"   breite="9"  ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <!-- ── Ergebnis Lage ──────────────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" fett="true" abstandNach="40">
+      <Feld var="R" label="Rechtswert:  " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="H" label="Hochwert:    " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="Hoehe" label="Hoehe:  " einheit=" m"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="S0DirInfo"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" unterlinie="true" abstandNach="60">
+      <Feld var="S0HInfo"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

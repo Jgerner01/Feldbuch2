@@ -313,7 +313,104 @@ public static class AbsteckungGrafik
         return list;
     }
 
-    // ── Schnurgerüst ──────────────────────────────────────────────────────────
+    // ── Schnurgerüst V2 (mit klickbaren Kanten, Messpunkt, Offset) ──────────────
+    public static List<DxfEntity> ErzeugeSchnurgeruestV2Overlay(
+        StandpunktInfo? station,
+        IReadOnlyList<(string? Nr, double R, double H)> polygon,
+        double sgAbstand,
+        bool fixiert,
+        int selectedAxis,
+        (double R, double H)? gemessenerPunkt)
+    {
+        var list = new List<DxfEntity>();
+        int n    = polygon.Count;
+
+        if (n >= 2)
+        {
+            bool isOpen = n == 2;
+
+            if (fixiert)
+            {
+                // Klickbare Kanten
+                int kantenZahl = isOpen ? n - 1 : n;
+                for (int i = 0; i < kantenZahl; i++)
+                {
+                    int j = (i + 1) % n;
+                    list.Add(new AbsteckSGKanteEntity(i,
+                        polygon[i].R, polygon[i].H,
+                        polygon[j].R, polygon[j].H,
+                        i == selectedAxis));
+                }
+
+                // SG-Versatzlinie
+                if (!isOpen && Math.Abs(sgAbstand) > 1e-6)
+                {
+                    var polySimple = polygon.Select(p => (p.R, p.H)).ToList();
+                    var sgPunkte   = AbsteckungRechner.BerechneSchnurgeruest(polySimple, sgAbstand, null);
+                    if (sgPunkte.Count >= 2)
+                        list.Add(new AbsteckPolygonEntity(
+                            sgPunkte.Select(p => (p.R_soll, p.H_soll)),
+                            Color.Blue, 1.5f, close: true,
+                            dash: System.Drawing.Drawing2D.DashStyle.Dash));
+                }
+                else if (isOpen && Math.Abs(sgAbstand) > 1e-6)
+                {
+                    double dR  = polygon[1].R - polygon[0].R;
+                    double dH  = polygon[1].H - polygon[0].H;
+                    double len = Math.Sqrt(dR * dR + dH * dH);
+                    if (len > 1e-9)
+                    {
+                        double nR = dH / len, nH = -dR / len;
+                        list.Add(new AbsteckPolygonEntity(
+                            new[] {
+                                (polygon[0].R + nR * sgAbstand, polygon[0].H + nH * sgAbstand),
+                                (polygon[1].R + nR * sgAbstand, polygon[1].H + nH * sgAbstand),
+                            },
+                            Color.Blue, 1.5f, close: false,
+                            dash: System.Drawing.Drawing2D.DashStyle.Dash));
+                    }
+                }
+            }
+            else
+            {
+                // Noch nicht fixiert: einfache Polylinie
+                list.Add(new AbsteckPolygonEntity(
+                    polygon.Select(p => (p.R, p.H)),
+                    Color.Red, 2f, close: !isOpen,
+                    dash: System.Drawing.Drawing2D.DashStyle.DashDot));
+            }
+
+            // Eckpunkte
+            for (int i = 0; i < n; i++)
+            {
+                string nr = polygon[i].Nr ?? $"{i + 1}";
+                list.Add(new AbsteckSollPunktEntity(
+                    polygon[i].R, polygon[i].H, nr, false, false));
+            }
+        }
+
+        // Gemessener Punkt + Lotstrecke
+        if (gemessenerPunkt.HasValue)
+        {
+            double? aR1 = null, aH1 = null, aR2 = null, aH2 = null;
+            if (selectedAxis >= 0 && n >= 2)
+            {
+                int j = (selectedAxis + 1) % n;
+                aR1 = polygon[selectedAxis].R; aH1 = polygon[selectedAxis].H;
+                aR2 = polygon[j].R;            aH2 = polygon[j].H;
+            }
+            list.Add(new AbsteckMesspunktEntity(
+                gemessenerPunkt.Value.R, gemessenerPunkt.Value.H,
+                aR1, aH1, aR2, aH2));
+        }
+
+        if (station != null)
+            list.Add(new AbsteckStandpunktEntity(station.R, station.H, station.PunktNr));
+
+        return list;
+    }
+
+    // ── Schnurgerüst (Altversion) ─────────────────────────────────────────────
     public static List<DxfEntity> ErzeugeSchnurgeruestOverlay(
         StandpunktInfo? station,
         IReadOnlyList<(double R, double H)> polygon,

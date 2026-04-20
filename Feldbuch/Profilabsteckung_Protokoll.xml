@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Protokoll modul="Profilabsteckung">
+
+  <Seite breite="297" hoehe="210" randLinks="20" randRechts="20" randOben="20" randUnten="20"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <Farben>
+    <Farbe r="42" g="72" b="130"/>
+  </Farben>
+
+  <Inhalt>
+
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Profilabsteckung"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="Standpunkt" label="Standpunkt:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="20">
+      <Feld var="AchseA" label="A:  "/>
+      <Feld text="     "/>
+      <Feld var="AchseE" label="E:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" abstandNach="60">
+      <Feld var="Intervall" label="Intervall:  "/>
+      <Feld text="   "/>
+      <Feld var="Halbbreite" label="Planum-Halbbreite:  "/>
+      <Feld text="   "/>
+      <Feld var="Boesch" label="B&#246;schung:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Tabelle" schrift="1" groesse="8" kopfFett="true" ampel="false">
+      <Spalte var="PunktNr"  header="Punkt"      breite="8"  ausrichtung="L"/>
+      <Spalte var="Station"  header="Stat. [m]"  breite="10" ausrichtung="R"/>
+      <Spalte var="H_Plan"   header="H_Plan [m]" breite="12" ausrichtung="R"/>
+      <Spalte var="H_Gel"    header="H_Gel. [m]" breite="12" ausrichtung="R"/>
+      <Spalte var="DeltaH"   header="&#916;H [m]"  breite="11" ausrichtung="R"/>
+      <Spalte var="Typ"      header="Art"        breite="10" ausrichtung="L"/>
+      <Spalte var="Boesch"   header="B.Fuss [m]" breite="11" ausrichtung="R"/>
+      <Spalte var="Hz"       header="Hz [gon]"   breite="13" ausrichtung="R"/>
+      <Spalte var="s"        header="s [m]"      breite="10" ausrichtung="R"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>
