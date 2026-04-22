@@ -65,6 +65,8 @@ public static class GsiParser
 
     private static KonvertierungPunkt? ParseLine(string line)
     {
+        // Optionalen * Zeilenpräfix (GSI-16) entfernen
+        if (line.StartsWith("*")) line = line[1..];
         // Token durch Leerzeichen trennen
         var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length == 0) return null;

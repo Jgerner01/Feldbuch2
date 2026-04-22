@@ -40,12 +40,14 @@ public class GsiDatenParser : ITachymeterDatenParser
     {
         if (string.IsNullOrWhiteSpace(zeile)) return false;
         // GSI-Zeile: erstes Token ist mindestens 15 Zeichen lang,
-        // beginnt mit zweistelligem WI (z. B. "11" oder "21")
-        var tokens = zeile.TrimStart().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // beginnt mit zweistelligem WI (z. B. "11" oder "21").
+        // GSI-16 Zeilen können mit "*" beginnen (Zeilenpräfix).
+        var trimmed = zeile.TrimStart();
+        if (trimmed.Length > 0 && trimmed[0] == '*') trimmed = trimmed[1..];
+        var tokens = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length == 0) return false;
         string t = tokens[0];
-        return t.Length >= 15 && t.Length is 15 or 23 &&
-               char.IsDigit(t[0]) && char.IsDigit(t[1]);
+        return t.Length is 15 or 23 && char.IsDigit(t[0]) && char.IsDigit(t[1]);
     }
 
     public TachymeterMessung? ParseZeile(string zeile) =>
@@ -79,6 +81,8 @@ public class GsiDatenParser : ITachymeterDatenParser
     private static TachymeterMessung? ParseGsiZeile(string line)
     {
         if (string.IsNullOrEmpty(line)) return null;
+        // Optionalen * Zeilenpräfix (GSI-16) entfernen
+        if (line.StartsWith("*")) line = line[1..];
         var tokens = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length == 0) return null;
 

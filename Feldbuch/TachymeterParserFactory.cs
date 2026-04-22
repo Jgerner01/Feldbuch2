@@ -19,6 +19,7 @@ public static class TachymeterParserFactory
     {
         Registrieren(new GeoCOMParser());
         Registrieren(new GsiDatenParser());
+        Registrieren(new GsiOnlineParser());
         Registrieren(new SokkiaSDRParser());
         Registrieren(new TopconParser());
     }

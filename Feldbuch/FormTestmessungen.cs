@@ -141,10 +141,11 @@ public partial class FormTestmessungen : Form
         _zeilenPuffer.Append(daten);
         string puffer = _zeilenPuffer.ToString();
 
+        // CR und LF beide als Zeilentrenner akzeptieren (CR allein z. B. bei GSI Online TPS300)
         int pos;
-        while ((pos = puffer.IndexOf('\n')) >= 0)
+        while ((pos = puffer.IndexOfAny(new[] { '\r', '\n' })) >= 0)
         {
-            string zeile = puffer[..pos].TrimEnd('\r');
+            string zeile = puffer[..pos];
             puffer = puffer[(pos + 1)..];
             if (!string.IsNullOrWhiteSpace(zeile))
                 VerarbeiteZeile(zeile);
@@ -247,14 +248,20 @@ public partial class FormTestmessungen : Form
         }
     }
 
-    // ── Generische Verarbeitung (Sokkia SDR, Topcon) ──────────────────────────
+    // ── Generische Verarbeitung (Sokkia SDR, Topcon, GSI Online) ─────────────
 
     private void VerarbeiteZeileGeneric(string zeile)
     {
         var messung = _datenParser.ParseZeile(zeile);
         if (messung == null) return;
 
-        if (messung.Typ == MessungsTyp.Status)
+        if (messung.Typ == MessungsTyp.Fehler)
+        {
+            AppendFarbe($"   !! FEHLER: {messung.Bemerkung}", FarbeFehler);
+            if (_messungZustand == MessungZustand.WarteMessen)
+                MessungAbschliessen();
+        }
+        else if (messung.Typ == MessungsTyp.Status)
         {
             AppendFarbe($"   → {messung.Bemerkung}", FarbeInfo);
         }

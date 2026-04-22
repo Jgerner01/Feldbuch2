@@ -11,6 +11,8 @@ public enum TachymeterModell
     LeicaTS06,
     LeicaTS11,
     TrimbleS3,
+    // ── Leica GSI Online-Protokoll ────────────────────────────────────────────
+    LeicaTPS300,              // TPS300-Reihe, GSI Online-Protokoll, 9600 Baud
     // ── Sokkia SDR-Format ─────────────────────────────────────────────────────
     SokkiaSDR,                // Sokkia SET-Reihe, SDR33-ASCII-Format
     // ── Topcon-Protokoll ──────────────────────────────────────────────────────
@@ -301,17 +303,27 @@ public static class TachymeterVerbindung
 
         try
         {
-            // Ping-Test: RPC_COM_NullProc (RPC 0) – minimale Anfrage
-            var antwort = await GeoCOM_SendenUndAntwortAsync("%R1Q,0,0:", timeoutMs: 3000);
+            if (Modell == TachymeterModell.LeicaTPS300)
+            {
+                // GSI Online Ping: GET/I/WI21 – Momentan-Winkelabfrage ohne EDM
+                // Antwort enthält "21." wenn das Gerät antwortet
+                await GeoCOM_SendenUndAntwortAsync(
+                    "GET/I/WI21", timeoutMs: 3000, antwortFilter: "21.");
+            }
+            else
+            {
+                // GeoCOM Ping: RPC_COM_NullProc (RPC 0) – minimale Anfrage
+                var antwort = await GeoCOM_SendenUndAntwortAsync("%R1Q,0,0:", timeoutMs: 3000);
 
-            // GRC_OK (0) oder informative RCs prüfen
-            bool gueltig = antwort.Contains(":0,")
-                        || antwort.Contains(":1283")
-                        || antwort.Contains(":1284")
-                        || antwort.Contains(":1285");
+                // GRC_OK (0) oder informative RCs prüfen
+                bool gueltig = antwort.Contains(":0,")
+                            || antwort.Contains(":1283")
+                            || antwort.Contains(":1284")
+                            || antwort.Contains(":1285");
 
-            if (!gueltig)
-                VerbindungVerloren();
+                if (!gueltig)
+                    VerbindungVerloren();
+            }
         }
         catch
         {
@@ -390,6 +402,7 @@ public static class TachymeterVerbindung
             TachymeterModell.LeicaTS06           => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.LeicaTS11           => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.TrimbleS3           => (9600,  8, Parity.None, StopBits.One),
+            TachymeterModell.LeicaTPS300         => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.SokkiaSDR           => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.TopconGTS           => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.GnssNmea            => (4800,  8, Parity.None, StopBits.One),
@@ -405,6 +418,7 @@ public static class TachymeterVerbindung
         TachymeterModell.LeicaTS06           => "Leica TS06",
         TachymeterModell.LeicaTS11           => "Leica TS11",
         TachymeterModell.TrimbleS3           => "Trimble S3",
+        TachymeterModell.LeicaTPS300         => "Leica TPS300  (GSI Online)  –  9600 Baud",
         TachymeterModell.SokkiaSDR           => "Sokkia SDR  (SET-Reihe)",
         TachymeterModell.TopconGTS           => "Topcon GTS/GPT",
         TachymeterModell.GnssNmea            => "GNSS  (NMEA 0183)",
@@ -420,6 +434,7 @@ public static class TachymeterVerbindung
         TachymeterModell.LeicaTS06,
         TachymeterModell.LeicaTS11,
         TachymeterModell.TrimbleS3,
+        TachymeterModell.LeicaTPS300,
         TachymeterModell.SokkiaSDR,
         TachymeterModell.TopconGTS,
         TachymeterModell.GnssNmea,
