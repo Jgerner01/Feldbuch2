@@ -7,7 +7,6 @@ public enum TachymeterModell
     // ── Leica GeoCOM-Protokoll ────────────────────────────────────────────────
     LeicaGeoCOM,              // 38400 Baud
     LeicaGeoCOMStandard,      // 9600 Baud (sicherer Fallback)
-    LeicaTCR307,
     LeicaTS06,
     LeicaTS11,
     TrimbleS3,
@@ -26,7 +25,7 @@ public enum TachymeterModell
 public static class TachymeterVerbindung
 {
     // ── Einstellungen ─────────────────────────────────────────────────────────
-    public static TachymeterModell Modell   { get; set; } = TachymeterModell.LeicaTCR307;
+    public static TachymeterModell Modell   { get; set; } = TachymeterModell.LeicaTPS300;
     public static string           Port     { get; set; } = "";
     public static int              BaudRate { get; set; } = 9600;
     public static int              DataBits { get; set; } = 8;
@@ -398,7 +397,6 @@ public static class TachymeterVerbindung
             TachymeterModell.LeicaGeoCOM         => (38400, 8, Parity.None, StopBits.One),
             // GeoCOM 9600 Baud (COM_SetSWBaudrate Code 3) – sicherer Fallback
             TachymeterModell.LeicaGeoCOMStandard => (9600,  8, Parity.None, StopBits.One),
-            TachymeterModell.LeicaTCR307         => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.LeicaTS06           => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.LeicaTS11           => (9600,  8, Parity.None, StopBits.One),
             TachymeterModell.TrimbleS3           => (9600,  8, Parity.None, StopBits.One),
@@ -414,7 +412,6 @@ public static class TachymeterVerbindung
     {
         TachymeterModell.LeicaGeoCOM         => "Leica GeoCOM (TPS1200)  –  38400 Baud",
         TachymeterModell.LeicaGeoCOMStandard => "Leica GeoCOM Standard (TPS1200)  –  9600 Baud",
-        TachymeterModell.LeicaTCR307         => "Leica TCR307",
         TachymeterModell.LeicaTS06           => "Leica TS06",
         TachymeterModell.LeicaTS11           => "Leica TS11",
         TachymeterModell.TrimbleS3           => "Trimble S3",
@@ -430,7 +427,6 @@ public static class TachymeterVerbindung
     [
         TachymeterModell.LeicaGeoCOM,
         TachymeterModell.LeicaGeoCOMStandard,
-        TachymeterModell.LeicaTCR307,
         TachymeterModell.LeicaTS06,
         TachymeterModell.LeicaTS11,
         TachymeterModell.TrimbleS3,

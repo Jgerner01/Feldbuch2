@@ -51,6 +51,7 @@ public partial class FormTestmessungen : Form
     private enum MessungZustand { Bereit, WarteMessen, WarteErgebnis }
     private MessungZustand _messungZustand    = MessungZustand.Bereit;
     private bool           _messungLibelleWar = false;
+    private bool           _messungWinkelWar  = false;
 
     // Zuletzt gesendeter GeoCOM-RPC (für Antwort-Kontext)
     private int _letzterRpc = 0;
@@ -227,9 +228,9 @@ public partial class FormTestmessungen : Form
 
         // Messungs-Zustandsmaschine
         if (_messungZustand == MessungZustand.WarteMessen
-            && rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure)
+            && rpcKontext == _befehlsgeber.MessSchritt1Rpc)
         {
-            if (messung.IstFehler)
+            if (messung.Typ == MessungsTyp.Fehler)
             {
                 AppendFehler($"[FEHLER] Messung konnte nicht gestartet werden: {messung.Bemerkung}");
                 MessungAbschliessen();
@@ -323,6 +324,8 @@ public partial class FormTestmessungen : Form
                 // GeoCOM: zweistufige Messung
                 _messungLibelleWar = _libelleAktiv;
                 if (_libelleAktiv) _libelleTimer.Stop();
+                _messungWinkelWar = _winkelAktiv;
+                if (_winkelAktiv) _winkelTimer.Stop();
 
                 _messungZustand = MessungZustand.WarteMessen;
                 SendeBefehl(_befehlsgeber.MessTriggerBefehl()!, _befehlsgeber.MessSchritt1Rpc);
@@ -349,6 +352,10 @@ public partial class FormTestmessungen : Form
         if (_messungLibelleWar && _libelleAktiv)
             _libelleTimer.Start();
         _messungLibelleWar = false;
+
+        if (_messungWinkelWar)
+            _winkelTimer.Start();
+        _messungWinkelWar = false;
     }
 
     // ── EDM-Modus umschalten (GeoCOM) ─────────────────────────────────────────

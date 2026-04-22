@@ -107,12 +107,21 @@ public partial class FormMessdatenEingabe : Form
         {
             try
             {
-                int zieltyp = _istReflektorlos ? 1 : 0;     // BAP_REFL_LESS / BAP_REFL_USE
-                int edmMode = _istReflektorlos ? EDM_SINGLE_RL_K : EDM_SINGLE_PRISM;
-                _letzterRpc = GeoCOMParser.RPC_BAP_SetTargetType;
-                TachymeterVerbindung.GeoCOM_Senden($"%R1Q,17021,0:{zieltyp}");
-                _letzterRpc = GeoCOMParser.RPC_TMC_SetEdmMode;
-                TachymeterVerbindung.GeoCOM_Senden($"%R1Q,2020,0:{edmMode}");
+                var bg = TachymeterBefehlsgeberFactory.Erstellen(TachymeterVerbindung.Modell);
+                int zieltyp = _istReflektorlos ? 1 : 0;
+                int edmProg = _istReflektorlos ? EDM_SINGLE_RL_K : EDM_SINGLE_PRISM;
+                var edmBefehle = bg.EdmModusBefehle(zieltyp, edmProg);
+                if (edmBefehle != null)
+                    foreach (var b in edmBefehle)
+                        TachymeterVerbindung.GeoCOM_Senden(b);
+                else
+                {
+                    // GeoCOM-Fallback
+                    _letzterRpc = GeoCOMParser.RPC_BAP_SetTargetType;
+                    TachymeterVerbindung.GeoCOM_Senden($"%R1Q,17021,0:{zieltyp}");
+                    _letzterRpc = GeoCOMParser.RPC_TMC_SetEdmMode;
+                    TachymeterVerbindung.GeoCOM_Senden($"%R1Q,2020,0:{edmProg}");
+                }
             }
             catch { /* ignorieren – Modus wurde lokal gesetzt */ }
         }
@@ -152,9 +161,10 @@ public partial class FormMessdatenEingabe : Form
             lblMessInfo.Text      = "Messung läuft …";
             lblMessInfo.ForeColor = Color.FromArgb(200, 160, 40);
 
+            var bg = TachymeterBefehlsgeberFactory.Erstellen(TachymeterVerbindung.Modell);
             _messZustand = MessZustand.WarteMessen;
-            _letzterRpc  = GeoCOMParser.RPC_TMC_DoMeasure;
-            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2008,0:1,1");
+            _letzterRpc  = bg.MessSchritt1Rpc;
+            TachymeterVerbindung.GeoCOM_Senden(bg.MessTriggerBefehl()!);
         }
         catch (Exception ex)
         {
@@ -201,12 +211,45 @@ public partial class FormMessdatenEingabe : Form
 
     private void VerarbeiteZeile(string zeile)
     {
+        // ── GSI Online: einstufige Messung ────────────────────────────────────
+        if (!TachymeterBefehlsgeberFactory.IstGeoCOM(TachymeterVerbindung.Modell))
+        {
+            if (_messZustand != MessZustand.WarteMessen) return;
+            var gsiParser = new GsiOnlineParser();
+            if (!gsiParser.KannVerarbeiten(zeile)) return;
+            var gsiMessung = gsiParser.ParseZeile(zeile);
+            MessungAbschliessen();
+            if (gsiMessung == null) return;
+            if (gsiMessung.IstFehler)
+            {
+                lblMessInfo.Text      = $"Messfehler: {gsiMessung.Bemerkung}";
+                lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+                return;
+            }
+            if (!gsiMessung.IstVollmessung)
+            {
+                lblMessInfo.Text      = "Unvollständige Messung (Hz/V/D fehlen).";
+                lblMessInfo.ForeColor = Color.FromArgb(200, 130, 40);
+                return;
+            }
+            nudHz.Value      = (decimal)Math.Round(gsiMessung.Hz_gon!.Value,  4);
+            nudV.Value       = (decimal)Math.Round(gsiMessung.V_gon!.Value,   4);
+            nudStrecke.Value = (decimal)Math.Round(gsiMessung.Schraegstrecke_m!.Value, 3);
+            lblMessInfo.Text = string.Format(IC,
+                "Hz={0:F4} gon   V={1:F4} gon   D={2:F3} m",
+                gsiMessung.Hz_gon.Value, gsiMessung.V_gon.Value, gsiMessung.Schraegstrecke_m.Value);
+            lblMessInfo.ForeColor = Color.FromArgb(40, 180, 60);
+            return;
+        }
+
+        // ── GeoCOM: zweistufige Messung ───────────────────────────────────────
         int rpcKontext = _letzterRpc;
         var messung    = GeoCOMParser.ParseAntwort(zeile, rpcKontext);
         if (messung == null) return;
 
         if (_messZustand == MessZustand.WarteMessen
-            && rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure)
+            && (rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure
+                || rpcKontext == GeoCOMParser.RPC_BAP_MeasDist))
         {
             if (messung.IstFehler)
             {

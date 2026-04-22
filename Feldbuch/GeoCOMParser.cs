@@ -30,6 +30,7 @@ public class GeoCOMParser : ITachymeterDatenParser
     public const int RPC_TMC_GetAngle1    = 2003;  // volle Winkelmessung + Kompensator (CrossIncline, LengthIncline)
     public const int RPC_TMC_SetAtmCorr   = 2028;  // atmosphärische Korrektur setzen (Lambda, Druck, TempTrock, TempFeucht)
     public const int RPC_TMC_GetAtmCorr   = 2029;  // atmosphärische Korrektur lesen
+    public const int RPC_BAP_MeasDist      = 17017; // TPS300: BAP_MeasDist – Messung auslösen (vereinfacht)
     public const int RPC_BAP_SetTargetType = 17021; // Zieltyp setzen: 0=Reflektor (IR), 1=Reflektorlos (RL)
     public const int RPC_BAP_GetTargetType = 17022; // Zieltyp abfragen
     public const int RPC_TMC_GetPrismCorr = 2023;  // Prismenkonstante lesen [m]
@@ -159,6 +160,7 @@ public class GeoCOMParser : ITachymeterDatenParser
 
             // Bestätigungen ohne Nutzdaten / Einzel-Wert-Antworten
             RPC_COM_NullProc       or
+            RPC_BAP_MeasDist       or
             RPC_TMC_DoMeasure      or
             RPC_TMC_SetEdmMode     or
             RPC_TMC_SetAtmCorr     or
@@ -328,6 +330,7 @@ public class GeoCOMParser : ITachymeterDatenParser
         m.Bemerkung = rpc switch
         {
             RPC_COM_NullProc      => "Ping OK",
+            RPC_BAP_MeasDist      => "Messung gestartet (BAP_MeasDist)",
             RPC_TMC_DoMeasure     => "Messung gestartet",
             RPC_TMC_SetEdmMode    => "EDM-Modus gesetzt",
             RPC_TMC_SetAtmCorr    => "Atmosphärische Korrektur (PPM) gesetzt",

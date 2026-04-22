@@ -447,9 +447,10 @@ public partial class FormDxfViewer : Form
             btnMessung.Enabled = false;
             lblStatus.Text     = "Messung läuft …";
 
+            var bg = TachymeterBefehlsgeberFactory.Erstellen(TachymeterVerbindung.Modell);
             _messungZustand    = MessungZustand.WarteMessen;
-            _parser_letzterRpc = GeoCOMParser.RPC_TMC_DoMeasure;
-            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2008,0:1,1");
+            _parser_letzterRpc = bg.MessSchritt1Rpc;
+            TachymeterVerbindung.GeoCOM_Senden(bg.MessTriggerBefehl()!);
         }
         catch (Exception ex)
         {
@@ -489,13 +490,41 @@ public partial class FormDxfViewer : Form
 
     private void VerarbeiteZeile(string zeile)
     {
+        // ── GSI Online: einstufige Messung ────────────────────────────────────
+        if (!TachymeterBefehlsgeberFactory.IstGeoCOM(TachymeterVerbindung.Modell))
+        {
+            if (_messungZustand != MessungZustand.WarteMessen) return;
+            var gsiParser = new GsiOnlineParser();
+            if (!gsiParser.KannVerarbeiten(zeile)) return;
+            var gsiMessung = gsiParser.ParseZeile(zeile);
+            MessungAbschliessen();
+            if (gsiMessung == null) return;
+            if (gsiMessung.IstFehler)
+            {
+                lblStatus.Text = $"Messfehler: {gsiMessung.Bemerkung}";
+                return;
+            }
+            if (!gsiMessung.IstVollmessung)
+            {
+                lblStatus.Text = "Unvollständige Messung (Hz/V/D fehlen).";
+                return;
+            }
+            if (double.TryParse(txtZielhoehe.Text.Replace(',', '.'),
+                NumberStyles.Any, CultureInfo.InvariantCulture, out double zhGsi))
+                gsiMessung.Zielhoehe_m = zhGsi;
+            VerarbeiteMiessung(gsiMessung);
+            return;
+        }
+
+        // ── GeoCOM: mehrstufige Messung ───────────────────────────────────────
         int rpcKontext = _parser_letzterRpc;
         var messung    = GeoCOMParser.ParseAntwort(zeile, rpcKontext);
         if (messung == null) return;
 
         // ── Schritt 1: DoMeasure-Bestätigung ──────────────────────────────────
         if (_messungZustand == MessungZustand.WarteMessen
-            && rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure)
+            && (rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure
+                || rpcKontext == GeoCOMParser.RPC_BAP_MeasDist))
         {
             if (messung.IstFehler)
             {
