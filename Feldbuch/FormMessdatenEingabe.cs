@@ -42,8 +42,10 @@ public partial class FormMessdatenEingabe : Form
     /// <param name="h">Hochwert  (aus DXF-Snap)</param>
     /// <param name="punktNr">Vorausgefüllte Punktnummer (aus Overlay-Entity)</param>
     /// <param name="hoehe">Vorausgefüllte Höhe des Anschlusspunktes</param>
+    /// <param name="vorausgefuellt">Letzte Tachymetermessung zur Vorbelegung (optional)</param>
     public FormMessdatenEingabe(double r, double h,
-        string punktNr = "", double hoehe = 0.0)
+        string punktNr = "", double hoehe = 0.0,
+        TachymeterMessung? vorausgefuellt = null)
     {
         InitializeComponent();
         _r = r;
@@ -52,7 +54,7 @@ public partial class FormMessdatenEingabe : Form
         lblRVal.Text = $"R (Rechtswert):   {r:F3} m";
         lblHVal.Text = $"H (Hochwert):     {h:F3} m";
 
-        // Vorbelegung
+        // Vorbelegung PunktNr + Höhe
         if (!string.IsNullOrEmpty(punktNr))
             txtPunktNr.Text = punktNr;
 
@@ -61,6 +63,31 @@ public partial class FormMessdatenEingabe : Form
 
         // Letzten Code übernehmen
         txtCode.Text = _letzterCode;
+
+        // Tachymetermessung vorausfüllen (aus TachymeterMessungsCache)
+        if (vorausgefuellt?.IstVollmessung == true)
+        {
+            nudHz.Value = (decimal)Math.Clamp(
+                Math.Round(vorausgefuellt.Hz_gon!.Value, 4),
+                (double)nudHz.Minimum, (double)nudHz.Maximum);
+            nudV.Value = (decimal)Math.Clamp(
+                Math.Round(vorausgefuellt.V_gon!.Value, 4),
+                (double)nudV.Minimum, (double)nudV.Maximum);
+            nudStrecke.Value = (decimal)Math.Clamp(
+                Math.Round(vorausgefuellt.Schraegstrecke_m!.Value, 3),
+                (double)nudStrecke.Minimum, (double)nudStrecke.Maximum);
+            if (vorausgefuellt.Zielhoehe_m.HasValue)
+                nudZielhoehe.Value = (decimal)Math.Clamp(
+                    Math.Round(vorausgefuellt.Zielhoehe_m.Value, 3),
+                    (double)nudZielhoehe.Minimum, (double)nudZielhoehe.Maximum);
+
+            lblMessInfo.Text = string.Format(IC,
+                "Tachymeter: Hz={0:F4}  V={1:F4}  D={2:F3} m",
+                vorausgefuellt.Hz_gon.Value,
+                vorausgefuellt.V_gon.Value,
+                vorausgefuellt.Schraegstrecke_m.Value);
+            lblMessInfo.ForeColor = Color.FromArgb(40, 120, 200);
+        }
 
         // Tachymeter-Event anschließen
         TachymeterVerbindung.DatenEmpfangen += OnDatenEmpfangen;

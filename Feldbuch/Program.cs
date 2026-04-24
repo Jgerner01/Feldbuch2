@@ -12,6 +12,7 @@ static class Program
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
         IkonGenerator.EnsureIcons();
+        TachymeterMessungsCache.Initialisieren();
         Application.Run(new Form1());
     }    
 }

@@ -17,6 +17,11 @@ partial class FormFreieStationierung
         lblInstHoehe        = new Label();
         nudInstHoehe        = new NumericUpDown();
         dgvPunkte           = new DataGridView();
+        pnlAutoMatch        = new Panel();
+        chkAutoMatch        = new CheckBox();
+        chkDistanzPflicht   = new CheckBox();
+        lblAutoMatchStatus  = new Label();
+        btnProtokolll       = new Button();
         btnNeuerStandpunkt  = new Button();
         btnPlatz1           = new Button();
         btnPlatz2           = new Button();
@@ -30,7 +35,7 @@ partial class FormFreieStationierung
         ((System.ComponentModel.ISupportInitialize)dgvPunkte).BeginInit();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize    = new Size(980, 718);
+        ClientSize    = new Size(980, 730);
         Text          = "Freie Stationierung";
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Font;
@@ -64,7 +69,7 @@ partial class FormFreieStationierung
 
         // ── Tabelle ───────────────────────────────────────────────────────────
         dgvPunkte.Location                    = new Point(20, 58);
-        dgvPunkte.Size                        = new Size(940, 545);
+        dgvPunkte.Size                        = new Size(940, 488);
         dgvPunkte.AllowUserToAddRows          = false;
         dgvPunkte.AllowUserToDeleteRows       = false;
         dgvPunkte.SelectionMode               = DataGridViewSelectionMode.CellSelect;
@@ -74,11 +79,47 @@ partial class FormFreieStationierung
         dgvPunkte.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
         dgvPunkte.AlternatingRowsDefaultCellStyle.BackColor = Color.AliceBlue;
 
+        // ── Auto-Match-Panel ──────────────────────────────────────────────────
+        pnlAutoMatch.Location  = new Point(20, 554);
+        pnlAutoMatch.Size      = new Size(940, 52);
+        pnlAutoMatch.BorderStyle = BorderStyle.FixedSingle;
+        pnlAutoMatch.BackColor = Color.FromArgb(240, 248, 255);
+
+        chkAutoMatch.Text      = "Auto-Punktsuche aktiv";
+        chkAutoMatch.Location  = new Point(8, 14);
+        chkAutoMatch.Size      = new Size(190, 24);
+        chkAutoMatch.Font      = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+        chkAutoMatch.Enabled   = false;   // wird aktivierbar wenn Station brauchbar
+        chkAutoMatch.CheckedChanged += chkAutoMatch_CheckedChanged;
+
+        chkDistanzPflicht.Text     = "Distanz-Pflicht";
+        chkDistanzPflicht.Location = new Point(210, 14);
+        chkDistanzPflicht.Size     = new Size(145, 24);
+        chkDistanzPflicht.Font     = new Font("Segoe UI", 9F);
+        chkDistanzPflicht.Checked  = true;
+
+        lblAutoMatchStatus.Text      = "Bereit";
+        lblAutoMatchStatus.Location  = new Point(370, 14);
+        lblAutoMatchStatus.Size      = new Size(430, 24);
+        lblAutoMatchStatus.Font      = new Font("Segoe UI", 9F);
+        lblAutoMatchStatus.ForeColor = Color.FromArgb(80, 80, 80);
+
+        btnProtokolll.Text      = "Protokoll";
+        btnProtokolll.Location  = new Point(812, 10);
+        btnProtokolll.Size      = new Size(120, 32);
+        btnProtokolll.Font      = new Font("Segoe UI", 9F);
+        btnProtokolll.Click    += btnProtokoll_Click;
+
+        pnlAutoMatch.Controls.AddRange(new Control[]
+        {
+            chkAutoMatch, chkDistanzPflicht, lblAutoMatchStatus, btnProtokolll
+        });
+
         // ── Button-Zeile 1 ────────────────────────────────────────────────────
         // Positionen: [Neuer Standpunkt] [Platz1] [Platz2]  ...  [Rechenparameter]
 
         btnNeuerStandpunkt.Text      = "Neuer Standpunkt";
-        btnNeuerStandpunkt.Location  = new Point(20, 614);
+        btnNeuerStandpunkt.Location  = new Point(20, 618);
         btnNeuerStandpunkt.Size      = new Size(195, 36);
         btnNeuerStandpunkt.Font      = new Font("Segoe UI", 10F, FontStyle.Bold);
         btnNeuerStandpunkt.BackColor = Color.FromArgb(220, 120, 20);
@@ -90,19 +131,19 @@ partial class FormFreieStationierung
 
         // Platzhalter für zukünftige Buttons (hidden – Layout reserviert)
         btnPlatz1.Text      = "";
-        btnPlatz1.Location  = new Point(225, 614);
+        btnPlatz1.Location  = new Point(225, 618);
         btnPlatz1.Size      = new Size(195, 36);
         btnPlatz1.Font      = labelFont;
         btnPlatz1.Visible   = false;
 
         btnPlatz2.Text      = "";
-        btnPlatz2.Location  = new Point(430, 614);
+        btnPlatz2.Location  = new Point(430, 618);
         btnPlatz2.Size      = new Size(195, 36);
         btnPlatz2.Font      = labelFont;
         btnPlatz2.Visible   = false;
 
         btnRechenparameter.Text     = "⚙ Rechenparameter";
-        btnRechenparameter.Location = new Point(730, 614);
+        btnRechenparameter.Location = new Point(730, 618);
         btnRechenparameter.Size     = new Size(230, 36);
         btnRechenparameter.Font     = labelFont;
         btnRechenparameter.Click   += btnRechenparameter_Click;
@@ -111,19 +152,19 @@ partial class FormFreieStationierung
         // [Testdaten laden]   ...   [Speichern]  [Berechnen]
 
         btnTestdatenLaden.Text     = "Testdaten laden (Muster.csv)";
-        btnTestdatenLaden.Location = new Point(20, 660);
+        btnTestdatenLaden.Location = new Point(20, 666);
         btnTestdatenLaden.Size     = new Size(240, 36);
         btnTestdatenLaden.Font     = labelFont;
         btnTestdatenLaden.Click   += btnTestdatenLaden_Click;
 
         btnSpeichern.Text      = "Speichern";
-        btnSpeichern.Location  = new Point(500, 660);
+        btnSpeichern.Location  = new Point(500, 666);
         btnSpeichern.Size      = new Size(200, 36);
         btnSpeichern.Font      = labelFont;
         btnSpeichern.Click    += btnSpeichern_Click;
 
         btnBerechnen.Text      = "Berechnen";
-        btnBerechnen.Location  = new Point(710, 660);
+        btnBerechnen.Location  = new Point(710, 666);
         btnBerechnen.Size      = new Size(250, 36);
         btnBerechnen.Font      = new Font("Segoe UI", 11F, FontStyle.Bold);
         btnBerechnen.BackColor = Color.SteelBlue;
@@ -136,6 +177,7 @@ partial class FormFreieStationierung
             lblStandpunkt, txtStandpunkt,
             lblInstHoehe, nudInstHoehe,
             dgvPunkte,
+            pnlAutoMatch,
             btnNeuerStandpunkt, btnPlatz1, btnPlatz2,
             btnRechenparameter,
             btnTestdatenLaden, btnSpeichern, btnBerechnen
@@ -151,6 +193,11 @@ partial class FormFreieStationierung
     private Label          lblInstHoehe       = null!;
     private NumericUpDown  nudInstHoehe       = null!;
     private DataGridView   dgvPunkte          = null!;
+    private Panel          pnlAutoMatch       = null!;
+    private CheckBox       chkAutoMatch       = null!;
+    private CheckBox       chkDistanzPflicht  = null!;
+    private Label          lblAutoMatchStatus = null!;
+    private Button         btnProtokolll      = null!;
     private Button         btnNeuerStandpunkt = null!;
     private Button         btnPlatz1          = null!;
     private Button         btnPlatz2          = null!;

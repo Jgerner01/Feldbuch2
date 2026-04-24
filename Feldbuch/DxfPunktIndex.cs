@@ -111,6 +111,58 @@ public class DxfPunktIndex
     /// </summary>
     public int Anzahl => _index.Count;
 
+    // ── Räumliche Suchmethoden (für PunktFinder) ──────────────────────────────
+
+    /// <summary>Liefert alle Einträge innerhalb des gegebenen Radius.</summary>
+    public List<PunktEintrag> SucheNahe(double r, double h, double radiusM)
+    {
+        var result = new List<PunktEintrag>();
+        double r2  = radiusM * radiusM;
+        foreach (var e in _eintraege)
+        {
+            double dr = e.R - r, dh = e.H - h;
+            if (dr * dr + dh * dh <= r2)
+                result.Add(e);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Liefert alle Einträge, deren Richtung von der Station aus
+    /// innerhalb der Winkeltoleranz liegt. Sortiert nach Distanz.
+    /// </summary>
+    public List<(PunktEintrag Punkt, double Distanz_m)> SucheNachRichtung(
+        double stationR, double stationH,
+        double richtung_gon, double toleranz_gon,
+        double maxDistanz_m = 500.0)
+    {
+        const double GON2RAD = Math.PI / 200.0;
+        double alpha_rad = richtung_gon * GON2RAD;
+        double tol_rad   = toleranz_gon * GON2RAD;
+
+        var result = new List<(PunktEintrag, double)>();
+        foreach (var e in _eintraege)
+        {
+            double dr   = e.R - stationR;
+            double dh   = e.H - stationH;
+            double dist = Math.Sqrt(dr * dr + dh * dh);
+            if (dist < 0.5 || dist > maxDistanz_m) continue;
+
+            double alpha_p = Math.Atan2(dr, dh);
+            double diff    = Math.Abs(NormRad(alpha_rad - alpha_p));
+            if (diff <= tol_rad)
+                result.Add((e, dist));
+        }
+        return result.OrderBy(x => x.Item2).ToList();
+
+        static double NormRad(double a)
+        {
+            while (a >  Math.PI) a -= 2 * Math.PI;
+            while (a < -Math.PI) a += 2 * Math.PI;
+            return a;
+        }
+    }
+
     // Rundet Koordinaten auf Toleranz-Schritte (long-Schlüssel für Dictionary).
     private (long rKey, long hKey) Runde(double r, double h)
     {

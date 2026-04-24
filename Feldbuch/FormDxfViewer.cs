@@ -13,6 +13,18 @@ public partial class FormDxfViewer : Form
     public static string AnschlusspunktePfad =>
         ProjektManager.GetPfad("Anschlusspunkte.csv");
 
+    /// <summary>Aktive Instanz des DXF-Viewers (null wenn nicht geöffnet).</summary>
+    public static FormDxfViewer? AktiveInstanz { get; private set; }
+
+    /// <summary>Wird gefeuert wenn ein Anschlusspunkt in die CSV geschrieben wurde.</summary>
+    public static event Action? AnschlusspunktGeschrieben;
+
+    /// <summary>Gibt die nächste freie Punktnummer aus dem internen Zähler zurück.</summary>
+    public string NaechstePunktNummer() => _neupunktZaehler.ToString();
+
+    /// <summary>DXF-Punkt-Index (für PunktFinder-Suche).</summary>
+    public DxfPunktIndex? PunktIndex => canvas.PunktIndex;
+
     // ── Private Felder ────────────────────────────────────────────────────────
     private string _aktuellerDxfPfad = "";
 
@@ -59,6 +71,7 @@ public partial class FormDxfViewer : Form
     public FormDxfViewer()
     {
         InitializeComponent();
+        AktiveInstanz = this;
 
         // Zähler aus ProjektManager laden
         _neupunktZaehler = ProjektManager.NeupunktZaehler;
@@ -1340,6 +1353,8 @@ public partial class FormDxfViewer : Form
 
         TachymeterVerbindung.DatenEmpfangen -= OnTachymeterDaten;
 
+        if (AktiveInstanz == this) AktiveInstanz = null;
+
         if (!string.IsNullOrEmpty(_aktuellerDxfPfad))
             ProjektManager.SpeichereZoom(
                 _aktuellerDxfPfad, canvas.Scale, canvas.PanX, canvas.PanY);
@@ -1503,7 +1518,8 @@ public partial class FormDxfViewer : Form
             if (!string.IsNullOrEmpty(punktNr))
                 txtPunktNr.Text = punktNr;
 
-            using var dlg = new FormMessdatenEingabe(x, y, punktNr, hoehe);
+            using var dlg = new FormMessdatenEingabe(x, y, punktNr, hoehe,
+                TachymeterMessungsCache.LetzteVollmessung);
             if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Ergebnis != null)
             {
                 SchreibeAnschlusspunkt(dlg.Ergebnis);
@@ -1519,8 +1535,76 @@ public partial class FormDxfViewer : Form
         }
     }
 
+    // ── PunktFinder-Overlay ───────────────────────────────────────────────────
+    private readonly List<DxfEntity> _punktFinderOverlay = new();
+
+    /// <summary>
+    /// Zeigt einen Suchkreis (Auto-Zone + Außenkreis) und markiert Kandidaten.
+    /// Wird im Bestätigungs-Dialog des Auto-Match aufgerufen.
+    /// </summary>
+    public void ZeigePunktFinderOverlay(
+        double e_pred, double n_pred, double r_suche,
+        IEnumerable<PunktFinderTreffer> kandidaten)
+    {
+        EntfernePunktFinderOverlay();
+
+        // Äußerer Suchkreis (cyan)
+        _punktFinderOverlay.Add(new PunktFinderKreisEntity(
+            e_pred, n_pred, r_suche, Color.FromArgb(0, 200, 220), gestrichelt: true));
+
+        // Innerer Auto-Zone-Kreis (grün)
+        _punktFinderOverlay.Add(new PunktFinderKreisEntity(
+            e_pred, n_pred, r_suche / 2.0, Color.FromArgb(40, 180, 60), gestrichelt: true));
+
+        // Vorhergesagte Position (kleines Kreuz, magenta)
+        _punktFinderOverlay.Add(new PunktFinderKandidatEntity(
+            "?", e_pred, n_pred, Color.FromArgb(180, 40, 180)));
+
+        // Kandidaten (orange)
+        foreach (var k in kandidaten)
+            _punktFinderOverlay.Add(new PunktFinderKandidatEntity(
+                k.PunktNr, k.R, k.H, Color.FromArgb(210, 120, 10)));
+
+        foreach (var e in _punktFinderOverlay)
+            canvas.OverlayEntities.Add(e);
+
+        BringToFront();
+        canvas.Invalidate();
+    }
+
+    /// <summary>Zeigt einen Richtungsstrahl statt eines Kreises (Winkel-only-Modus).</summary>
+    public void ZeigePunktFinderRichtung(
+        double stationE, double stationN, double richtung_gon, double toleranz_cc,
+        IEnumerable<PunktFinderTreffer> kandidaten)
+    {
+        EntfernePunktFinderOverlay();
+
+        _punktFinderOverlay.Add(new PunktFinderRichtungsEntity(
+            stationE, stationN, richtung_gon, toleranz_cc / 100.0, 200.0,
+            Color.FromArgb(0, 200, 220)));
+
+        foreach (var k in kandidaten)
+            _punktFinderOverlay.Add(new PunktFinderKandidatEntity(
+                k.PunktNr, k.R, k.H, Color.FromArgb(210, 120, 10)));
+
+        foreach (var e in _punktFinderOverlay)
+            canvas.OverlayEntities.Add(e);
+
+        BringToFront();
+        canvas.Invalidate();
+    }
+
+    /// <summary>Entfernt alle PunktFinder-Overlay-Entities.</summary>
+    public void EntfernePunktFinderOverlay()
+    {
+        foreach (var e in _punktFinderOverlay)
+            canvas.OverlayEntities.Remove(e);
+        _punktFinderOverlay.Clear();
+        canvas.Invalidate();
+    }
+
     // ── Anschlusspunkt in CSV schreiben ───────────────────────────────────────
-    private static void SchreibeAnschlusspunkt(StationierungsPunkt p)
+    public static void SchreibeAnschlusspunkt(StationierungsPunkt p)
     {
         var ic     = CultureInfo.InvariantCulture;
         const string header = "PunktNr,R,H,Hoehe,HZ,V,Strecke,Zielhoehe";
@@ -1551,6 +1635,8 @@ public partial class FormDxfViewer : Form
         File.WriteAllLines(AnschlusspunktePfad,
             new[] { header }.Concat(zeilen),
             System.Text.Encoding.UTF8);
+
+        AnschlusspunktGeschrieben?.Invoke();
     }
 
     // ── Lösch-Modus ───────────────────────────────────────────────────────────
