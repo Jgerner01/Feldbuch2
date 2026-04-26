@@ -38,6 +38,8 @@ public class GeoCOMParser : ITachymeterDatenParser
     public const int RPC_TMC_GetAngle     = 2107;
     public const int RPC_TMC_GetSimpleMea = 2108;
     public const int RPC_TMC_GetFullMeas  = 2167;
+    public const int RPC_MOT_MoveAngle      = 6007;  // RELATIV-Bewegung (addiert Hz/V zum aktuellen Winkel) – NICHT für Absolutpositionierung
+    public const int RPC_AUT_MakePositioning = 9027; // AUT_MakePositioning – absolute Hz/V-Zielposition (PosTol/AngTol > 0 erforderlich)
 
     // Kontext: zuletzt gesendeter RPC (0 = unbekannt / kein Kontext)
     private int _letzterRpc = 0;
@@ -46,8 +48,9 @@ public class GeoCOMParser : ITachymeterDatenParser
     // GRC_TMC_NO_FULL_CORRECTION=1283, GRC_TMC_ACCURACY_GUARANTEE=1284,
     // GRC_TMC_ANGLE_OK=1285, GRC_TMC_ANGLE_NO_FULL_CORRECTION=1288
     // GRC_BAP_CHANGE_ALL_TO_DIST=3079 – EDM-Parameter auf Reflektor/IR umgestellt (OK)
+    // GRC_BAP_CHANGE_ALL_TO_EGL=3080  – EDM-Parameter automatisch angepasst (OK)
     // GRC_BAP_CHANGE_ALL_TO_RL=3081   – EDM-Parameter auf Reflektorlos/RL umgestellt (OK)
-    private static readonly HashSet<int> _informativeRcs = [1283, 1284, 1285, 1288, 3079, 3081];
+    private static readonly HashSet<int> _informativeRcs = [1283, 1284, 1285, 1288, 3079, 3080, 3081];
 
     // ── ITachymeterDatenParser ────────────────────────────────────────────────
     public string FormatName        => "GeoCOM";
@@ -165,9 +168,11 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_TMC_SetEdmMode     or
             RPC_TMC_SetAtmCorr     or
             RPC_TMC_SetPrismCorr   or
-            RPC_BAP_SetTargetType  or
-            RPC_COM_SetSWBaud      or
-            RPC_EDM_Laserpointer   => ParseStatus(m, daten, rpcKontext),
+            RPC_BAP_SetTargetType    or
+            RPC_COM_SetSWBaud        or
+            RPC_EDM_Laserpointer     or
+            RPC_MOT_MoveAngle        or
+            RPC_AUT_MakePositioning  => ParseStatus(m, daten, rpcKontext),
 
             // Kein Kontext: aus Datenanzahl schließen
             _ => InferiereTyp(m, daten)
@@ -426,6 +431,7 @@ public class GeoCOMParser : ITachymeterDatenParser
         5    => "GRC_NOTOK – Gerät nicht bereit",
         13   => "GRC_IVRESULT – Ungültiges Ergebnis",
         25   => "GRC_ABORT – Messung abgebrochen",
+        27   => "GRC_IVRESULT – Ungültige Parameter (z. B. PosTol=0 nicht erlaubt; explizite Toleranzwerte senden)",
         30   => "GRC_NOMEAS – Keine Messung vorhanden",
         35   => "GRC_NOTACCEPTED – Befehl abgelehnt (Funktion nicht verfügbar?)",
         // TMC-Fehler/Hinweise (1280–1299) – korrekt laut GeoCOM Reference Manual V1.10
@@ -445,8 +451,9 @@ public class GeoCOMParser : ITachymeterDatenParser
         1792 => "GRC_EDM_BUSYMODE – EDM in parallelem Messmodus",
         1793 => "GRC_EDM_NO_VALID_MEAS – Keine gültige Messung (Reflektormodus/Ziel prüfen)",
         1800 => "GRC_EDM_DEV_NOT_INSTALLED – Reflektorlos-Option nicht installiert",
-        // BAP-Hinweise (3079, 3081) – Befehl OK, Gerät meldet Parameteranpassung
+        // BAP-Hinweise (3079–3081) – Befehl OK, Gerät meldet Parameteranpassung
         3079 => "GRC_BAP_CHANGE_ALL_TO_DIST – Alle EDM-Parameter auf Reflektor/IR umgestellt",
+        3080 => "GRC_BAP_CHANGE_ALL_TO_EGL – EDM-Parameter automatisch angepasst",
         3081 => "GRC_BAP_CHANGE_ALL_TO_RL – Alle EDM-Parameter auf Reflektorlos/RL umgestellt",
         _    => ""
     };

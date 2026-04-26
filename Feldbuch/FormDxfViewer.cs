@@ -87,6 +87,13 @@ public partial class FormDxfViewer : Form
             txtStandpunktNr.Text = StationsdatenManager.StandpunktNr;
         else if (!string.IsNullOrEmpty(ProjektManager.LetzteStandpunktNr))
             txtStandpunktNr.Text = ProjektManager.LetzteStandpunktNr;
+        else
+        {
+            // Keine aktive Station: automatisch STP{N} vergeben
+            txtStandpunktNr.Text = $"STP{ProjektManager.StationierungZaehler}";
+            ProjektManager.LetzteStandpunktNr = txtStandpunktNr.Text;
+            ProjektManager.SpeichereOptionen();
+        }
 
         // Snap-Zustand laden
         string? snapState = ProjektdatenManager.GetValue("Einstellungen", "Snap");
@@ -105,6 +112,7 @@ public partial class FormDxfViewer : Form
         // Events
         canvas.PointPicked       += OnPointPicked!;
         canvas.RectangleSelected += OnRectangleSelected;
+        canvas.RightClicked      += OnCanvasRightClicked;
         FormClosed               += OnFormClosed;
         Activated                += OnFormActivated;
 
@@ -422,17 +430,11 @@ public partial class FormDxfViewer : Form
     {
         if (_messungZustand != MessungZustand.Bereit) return;
 
-        // Warnung wenn keine Stationierung und Neupunkt-Modus
+        // Hinweis wenn keine Stationierung und Neupunkt-Modus (nur einmal, kein Dialog)
         if (_istNeupunktModus && !StationsdatenManager.HatGueltigeStation
             && !_stationierungsWarnungGezeigt)
         {
-            MessageBox.Show(
-                "Es liegt keine gültige Stationierung vor.\n" +
-                "Die Messung wird gespeichert, aber keine Koordinaten berechnet.\n\n" +
-                "Bitte zuerst die Freie Stationierung durchführen oder\n" +
-                "in den Modus \"Stationierung\" wechseln.",
-                "Keine Stationierung",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            lblStatus.Text = "Hinweis: Keine gültige Stationierung – Messdaten werden gespeichert, Koordinaten werden erst nach Stationierung berechnet.";
             _stationierungsWarnungGezeigt = true;
         }
 
@@ -1690,6 +1692,67 @@ public partial class FormDxfViewer : Form
     {
         using var form = new FormAbsteckungAuswahl();
         form.ShowDialog(this);
+    }
+
+    private FormAufnahmetest? _formAufnahmetest;
+
+    private void btnAufnahmetest_Click(object? sender, EventArgs e)
+    {
+        if (_formAufnahmetest == null || _formAufnahmetest.IsDisposed)
+        {
+            _formAufnahmetest = new FormAufnahmetest();
+            _formAufnahmetest.FormClosed += (s, _) => _formAufnahmetest = null;
+        }
+        if (!_formAufnahmetest.Visible) _formAufnahmetest.Show(this);
+        _formAufnahmetest.BringToFront();
+    }
+
+    private FormFreieStationierung? _formFreieStationierung;
+
+    private void btnFreieStationierung_Click(object? sender, EventArgs e)
+    {
+        if (_formFreieStationierung == null || _formFreieStationierung.IsDisposed)
+        {
+            _formFreieStationierung = new FormFreieStationierung();
+            _formFreieStationierung.FormClosed += (s, _) => _formFreieStationierung = null;
+        }
+        if (!_formFreieStationierung.Visible) _formFreieStationierung.Show(this);
+        _formFreieStationierung.BringToFront();
+    }
+
+    private void OnCanvasRightClicked(double wx, double wy, DxfEntity? entity)
+    {
+        var menu = new ContextMenuStrip();
+
+        if (entity is OverlayImportPunkt imp)
+        {
+            bool aufnahmetestOffen = _formAufnahmetest != null && !_formAufnahmetest.IsDisposed;
+
+            var itemAnfahren = new ToolStripMenuItem($"Anfahren: {imp.PunktNr}");
+            if (aufnahmetestOffen)
+            {
+                itemAnfahren.Click += (_, _) =>
+                {
+                    if (!_formAufnahmetest!.Visible) _formAufnahmetest.Show(this);
+                    _formAufnahmetest.BringToFront();
+                    if (!_formAufnahmetest.AnfahrenNach(imp.PunktNr))
+                        lblStatus.Text = $"Punkt '{imp.PunktNr}' nicht im Aufnahmetest-Fenster vorhanden.";
+                };
+            }
+            else
+            {
+                itemAnfahren.Enabled = false;
+                itemAnfahren.ToolTipText = "Aufnahmetest-Fenster muss geöffnet sein";
+            }
+            menu.Items.Add(itemAnfahren);
+            menu.Items.Add(new ToolStripSeparator());
+        }
+
+        var itemKoord = new ToolStripMenuItem($"R={wx:F3}  H={wy:F3}");
+        itemKoord.Enabled = false;
+        menu.Items.Add(itemKoord);
+
+        menu.Show(canvas, canvas.PointToClient(Cursor.Position));
     }
 
     private void UpdateLoeschenButton()

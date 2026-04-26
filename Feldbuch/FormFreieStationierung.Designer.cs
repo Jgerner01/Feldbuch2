@@ -51,7 +51,7 @@ partial class FormFreieStationierung
         txtStandpunkt.Location = new Point(170, 19);
         txtStandpunkt.Size     = new Size(110, 28);
         txtStandpunkt.Font     = new Font("Segoe UI", 10F);
-        txtStandpunkt.Text     = "9000";
+        txtStandpunkt.Text     = "";
 
         lblInstHoehe.Text     = "Instrumentenhöhe (m):";
         lblInstHoehe.Location = new Point(310, 22);
@@ -104,7 +104,7 @@ partial class FormFreieStationierung
         lblAutoMatchStatus.Font      = new Font("Segoe UI", 9F);
         lblAutoMatchStatus.ForeColor = Color.FromArgb(80, 80, 80);
 
-        btnProtokolll.Text      = "Protokoll";
+        btnProtokolll.Text      = "Berechnungsprotokoll";
         btnProtokolll.Location  = new Point(812, 10);
         btnProtokolll.Size      = new Size(120, 32);
         btnProtokolll.Font      = new Font("Segoe UI", 9F);
@@ -129,12 +129,12 @@ partial class FormFreieStationierung
         btnNeuerStandpunkt.Visible   = false;   // Sichtbarkeit wird im Konstruktor gesetzt
         btnNeuerStandpunkt.Click    += btnNeuerStandpunkt_Click;
 
-        // Platzhalter für zukünftige Buttons (hidden – Layout reserviert)
-        btnPlatz1.Text      = "";
+        btnPlatz1.Text      = "Auto-Match-Protokoll";
         btnPlatz1.Location  = new Point(225, 618);
         btnPlatz1.Size      = new Size(195, 36);
         btnPlatz1.Font      = labelFont;
-        btnPlatz1.Visible   = false;
+        btnPlatz1.Visible   = true;
+        btnPlatz1.Click    += btnAutoMatchLog_Click;
 
         btnPlatz2.Text      = "";
         btnPlatz2.Location  = new Point(430, 618);

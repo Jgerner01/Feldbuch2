@@ -19,8 +19,9 @@ public partial class FormMessdatenEingabe : Form
     private readonly double _h;
 
     // ── Persistenter Zustand (bleibt zwischen Dialog-Öffnungen erhalten) ─────
-    private static string _letzterCode    = "";
-    private static bool   _istReflektorlos = false;
+    private static string  _letzterCode      = "";
+    private static bool    _istReflektorlos  = false;
+    private static decimal _letzteZielhoehe  = 1.700m;
 
     // ── GeoCOM-Zustandsmaschine ───────────────────────────────────────────────
     private enum MessZustand { Bereit, WarteMessen, WarteErgebnis }
@@ -61,46 +62,36 @@ public partial class FormMessdatenEingabe : Form
         if (hoehe != 0.0)
             nudHoehe.Value = (decimal)Math.Clamp(hoehe, (double)nudHoehe.Minimum, (double)nudHoehe.Maximum);
 
-        // Letzten Code übernehmen
-        txtCode.Text = _letzterCode;
+        // Code: letzter Wert oder Standardcode "030"
+        txtCode.Text = string.IsNullOrEmpty(_letzterCode) ? "030" : _letzterCode;
 
-        // Tachymetermessung vorausfüllen (aus TachymeterMessungsCache)
-        if (vorausgefuellt?.IstVollmessung == true)
-        {
-            nudHz.Value = (decimal)Math.Clamp(
-                Math.Round(vorausgefuellt.Hz_gon!.Value, 4),
-                (double)nudHz.Minimum, (double)nudHz.Maximum);
-            nudV.Value = (decimal)Math.Clamp(
-                Math.Round(vorausgefuellt.V_gon!.Value, 4),
-                (double)nudV.Minimum, (double)nudV.Maximum);
-            nudStrecke.Value = (decimal)Math.Clamp(
-                Math.Round(vorausgefuellt.Schraegstrecke_m!.Value, 3),
-                (double)nudStrecke.Minimum, (double)nudStrecke.Maximum);
-            if (vorausgefuellt.Zielhoehe_m.HasValue)
-                nudZielhoehe.Value = (decimal)Math.Clamp(
-                    Math.Round(vorausgefuellt.Zielhoehe_m.Value, 3),
-                    (double)nudZielhoehe.Minimum, (double)nudZielhoehe.Maximum);
+        // Zielhöhe: 0 bei Reflektorlos, sonst letzter verwendeter Wert
+        nudZielhoehe.Value = _istReflektorlos ? 0m : _letzteZielhoehe;
 
-            lblMessInfo.Text = string.Format(IC,
-                "Tachymeter: Hz={0:F4}  V={1:F4}  D={2:F3} m",
-                vorausgefuellt.Hz_gon.Value,
-                vorausgefuellt.V_gon.Value,
-                vorausgefuellt.Schraegstrecke_m.Value);
-            lblMessInfo.ForeColor = Color.FromArgb(40, 120, 200);
-        }
+        // HZ, V, Strecke bleiben leer (werden nicht aus Cache vorbelegt)
 
         // Tachymeter-Event anschließen
         TachymeterVerbindung.DatenEmpfangen += OnDatenEmpfangen;
+
+        // Übernehmen-Button erst freigeben wenn Strecke > 0
+        nudStrecke.ValueChanged += (_, __) => AktualisiereUebernahmeButton();
+        btnUebernehmen.Enabled = false;
 
         // Button-Zustand initialisieren
         AktualisiereReflModusButton();
         AktualisiereMessButton();
     }
 
+    // ── Übernehmen-Button freigeben wenn Messdaten vorhanden ─────────────────
+    private void AktualisiereUebernahmeButton()
+        => btnUebernehmen.Enabled = nudStrecke.Value > 0;
+
     // ── Reflektormodus umschalten ─────────────────────────────────────────────
     private void btnReflModus_Click(object? sender, EventArgs e)
     {
         _istReflektorlos = !_istReflektorlos;
+        // Zielhöhe sofort anpassen: reflektorlos → 0, Prisma → letzter Wert
+        nudZielhoehe.Value = _istReflektorlos ? 0m : _letzteZielhoehe;
         AktualisiereReflModusButton();
 
         if (TachymeterVerbindung.IstVerbunden)
@@ -314,8 +305,10 @@ public partial class FormMessdatenEingabe : Form
             return;
         }
 
-        // Letzten Code merken
-        _letzterCode = txtCode.Text.Trim();
+        // Letzten Code und Zielhöhe merken
+        _letzterCode     = txtCode.Text.Trim();
+        if (!_istReflektorlos)
+            _letzteZielhoehe = nudZielhoehe.Value;
 
         Ergebnis = new StationierungsPunkt
         {

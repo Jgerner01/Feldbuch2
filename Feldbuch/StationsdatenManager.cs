@@ -169,6 +169,29 @@ public static class StationsdatenManager
         return HinzufuegenUndBerechnen(_aktiv.Messungen.Last());   // Neuberechnung auslösen
     }
 
+    // ── Ergebnis aus manueller Berechnung übernehmen ─────────────────────────
+
+    /// <summary>
+    /// Übernimmt das Ergebnis einer manuellen Freie-Stationierung-Berechnung
+    /// (FormFreieStationierung/FormErgebnis) in den aktiven Stationsdatensatz
+    /// und schreibt die JSON-Datei.
+    /// </summary>
+    public static void SetzeErgebnisManuell(
+        string standpunktNr, double instrHoehe,
+        List<StationierungsPunkt> punkte,
+        StationierungsErgebnis ergebnis)
+    {
+        _aktiv.StandpunktNr      = standpunktNr;
+        _aktiv.InstrumentenHoehe = instrHoehe;
+        _aktiv.Messungen         = new List<StationierungsPunkt>(punkte);
+        _aktiv.Ergebnis          = ergebnis;
+        _aktiv.Datum             = DateTime.Today.ToString("yyyy-MM-dd");
+        _pfad = ProjektManager.IstGeladen
+            ? ProjektManager.GetPfad($"Station-{standpunktNr}.json")
+            : Path.Combine(AppPfade.Basis, $"Station-{standpunktNr}.json");
+        Speichern();
+    }
+
     // ── Neuen Standpunkt beginnen ─────────────────────────────────────────────
 
     /// <summary>

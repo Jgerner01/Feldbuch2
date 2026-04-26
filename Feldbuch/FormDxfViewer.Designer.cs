@@ -48,7 +48,9 @@ partial class FormDxfViewer
         btnLoeschen         = new Button();
         btnPunktIndexReset  = new Button();
         btnDigitalisierung  = new Button();
-        btnAbsteckung       = new Button();
+        btnAbsteckung           = new Button();
+        btnAufnahmetest         = new Button();
+        btnFreieStationierung   = new Button();
         pnlStatus           = new Panel();
         lblStatus           = new Label();
         flpLayers           = new FlowLayoutPanel();
@@ -388,12 +390,23 @@ partial class FormDxfViewer
         btnAbsteckung.Click += btnAbsteckung_Click;
         new ToolTip().SetToolTip(btnAbsteckung, "Absteckung");
 
+        sy += ss + sp;
+        SideBtn(btnAufnahmetest, "⊙", fntIco, sy, ss, Color.FromArgb(40, 70, 110), Color.FromArgb(180, 210, 255), Color.FromArgb(25, 50, 85));
+        btnAufnahmetest.Click += btnAufnahmetest_Click;
+        new ToolTip().SetToolTip(btnAufnahmetest, "Aufnahmetest: Koordinaten messen & Punkt anfahren (motorisiert)");
+
+        sy += ss + sp;
+        SideBtn(btnFreieStationierung, "⊕F", fntSm, sy, ss, Color.FromArgb(80, 55, 20), Color.FromArgb(240, 210, 150), Color.FromArgb(60, 40, 10));
+        btnFreieStationierung.Click += btnFreieStationierung_Click;
+        new ToolTip().SetToolTip(btnFreieStationierung, "Freie Stationierung");
+
         pnlSide.Controls.AddRange(new Control[]
         {
             btnOpen, btnZoomIn, btnZoomOut, btnFit,
             btnSnap, btnPunkte, btnDxfToggle, btnExportDxf,
             btnNeu, btnImportKorCsv, btnImportJson, btnLoeschen,
-            btnPunktIndexReset, btnDigitalisierung, btnAbsteckung
+            btnPunktIndexReset, btnDigitalisierung, btnAbsteckung,
+            btnAufnahmetest, btnFreieStationierung
         });
 
         // ══ Canvas ════════════════════════════════════════════════════════════
@@ -463,7 +476,9 @@ partial class FormDxfViewer
     private Button           btnLoeschen         = null!;
     private Button           btnPunktIndexReset  = null!;
     private Button           btnDigitalisierung  = null!;
-    private Button           btnAbsteckung       = null!;
+    private Button           btnAbsteckung           = null!;
+    private Button           btnAufnahmetest         = null!;
+    private Button           btnFreieStationierung   = null!;
     private Panel            pnlStatus           = null!;
     private Label            lblStatus           = null!;
     private FlowLayoutPanel  flpLayers           = null!;

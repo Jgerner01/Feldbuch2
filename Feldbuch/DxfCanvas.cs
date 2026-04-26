@@ -79,6 +79,7 @@ public class DxfCanvas : Panel
     // isClick=true: ausgelöst durch Mausklick (MouseUp); false: Mausbewegung (Hover)
     public event Action<double, double, DxfEntity?, bool>?     PointPicked;
     public event Action<double, double, double, double>?       RectangleSelected;
+    public event Action<double, double, DxfEntity?>?           RightClicked;
 
     // Delete-Modus: Auswahlrechteck statt Pan
     bool _deleteModeActive;
@@ -356,6 +357,14 @@ public class DxfCanvas : Panel
 
     void OnMouseUp(object? s, MouseEventArgs e)
     {
+        if (e.Button == MouseButtons.Right)
+        {
+            var picked = Pick(e.X, e.Y);
+            var (wx, wy) = ToWorld(e.X, e.Y);
+            RightClicked?.Invoke(wx, wy, picked);
+            return;
+        }
+
         if (_selecting)
         {
             _selecting = false;

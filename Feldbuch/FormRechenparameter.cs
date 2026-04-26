@@ -11,9 +11,10 @@ public partial class FormRechenparameter : Form
     private void LadeParmeter()
     {
         var p = RechenparameterManager.Params;
-        nudWinkel.Value   = (decimal)p.FehlergrenzCC_Winkel;
-        nudStrecke.Value  = (decimal)p.FehlergrenzeMM_Strecke;
-        nudHoehe.Value    = (decimal)p.FehlergrenzeMM_Hoehe;
+        nudWinkel.Value      = (decimal)p.FehlergrenzCC_Winkel;
+        nudStrecke.Value     = (decimal)p.FehlergrenzeMM_Strecke;
+        nudHoehe.Value       = (decimal)p.FehlergrenzeMM_Hoehe;
+        nudS0AutoMatch.Value = (decimal)p.FehlergrenzeMM_s0AutoMatch;
         chkFreierMassstab.Checked = p.FreierMassstab;
         chkBerechnung3D.Checked   = p.Berechnung3D;
     }
@@ -21,11 +22,12 @@ public partial class FormRechenparameter : Form
     private void btnOK_Click(object? sender, EventArgs e)
     {
         var p = RechenparameterManager.Params;
-        p.FehlergrenzCC_Winkel    = (double)nudWinkel.Value;
-        p.FehlergrenzeMM_Strecke  = (double)nudStrecke.Value;
-        p.FehlergrenzeMM_Hoehe    = (double)nudHoehe.Value;
-        p.FreierMassstab          = chkFreierMassstab.Checked;
-        p.Berechnung3D            = chkBerechnung3D.Checked;
+        p.FehlergrenzCC_Winkel        = (double)nudWinkel.Value;
+        p.FehlergrenzeMM_Strecke      = (double)nudStrecke.Value;
+        p.FehlergrenzeMM_Hoehe        = (double)nudHoehe.Value;
+        p.FehlergrenzeMM_s0AutoMatch  = (double)nudS0AutoMatch.Value;
+        p.FreierMassstab              = chkFreierMassstab.Checked;
+        p.Berechnung3D                = chkBerechnung3D.Checked;
         RechenparameterManager.Save();
         DialogResult = DialogResult.OK;
     }

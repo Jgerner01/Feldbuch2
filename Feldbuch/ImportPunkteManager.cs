@@ -139,31 +139,32 @@ public static class ImportPunkteManager
         string quelle = Path.GetFileName(path);
         var lines = File.ReadAllLines(path, Encoding.UTF8);
 
-        // Trennzeichen bestimmen
+        // Trennzeichen bestimmen – alle Zeilen prüfen, da Metadaten-Block vor Daten steht
         char sep = ',';
-        if (lines.Length > 0 && lines[0].Contains(';')) sep = ';';
+        foreach (var l in lines)
+            if (l.Contains(';')) { sep = ';'; break; }
 
-        // Kopfzeile prüfen und Spaltenindizes ermitteln
+        // Kopfzeile suchen – ebenfalls über alle Zeilen, nicht nur Zeile 0
         int idxNr = 0, idxR = 1, idxH = 2, idxHoehe = 3;
         int startLine = 0;
 
-        if (lines.Length > 0)
+        for (int i = 0; i < lines.Length; i++)
         {
-            var header = lines[0].Split(sep);
+            var header = lines[i].Split(sep);
             bool hatHeader = false;
-            for (int i = 0; i < header.Length; i++)
+            for (int j = 0; j < header.Length; j++)
             {
-                string h = header[i].Trim().ToLowerInvariant();
+                string h = header[j].Trim().ToLowerInvariant();
                 if (h == "punktnr" || h == "nr" || h == "point" || h == "name")
-                { idxNr = i; hatHeader = true; }
+                { idxNr = j; hatHeader = true; }
                 else if (h is "r" or "rechtswert" or "easting" or "x")
-                    idxR = i;
+                    idxR = j;
                 else if (h is "h" or "hochwert" or "northing" or "y")
-                    idxH = i;
+                    idxH = j;
                 else if (h is "hoehe" or "höhe" or "z" or "elevation" or "height")
-                    idxHoehe = i;
+                    idxHoehe = j;
             }
-            if (hatHeader) startLine = 1;
+            if (hatHeader) { startLine = i + 1; break; }
         }
 
         for (int li = startLine; li < lines.Length; li++)

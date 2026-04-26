@@ -22,6 +22,9 @@ partial class FormRechenparameter
         lblHoehe          = new Label();
         nudHoehe          = new NumericUpDown();
         lblHoeheUnit      = new Label();
+        lblS0AutoMatch    = new Label();
+        nudS0AutoMatch    = new NumericUpDown();
+        lblS0AutoMatchUnit = new Label();
         grpMassstab       = new GroupBox();
         chkFreierMassstab = new CheckBox();
         lblMassstabInfo   = new Label();
@@ -33,10 +36,11 @@ partial class FormRechenparameter
         ((System.ComponentModel.ISupportInitialize)nudWinkel).BeginInit();
         ((System.ComponentModel.ISupportInitialize)nudStrecke).BeginInit();
         ((System.ComponentModel.ISupportInitialize)nudHoehe).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)nudS0AutoMatch).BeginInit();
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize    = new Size(420, 392);
+        ClientSize    = new Size(420, 432);
         Text          = "Rechenparameter – Freie Stationierung";
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Font;
@@ -51,7 +55,7 @@ partial class FormRechenparameter
         grpFehlergrenzen.Text     = "Fehlergrenzen";
         grpFehlergrenzen.Font     = grpFont;
         grpFehlergrenzen.Location = new Point(14, 12);
-        grpFehlergrenzen.Size     = new Size(392, 170);
+        grpFehlergrenzen.Size     = new Size(392, 210);
 
         // Winkel
         lblWinkel.Text     = "Winkelresiduen:";
@@ -113,17 +117,38 @@ partial class FormRechenparameter
         lblHoeheUnit.Location = new Point(258, 114);
         lblHoeheUnit.AutoSize = true;
 
+        // Auto-Match s0-Schwelle
+        lblS0AutoMatch.Text     = "Auto-Match (s₀ ≤):";
+        lblS0AutoMatch.Font     = lblFont;
+        lblS0AutoMatch.Location = new Point(16, 154);
+        lblS0AutoMatch.Size     = new Size(140, 24);
+        lblS0AutoMatch.AutoSize = false;
+
+        nudS0AutoMatch.Location     = new Point(162, 151);
+        nudS0AutoMatch.Size         = new Size(90, 26);
+        nudS0AutoMatch.Font         = lblFont;
+        nudS0AutoMatch.Minimum      = 1m;
+        nudS0AutoMatch.Maximum      = 200m;
+        nudS0AutoMatch.DecimalPlaces= 1;
+        nudS0AutoMatch.Increment    = 1m;
+
+        lblS0AutoMatchUnit.Text     = "mm";
+        lblS0AutoMatchUnit.Font     = lblFont;
+        lblS0AutoMatchUnit.Location = new Point(258, 154);
+        lblS0AutoMatchUnit.AutoSize = true;
+
         grpFehlergrenzen.Controls.AddRange(new Control[]
         {
             lblWinkel, nudWinkel, lblWinkelUnit,
             lblStrecke, nudStrecke, lblStreckeUnit,
-            lblHoehe, nudHoehe, lblHoeheUnit
+            lblHoehe, nudHoehe, lblHoeheUnit,
+            lblS0AutoMatch, nudS0AutoMatch, lblS0AutoMatchUnit
         });
 
         // ── Gruppe: Maßstab ───────────────────────────────────────────────────
         grpMassstab.Text     = "Maßstab";
         grpMassstab.Font     = grpFont;
-        grpMassstab.Location = new Point(14, 192);
+        grpMassstab.Location = new Point(14, 232);
         grpMassstab.Size     = new Size(392, 76);
 
         chkFreierMassstab.Text     = "Freier Maßstab (Helmert-Maßstab als freie Variable)";
@@ -136,7 +161,7 @@ partial class FormRechenparameter
         // ── Gruppe: Berechnungsmodus ──────────────────────────────────────────
         grpBerechnungsModus.Text     = "Berechnungsmodus";
         grpBerechnungsModus.Font     = grpFont;
-        grpBerechnungsModus.Location = new Point(14, 278);
+        grpBerechnungsModus.Location = new Point(14, 318);
         grpBerechnungsModus.Size     = new Size(392, 76);
 
         chkBerechnung3D.Text     = "3D-Berechnung (mit Höhen)";
@@ -148,7 +173,7 @@ partial class FormRechenparameter
 
         // ── Buttons ───────────────────────────────────────────────────────────
         btnOK.Text      = "OK";
-        btnOK.Location  = new Point(200, 350);
+        btnOK.Location  = new Point(200, 390);
         btnOK.Size      = new Size(96, 32);
         btnOK.Font      = lblFont;
         btnOK.BackColor = Color.FromArgb(60, 100, 160);
@@ -157,7 +182,7 @@ partial class FormRechenparameter
         btnOK.Click    += btnOK_Click;
 
         btnAbbrechen.Text      = "Abbrechen";
-        btnAbbrechen.Location  = new Point(308, 350);
+        btnAbbrechen.Location  = new Point(308, 390);
         btnAbbrechen.Size      = new Size(100, 32);
         btnAbbrechen.Font      = lblFont;
         btnAbbrechen.Click    += btnAbbrechen_Click;
@@ -170,6 +195,7 @@ partial class FormRechenparameter
         ((System.ComponentModel.ISupportInitialize)nudWinkel).EndInit();
         ((System.ComponentModel.ISupportInitialize)nudStrecke).EndInit();
         ((System.ComponentModel.ISupportInitialize)nudHoehe).EndInit();
+        ((System.ComponentModel.ISupportInitialize)nudS0AutoMatch).EndInit();
         ResumeLayout(false);
     }
 
@@ -183,6 +209,9 @@ partial class FormRechenparameter
     private Label         lblHoehe          = null!;
     private NumericUpDown nudHoehe          = null!;
     private Label         lblHoeheUnit      = null!;
+    private Label         lblS0AutoMatch    = null!;
+    private NumericUpDown nudS0AutoMatch    = null!;
+    private Label         lblS0AutoMatchUnit = null!;
     private GroupBox      grpMassstab          = null!;
     private CheckBox      chkFreierMassstab    = null!;
     private Label         lblMassstabInfo      = null!;

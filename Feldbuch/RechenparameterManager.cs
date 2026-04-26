@@ -42,11 +42,12 @@ public static class RechenparameterManager
 
             _params = new Rechenparameter
             {
-                FehlergrenzCC_Winkel    = ReadDouble(root, "FehlergrenzCC_Winkel",    20.0),
-                FehlergrenzeMM_Strecke  = ReadDouble(root, "FehlergrenzeMM_Strecke",  10.0),
-                FehlergrenzeMM_Hoehe    = ReadDouble(root, "FehlergrenzeMM_Hoehe",    10.0),
-                FreierMassstab          = ReadBool  (root, "FreierMassstab",          true),
-                Berechnung3D            = ReadBool  (root, "Berechnung3D",            true)
+                FehlergrenzCC_Winkel       = ReadDouble(root, "FehlergrenzCC_Winkel",       20.0),
+                FehlergrenzeMM_Strecke     = ReadDouble(root, "FehlergrenzeMM_Strecke",     10.0),
+                FehlergrenzeMM_Hoehe       = ReadDouble(root, "FehlergrenzeMM_Hoehe",       10.0),
+                FehlergrenzeMM_s0AutoMatch = ReadDouble(root, "FehlergrenzeMM_s0AutoMatch", 20.0),
+                FreierMassstab             = ReadBool  (root, "FreierMassstab",             true),
+                Berechnung3D               = ReadBool  (root, "Berechnung3D",               true)
             };
         }
         catch (Exception ex)
@@ -68,11 +69,12 @@ public static class RechenparameterManager
         var root = doc.CreateElement("RechenparameterFreieStationierung");
         doc.AppendChild(root);
 
-        AppendElem(doc, root, "FehlergrenzCC_Winkel",   _params.FehlergrenzCC_Winkel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
-        AppendElem(doc, root, "FehlergrenzeMM_Strecke", _params.FehlergrenzeMM_Strecke.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
-        AppendElem(doc, root, "FehlergrenzeMM_Hoehe",   _params.FehlergrenzeMM_Hoehe.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
-        AppendElem(doc, root, "FreierMassstab",          _params.FreierMassstab ? "true" : "false");
-        AppendElem(doc, root, "Berechnung3D",            _params.Berechnung3D   ? "true" : "false");
+        AppendElem(doc, root, "FehlergrenzCC_Winkel",       _params.FehlergrenzCC_Winkel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+        AppendElem(doc, root, "FehlergrenzeMM_Strecke",   _params.FehlergrenzeMM_Strecke.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+        AppendElem(doc, root, "FehlergrenzeMM_Hoehe",     _params.FehlergrenzeMM_Hoehe.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+        AppendElem(doc, root, "FehlergrenzeMM_s0AutoMatch", _params.FehlergrenzeMM_s0AutoMatch.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+        AppendElem(doc, root, "FreierMassstab",            _params.FreierMassstab ? "true" : "false");
+        AppendElem(doc, root, "Berechnung3D",              _params.Berechnung3D   ? "true" : "false");
 
         doc.Save(_path);
     }
@@ -111,6 +113,8 @@ public class Rechenparameter
     public double FehlergrenzeMM_Strecke { get; set; } = 10.0;
     /// <summary>Fehlergrenze für Höhenresiduen [mm]</summary>
     public double FehlergrenzeMM_Hoehe   { get; set; } = 10.0;
+    /// <summary>s0-Schwellwert für Auto-Match-Freigabe [mm] – überschritten = Auto-Match gesperrt</summary>
+    public double FehlergrenzeMM_s0AutoMatch { get; set; } = 20.0;
     /// <summary>Freier Maßstab (true) oder Maßstab fixiert auf m=1 (false)</summary>
     public bool   FreierMassstab         { get; set; } = true;
     /// <summary>3D-Berechnung inkl. Höhen (true) oder rein 2D (false)</summary>

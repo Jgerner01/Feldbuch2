@@ -23,6 +23,21 @@ public partial class FormFreieStationierung : Form
         AktualisiereNeuerStandpunktButton();
         AktualisiereAutoMatchPanel();
 
+        // Standpunktnummer laden: aktive Station → letzter Name → neues STP{N}
+        if (!string.IsNullOrEmpty(StationsdatenManager.StandpunktNr))
+            txtStandpunkt.Text = StationsdatenManager.StandpunktNr;
+        else if (!string.IsNullOrEmpty(ProjektManager.LetzteStandpunktNr))
+            txtStandpunkt.Text = ProjektManager.LetzteStandpunktNr;
+        else
+            txtStandpunkt.Text = $"STP{ProjektManager.StationierungZaehler}";
+
+        // Instrumentenhöhe laden
+        double iHLaden = StationsdatenManager.AktiveStation.InstrumentenHoehe > 0
+            ? StationsdatenManager.InstrumentenHoehe
+            : ProjektManager.InstrumentenHoehe;
+        if (iHLaden > 0)
+            nudInstHoehe.Value = (decimal)Math.Clamp(iHLaden, 0.0, 10.0);
+
         // Anschlusspunkte neu laden wenn DXF-Viewer etwas gespeichert hat
         FormDxfViewer.AnschlusspunktGeschrieben += OnAnschlusspunktGeschrieben;
     }
@@ -31,6 +46,14 @@ public partial class FormFreieStationierung : Form
     {
         FormDxfViewer.AnschlusspunktGeschrieben -= OnAnschlusspunktGeschrieben;
         TachymeterMessungsCache.NeueVollmessung  -= OnNeueVollmessung;
+
+        // Letzte Einstellungen für Neuaufruf merken
+        string sp = txtStandpunkt.Text.Trim();
+        if (!string.IsNullOrEmpty(sp))
+            ProjektManager.LetzteStandpunktNr = sp;
+        ProjektManager.InstrumentenHoehe = (double)nudInstHoehe.Value;
+        ProjektManager.SpeichereOptionen();
+
         base.OnFormClosed(e);
     }
 
@@ -102,6 +125,25 @@ public partial class FormFreieStationierung : Form
             dgvPunkte.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = h, Name = h });
 
         dgvPunkte.Rows.Add(MAX_ROWS);
+        dgvPunkte.CellMouseClick += DgvPunkte_CellMouseClick;
+    }
+
+    private void DgvPunkte_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Right || e.RowIndex < 0) return;
+        string? pnr = dgvPunkte.Rows[e.RowIndex].Cells[0].Value?.ToString();
+        if (string.IsNullOrWhiteSpace(pnr)) return;
+
+        dgvPunkte.CurrentCell = dgvPunkte.Rows[e.RowIndex].Cells[e.ColumnIndex];
+        var menu = new ContextMenuStrip();
+        menu.Items.Add($"Zeile '{pnr}' leeren", null, (_, __) => ZeileLeeren(e.RowIndex));
+        menu.Show(dgvPunkte, dgvPunkte.PointToClient(Cursor.Position));
+    }
+
+    private void ZeileLeeren(int rowIdx)
+    {
+        foreach (DataGridViewCell cell in dgvPunkte.Rows[rowIdx].Cells)
+            cell.Value = null;
     }
 
     private void btnTestdatenLaden_Click(object? sender, EventArgs e)
@@ -131,7 +173,13 @@ public partial class FormFreieStationierung : Form
 
     private void btnSpeichern_Click(object? sender, EventArgs e)
     {
-        string pfad = AppPfade.Get("Muster.csv");
+        string standpunktNr = txtStandpunkt.Text.Trim();
+        string sicher = string.IsNullOrEmpty(standpunktNr)
+            ? "Unbekannt"
+            : string.Join("_", standpunktNr.Split(Path.GetInvalidFileNameChars()));
+        string pfad = ProjektManager.IstGeladen
+            ? ProjektManager.GetPfad($"Standpunkt-{sicher}.csv")
+            : Path.Combine(AppPfade.Basis, $"Standpunkt-{sicher}.csv");
 
         var zeilen = new List<string>
         {
@@ -226,8 +274,23 @@ public partial class FormFreieStationierung : Form
                 Quelle           = "Freie Stationierung"
             });
 
+            // Ergebnis in StationsdatenManager eintragen (Auto-Match-Panel liest von dort)
+            StationsdatenManager.SetzeErgebnisManuell(standpunkt, iH, punkte, ergebnis);
+
             using var formErg = new FormErgebnis(standpunkt, iH, ergebnis, punkte);
             formErg.ShowDialog(this);
+
+            // Panel nach Berechnungsdialog aktualisieren (FormErgebnis kann s0 verfeinert haben)
+            AktualisiereAutoMatchPanel();
+
+            // Standpunkt-Zähler hochsetzen wenn STP{N}-Muster, Feld auf nächste Nr. setzen
+            if (standpunkt.StartsWith("STP", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(standpunkt.Substring(3), out int stpNr))
+            {
+                ProjektManager.StationierungZaehler = stpNr + 1;
+                ProjektManager.SpeichereOptionen();
+                txtStandpunkt.Text = $"STP{ProjektManager.StationierungZaehler}";
+            }
         }
         catch (Exception ex)
         {
@@ -266,18 +329,19 @@ public partial class FormFreieStationierung : Form
     private void AktualisiereAutoMatchPanel()
     {
         var ergebnis  = StationsdatenManager.AktuellesErgebnis;
+        double grenze = RechenparameterManager.Params.FehlergrenzeMM_s0AutoMatch;
         bool brauchbar = ergebnis != null
-            && PunktFinder.IstBrauchbar(ergebnis.s0_mm, ergebnis.Redundanz);
+            && PunktFinder.IstBrauchbar(ergebnis.s0_mm, ergebnis.Redundanz, grenze);
 
         chkAutoMatch.Enabled = brauchbar;
 
         if (!brauchbar && chkAutoMatch.Checked)
-            chkAutoMatch.Checked = false;   // deaktivieren wenn Station tiefrot
+            chkAutoMatch.Checked = false;
 
         if (ergebnis == null)
             lblAutoMatchStatus.Text = "Keine Stationierung vorhanden";
         else if (!brauchbar)
-            lblAutoMatchStatus.Text = $"Station zu ungenau (s₀={ergebnis.s0_mm:F1} mm) – Auto-Match gesperrt";
+            lblAutoMatchStatus.Text = $"Station zu ungenau (s₀={ergebnis.s0_mm:F1} mm > {grenze:F0} mm) – Auto-Match gesperrt";
         else
             lblAutoMatchStatus.Text = $"Station: s₀={ergebnis.s0_mm:F1} mm  r={ergebnis.Redundanz}  " +
                                       $"– Auto-Match {(chkAutoMatch.Checked ? "aktiv" : "bereit")}";
@@ -297,6 +361,40 @@ public partial class FormFreieStationierung : Form
 
     private void btnProtokoll_Click(object? sender, EventArgs e)
     {
+        // Öffnet die zuletzt erzeugte Berechnungsprotokoll-RTF
+        string verzeichnis = ProjektManager.IstGeladen
+            ? ProjektManager.ProjektVerzeichnis
+            : AppPfade.Basis;
+
+        var rtfDateien = Directory.GetFiles(verzeichnis, "FreieStationierung_*.rtf")
+                                  .OrderByDescending(f => f)
+                                  .ToArray();
+
+        if (rtfDateien.Length == 0)
+        {
+            MessageBox.Show(
+                "Kein Berechnungsprotokoll gefunden.\nEs wird beim Übernehmen eines Ergebnisses im Berechnungsdialog erzeugt.",
+                "Kein Protokoll", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName        = rtfDateien[0],
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Protokoll konnte nicht geöffnet werden:\n" + ex.Message,
+                "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void btnAutoMatchLog_Click(object? sender, EventArgs e)
+    {
         string standpunktNr = txtStandpunkt.Text.Trim();
         using var form = new FormAutoMatchProtokoll(standpunktNr);
         form.ShowDialog(this);
@@ -314,7 +412,8 @@ public partial class FormFreieStationierung : Form
     {
         var ergebnis = StationsdatenManager.AktuellesErgebnis;
         if (ergebnis == null) return;
-        if (!PunktFinder.IstBrauchbar(ergebnis.s0_mm, ergebnis.Redundanz)) return;
+        double grenze = RechenparameterManager.Params.FehlergrenzeMM_s0AutoMatch;
+        if (!PunktFinder.IstBrauchbar(ergebnis.s0_mm, ergebnis.Redundanz, grenze)) return;
         if (!messung.IstVollmessung && chkDistanzPflicht.Checked) return;
 
         // PunktIndex aus aktivem DXF-Viewer holen

@@ -32,12 +32,9 @@ public static class PunktFinder
     private const double GON2RAD      = Math.PI / 200.0;
     private const double CC2RAD       = Math.PI / 2_000_000.0;
 
-    // ── Qualitätsgrenzen für Auto-Match (Tiefrot = gesperrt) ─────────────────
-    private const double TiefrotGrenze_mm = 20.0;
-
     /// <summary>True wenn Stationierungsqualität Auto-Match erlaubt.</summary>
-    public static bool IstBrauchbar(double s0_mm, int redundanz)
-        => redundanz > 0 && s0_mm <= TiefrotGrenze_mm;
+    public static bool IstBrauchbar(double s0_mm, int redundanz, double grenzeMM = 20.0)
+        => redundanz > 0 && s0_mm <= grenzeMM;
 
     // ── Vorhergesagte Position aus Station + Messung ──────────────────────────
 

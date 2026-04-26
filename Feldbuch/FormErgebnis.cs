@@ -217,6 +217,10 @@ public partial class FormErgebnis : Form
             AktualisiereAnzeige(erg);
             _letzteErgebnis = erg;   // für Protokoll beim Schließen
 
+            // Aktualisiertes Ergebnis sofort in StationsdatenManager übernehmen,
+            // damit Auto-Match-Panel in FormFreieStationierung das korrekte s0 sieht.
+            StationsdatenManager.SetzeErgebnisManuell(_standpunkt, _iH, _allePunkte, erg);
+
             var ic = System.Globalization.CultureInfo.InvariantCulture;
             ProjektdatenManager.SetValue("Freie Stationierung", "Standpunkt",         _standpunkt);
             ProjektdatenManager.SetValue("Freie Stationierung", "R [m]",              erg.R.ToString("F3", ic));
