@@ -2,6 +2,11 @@ namespace Feldbuch;
 
 public partial class FormDxfExport : Form
 {
+    /// <summary>Fehlerellipsen werden exportiert wenn gesetzt und Residuen aktiv.</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(
+        System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public IReadOnlyList<OverlayFehlerEllipse>? FehlerEllipsen { get; set; }
+
     public FormDxfExport()
     {
         InitializeComponent();
@@ -9,11 +14,17 @@ public partial class FormDxfExport : Form
 
     private void btnExportieren_Click(object? sender, EventArgs e)
     {
-        var punkte = FeldbuchpunkteManager.Punkte;
-        if (punkte.Count == 0)
+        var feldbuchPunkte  = FeldbuchpunkteManager.Punkte;
+        var importPunkte    = ImportPunkteManager.Punkte;
+        var gemessenePunkte = NeupunkteManager.Koordinaten;
+
+        int gesamt = feldbuchPunkte.Count + importPunkte.Count + gemessenePunkte.Count;
+        if (gesamt == 0)
         {
-            MessageBox.Show("Keine Feldbuchpunkte vorhanden.\n" +
-                            "Bitte zuerst eine Freie Stationierung berechnen.",
+            MessageBox.Show(
+                "Keine Punkte vorhanden.\n" +
+                "Bitte zuerst Koordinaten importieren, Punkte messen\n" +
+                "oder eine Freie Stationierung berechnen.",
                 "Keine Daten", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
@@ -37,14 +48,23 @@ public partial class FormDxfExport : Form
         try
         {
             DxfExporter.Exportieren(
-                punkte,
+                feldbuchPunkte,
+                importPunkte,
+                gemessenePunkte,
                 dlg.FileName,
-                massstab:     (double)nudMassstab.Value,
-                symbolSizeMm: (double)nudSymbolMm.Value,
-                textSizeMm:   (double)nudTextMm.Value);
+                massstab:       (double)nudMassstab.Value,
+                symbolSizeMm:   (double)nudSymbolMm.Value,
+                textSizeMm:     (double)nudTextMm.Value,
+                fehlerEllipsen: FehlerEllipsen);
 
+            int nEllipsen = FehlerEllipsen?.Count ?? 0;
             MessageBox.Show(
-                $"Exportiert: {punkte.Count} Punkt(e)\n{dlg.FileName}",
+                $"Export erfolgreich:\n" +
+                $"  {feldbuchPunkte.Count} berechnete Punkt(e)\n" +
+                $"  {importPunkte.Count} eingelesene Koordinate(n)\n" +
+                $"  {gemessenePunkte.Count} gemessene Punkt(e)\n" +
+                (nEllipsen > 0 ? $"  {nEllipsen} Fehlerellipse(n)\n" : "") +
+                $"\n{dlg.FileName}",
                 "Export erfolgreich", MessageBoxButtons.OK, MessageBoxIcon.Information);
             DialogResult = DialogResult.OK;
         }

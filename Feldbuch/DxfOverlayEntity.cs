@@ -12,6 +12,9 @@ namespace Feldbuch;
 
 public abstract class FeldbuchOverlayEntity : DxfEntity
 {
+    // Einheitliche Höhen-Farbe (dunkelbraun, passend zu ACI 30 im DXF-Export)
+    internal static readonly Color FarbeHoehe = Color.FromArgb(120, 60, 0);
+
     public FeldbuchPunkt Punkt { get; }
 
     protected FeldbuchOverlayEntity(FeldbuchPunkt punkt)
@@ -38,13 +41,14 @@ public abstract class FeldbuchOverlayEntity : DxfEntity
         $"R={Punkt.R:F3}  H={Punkt.H:F3}" +
         (Punkt.IstBerechnung3D ? $"  Höhe={Punkt.Hoehe:F3}" : "");
 
-    // Hilfsmethode: Beschriftungstext zeichnen
+    // Hilfsmethode: Beschriftungstext zeichnen (Höhe immer dunkelbraun)
     protected static void DrawLabel(Graphics g, PointF center,
         string punktNr, FeldbuchPunkt p, Color col, float symbolRadius)
     {
-        using var brush = new SolidBrush(col);
-        using var fntNr = new Font("Arial", 9f, FontStyle.Bold,  GraphicsUnit.Pixel);
-        using var fntH  = new Font("Arial", 8f, FontStyle.Regular, GraphicsUnit.Pixel);
+        using var brush  = new SolidBrush(col);
+        using var brushH = new SolidBrush(FarbeHoehe);
+        using var fntNr  = new Font("Arial", 9f, FontStyle.Bold,    GraphicsUnit.Pixel);
+        using var fntH   = new Font("Arial", 8f, FontStyle.Regular, GraphicsUnit.Pixel);
 
         float gap = symbolRadius + 3f;
 
@@ -53,9 +57,9 @@ public abstract class FeldbuchOverlayEntity : DxfEntity
             center.X + gap * 0.4f,
             center.Y - gap - fntNr.Size);
 
-        // Höhe unten rechts (nur bei 3D)
+        // Höhe unten rechts (nur bei 3D, dunkelbraun)
         if (p.IstBerechnung3D)
-            g.DrawString($"{p.Hoehe:F3}", fntH, brush,
+            g.DrawString($"{p.Hoehe:F3}", fntH, brushH,
                 center.X + gap * 0.4f,
                 center.Y + gap);
     }
@@ -183,6 +187,7 @@ public class OverlayImportPunkt : DxfEntity
         using var penSym   = new Pen(FarbeSymbol, 1.5f);
         using var brushSym = new SolidBrush(FarbeSymbol);
         using var brushLbl = new SolidBrush(FarbeBeschr);
+        using var brushH   = new SolidBrush(FeldbuchOverlayEntity.FarbeHoehe);
         using var fntNr    = new Font("Arial", 8f, FontStyle.Bold,    GraphicsUnit.Pixel);
         using var fntH     = new Font("Arial", 7f, FontStyle.Regular, GraphicsUnit.Pixel);
 
@@ -191,12 +196,13 @@ public class OverlayImportPunkt : DxfEntity
         // gefüllter Mittelpunkt
         g.FillEllipse(brushSym, c.X - 1f, c.Y - 1f, 2f, 2f);
 
-        // Beschriftung grün
+        // Punktnummer grün
         float gap = R + 2f;
         g.DrawString(PunktNr, fntNr, brushLbl,
             c.X + gap * 0.4f, c.Y - gap - fntNr.Size);
+        // Höhe dunkelbraun
         if (Hoehe != 0)
-            g.DrawString($"{Hoehe:F3}", fntH, brushLbl,
+            g.DrawString($"{Hoehe:F3}", fntH, brushH,
                 c.X + gap * 0.4f, c.Y + gap);
     }
 }
@@ -278,6 +284,7 @@ public class OverlayGemessenerNeupunkt : DxfEntity
         using var penSym  = new Pen(FarbeSymbol, 1.5f);
         using var brSym   = new SolidBrush(Color.FromArgb(160, FarbeSymbol));
         using var brLbl   = new SolidBrush(FarbeBeschr);
+        using var brH     = new SolidBrush(FeldbuchOverlayEntity.FarbeHoehe);
         using var fntNr   = new Font("Arial", 9f,  FontStyle.Bold,    GraphicsUnit.Pixel);
         using var fntCode = new Font("Arial", 8f,  FontStyle.Regular, GraphicsUnit.Pixel);
         using var fntH    = new Font("Arial", 7.5f, FontStyle.Regular, GraphicsUnit.Pixel);
@@ -290,7 +297,7 @@ public class OverlayGemessenerNeupunkt : DxfEntity
         using var brDot = new SolidBrush(FarbeSymbol);
         g.FillEllipse(brDot, c.X - 1.2f, c.Y - 1.2f, 2.4f, 2.4f);
 
-        // Beschriftung
+        // Punktnummer + Code blau
         float gap = S + 3f;
         float y   = c.Y - gap - fntNr.Size - 1;
 
@@ -303,8 +310,9 @@ public class OverlayGemessenerNeupunkt : DxfEntity
             y += fntCode.Size + 1f;
         }
 
+        // Höhe dunkelbraun
         if (Ergebnis.Ist3D)
-            g.DrawString($"{Ergebnis.Hoehe:F3}", fntH, brLbl, c.X + gap * 0.4f, c.Y + gap);
+            g.DrawString($"{Ergebnis.Hoehe:F3}", fntH, brH, c.X + gap * 0.4f, c.Y + gap);
     }
 }
 
@@ -366,5 +374,79 @@ public class OverlayResidualPunkt : DxfEntity
         double vGes = Math.Sqrt(Residuum.vQuer_mm * Residuum.vQuer_mm +
                                 Residuum.vStrecke_mm * Residuum.vStrecke_mm);
         g.DrawString($"{vGes:F1}", fnt, lbl, c.X + r + 2, c.Y - fnt.Size / 2);
+    }
+}
+
+// ── Fehlerellipse ──────────────────────────────────────────────────────────────
+// Stellt Residuen als skalierbare Ellipse dar.
+// Längsachse (a) = vStrecke in radialer Richtung (Station→Punkt),
+// Querachse  (b) = vQuer senkrecht dazu.
+// Skalierung wird vom DxfCanvas per Mausrad gesteuert.
+public class OverlayFehlerEllipse : DxfEntity
+{
+    public string PunktNr     { get; }
+    public double R           { get; }
+    public double H           { get; }
+    public double VStrecke_mm { get; }
+    public double VQuer_mm    { get; }
+    public double Phi_rad     { get; }   // Richtung Station→Punkt im Weltsystem [rad]
+    public double Skalierung  { get; set; } = 1.0;
+
+    private static readonly Color Farbe = Color.FromArgb(20, 80, 200);
+    const int N = 36;
+
+    public OverlayFehlerEllipse(string punktNr, double r, double h,
+        double vStrecke_mm, double vQuer_mm, double phi_rad)
+    {
+        PunktNr     = punktNr;
+        R           = r;  H = h;
+        VStrecke_mm = vStrecke_mm;
+        VQuer_mm    = vQuer_mm;
+        Phi_rad     = phi_rad;
+        Layer       = "FehlerEllipse";
+    }
+
+    public override BoundingBox GetBounds()
+    {
+        double d = Math.Max(Math.Abs(VStrecke_mm), Math.Abs(VQuer_mm)) * 0.001 * Skalierung + 0.1;
+        return new(R - d, H - d, R + d, H + d);
+    }
+
+    public override double DistanceTo(double wx, double wy) => double.MaxValue;
+    public override (double, double) GetNearestPoint(double wx, double wy) => (R, H);
+    public override (double, double) GetSnapPoint(double wx, double wy)    => (R, H);
+    public override string GetInfo() =>
+        $"Fehlerellipse {PunktNr}  vL={VStrecke_mm:+0.0;-0.0} mm  vQ={VQuer_mm:+0.0;-0.0} mm";
+
+    public override void Draw(Graphics g, Pen _,
+        Func<double, double, PointF> ts, double scale)
+    {
+        double a = Math.Abs(VStrecke_mm) * 0.001 * Skalierung;
+        double b = Math.Abs(VQuer_mm)    * 0.001 * Skalierung;
+        double minR = 0.5 / scale;
+        a = Math.Max(a, minR);
+        b = Math.Max(b, minR);
+
+        double cosPhi = Math.Cos(Phi_rad);
+        double sinPhi = Math.Sin(Phi_rad);
+        var pts = new PointF[N];
+
+        for (int i = 0; i < N; i++)
+        {
+            double t  = 2 * Math.PI * i / N;
+            double lx = a * Math.Cos(t);   // entlang Längsachse (radial)
+            double ly = b * Math.Sin(t);   // entlang Querachse
+            pts[i] = ts(R + lx * cosPhi - ly * sinPhi,
+                        H + lx * sinPhi + ly * cosPhi);
+        }
+
+        using var pen = new Pen(Farbe, 1.5f);
+        try { g.DrawPolygon(pen, pts); } catch { }
+
+        // Mittelpunkt-Kreuz
+        var c = ts(R, H);
+        const float d = 3.5f;
+        g.DrawLine(pen, c.X - d, c.Y, c.X + d, c.Y);
+        g.DrawLine(pen, c.X, c.Y - d, c.X, c.Y + d);
     }
 }

@@ -76,6 +76,16 @@ public class DxfCanvas : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool PunktMarkerVisible { get; set; } = true;
 
+    // Fehlerellipsen (Residuen skalierbar, Mausrad ändert Skalierung wenn ResidualVisible)
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public List<DxfEntity> FehlerEllipsenEntities { get; set; } = new();
+
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public double FehlerEllipsenSkalierung { get; set; } = 1.0;
+
+    // Wird ausgelöst wenn Skalierung per Mausrad geändert wurde
+    public event Action<double>? FehlerEllipsenSkalierungChanged;
+
     // isClick=true: ausgelöst durch Mausklick (MouseUp); false: Mausbewegung (Hover)
     public event Action<double, double, DxfEntity?, bool>?     PointPicked;
     public event Action<double, double, double, double>?       RectangleSelected;
@@ -400,7 +410,16 @@ public class DxfCanvas : Panel
     void OnMouseWheel(object? s, MouseEventArgs e)
     {
         double factor = e.Delta > 0 ? 1.25 : 1.0 / 1.25;
-        ApplyZoom(factor, e.X, e.Y);
+        if (ResidualVisible && FehlerEllipsenEntities.Count > 0)
+        {
+            FehlerEllipsenSkalierung = Math.Clamp(FehlerEllipsenSkalierung * factor, 1e-9, 1e9);
+            FehlerEllipsenSkalierungChanged?.Invoke(FehlerEllipsenSkalierung);
+            Invalidate();
+        }
+        else
+        {
+            ApplyZoom(factor, e.X, e.Y);
+        }
     }
 
     // ── WM_TOUCH (Touchscreen) ────────────────────────────────────────────────
@@ -622,6 +641,20 @@ public class DxfCanvas : Panel
                     catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawResidual: {ex.Message}"); }
                 }
             }
+
+            // Fehlerellipsen
+            foreach (var entity in FehlerEllipsenEntities)
+            {
+                if (IsDrawable(entity))
+                {
+                    try { entity.Draw(g, defPen, ToScreen, Scale); }
+                    catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"DxfCanvas.DrawEllipse: {ex.Message}"); }
+                }
+            }
+
+            // Maßstabsbalken für Ellipsen-Skalierung
+            if (FehlerEllipsenEntities.Count > 0)
+                ZeichneEllipsenMassstab(g);
         }
 
         // DXF-Punkt-Marker (Punktnummern aus DxfPunktIndex)
@@ -671,5 +704,50 @@ public class DxfCanvas : Panel
                 g.DrawRectangle(border, rx, ry, rw, rh);
             }
         }
+    }
+
+    // ── Maßstabsbalken für Fehlerellipsen-Skalierung ──────────────────────────
+    // Linke untere Ecke: zeigt z.B. "|----| 5 mm" für die aktuelle Ellipsen-Skalierung.
+    void ZeichneEllipsenMassstab(Graphics g)
+    {
+        double pixPerMm = 0.001 * FehlerEllipsenSkalierung * Scale;
+        if (pixPerMm <= 0) return;
+
+        double barMm = NiceBarMm(80.0 / pixPerMm);
+        float  barPx = (float)(barMm * pixPerMm);
+        if (barPx < 3 || barPx > Width * 0.6) return;
+
+        string label = barMm >= 1 ? $"{barMm:F0} mm" : $"{barMm * 10:F1}×0.1 mm";
+
+        using var fnt    = new Font("Arial", 9f, FontStyle.Regular, GraphicsUnit.Pixel);
+        SizeF  txtSize   = g.MeasureString(label, fnt);
+        float  boxW      = barPx + 16 + txtSize.Width;
+        float  boxH      = 22f;
+        float  xLeft     = 12f;
+        float  yCenter   = Height - 20f;
+
+        using var bg  = new SolidBrush(Color.FromArgb(210, 255, 255, 255));
+        using var bd  = new Pen(Color.FromArgb(160, 160, 160), 1f);
+        g.FillRectangle(bg, xLeft - 4, yCenter - boxH / 2, boxW, boxH);
+        g.DrawRectangle(bd, xLeft - 4, yCenter - boxH / 2, boxW, boxH);
+
+        using var pen   = new Pen(Color.FromArgb(20, 80, 200), 2.5f);
+        using var brush = new SolidBrush(Color.FromArgb(20, 80, 200));
+        g.DrawLine(pen, xLeft, yCenter, xLeft + barPx, yCenter);
+        g.DrawLine(pen, xLeft,          yCenter - 5, xLeft,          yCenter + 5);
+        g.DrawLine(pen, xLeft + barPx,  yCenter - 5, xLeft + barPx,  yCenter + 5);
+        g.DrawString(label, fnt, brush, xLeft + barPx + 6, yCenter - txtSize.Height / 2);
+    }
+
+    static double NiceBarMm(double rawMm)
+    {
+        double[] nice = { 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000 };
+        double best = nice[0], bestDiff = Math.Abs(rawMm - nice[0]);
+        foreach (var n in nice)
+        {
+            double d = Math.Abs(rawMm - n);
+            if (d < bestDiff) { bestDiff = d; best = n; }
+        }
+        return best;
     }
 }

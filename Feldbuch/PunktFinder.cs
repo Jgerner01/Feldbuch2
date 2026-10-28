@@ -74,7 +74,63 @@ public static class PunktFinder
         return Math.Clamp(r, konfig.MindestRadius_m, konfig.MaximalRadius_m);
     }
 
-    // ── Suche nach Position (Vollmessung) ─────────────────────────────────────
+    // ── Suche nach Position in ImportPunkten (Vollmessung) ───────────────────
+
+    public static List<PunktFinderTreffer> SucheNachPosition(
+        double e_pred, double n_pred, double r_suche,
+        IReadOnlyList<ImportPunkt> punkte,
+        HashSet<string> bereitsGemessen)
+    {
+        double r2     = r_suche * r_suche;
+        var    result = new List<PunktFinderTreffer>();
+        foreach (var p in punkte)
+        {
+            if (bereitsGemessen.Contains(p.PunktNr)) continue;
+            double dr   = p.R - e_pred;
+            double dh   = p.H - n_pred;
+            double abst2 = dr * dr + dh * dh;
+            if (abst2 > r2) continue;
+            double abst = Math.Sqrt(abst2);
+            result.Add(new PunktFinderTreffer(p.PunktNr, p.R, p.H, abst,
+                abst <= r_suche / 2.0));
+        }
+        return result.OrderBy(t => t.Abstand_m).ToList();
+    }
+
+    // ── Suche nach Richtung in ImportPunkten (Winkel-only, kein Auto-Match) ──
+
+    public static List<PunktFinderTreffer> SucheNachRichtung(
+        double stationE, double stationN, double richtung_gon,
+        IReadOnlyList<ImportPunkt> punkte,
+        HashSet<string> bereitsGemessen,
+        PunktFinderKonfig konfig)
+    {
+        double toleranz_rad = konfig.WinkelToleranz_cc * CC2RAD;
+        double alpha_rad    = richtung_gon * GON2RAD;
+
+        var result = new List<PunktFinderTreffer>();
+        foreach (var p in punkte)
+        {
+            if (bereitsGemessen.Contains(p.PunktNr)) continue;
+            double dr   = p.R - stationE;
+            double dh   = p.H - stationN;
+            double dist = Math.Sqrt(dr * dr + dh * dh);
+            if (dist < 0.5 || dist > 500.0) continue;
+            double alpha_p = Math.Atan2(dr, dh);
+            if (Math.Abs(NormRad(alpha_rad - alpha_p)) <= toleranz_rad)
+                result.Add(new PunktFinderTreffer(p.PunktNr, p.R, p.H, dist, false));
+        }
+        return result.OrderBy(t => t.Abstand_m).ToList();
+
+        static double NormRad(double a)
+        {
+            while (a >  Math.PI) a -= 2 * Math.PI;
+            while (a < -Math.PI) a += 2 * Math.PI;
+            return a;
+        }
+    }
+
+    // ── Suche nach Position in DxfPunktIndex (Fallback) ─────────────────────
 
     public static List<PunktFinderTreffer> SucheNachPosition(
         double e_pred, double n_pred, double r_suche,
@@ -83,21 +139,19 @@ public static class PunktFinder
     {
         var kandidaten = dxfIndex.SucheNahe(e_pred, n_pred, r_suche);
         var result = new List<PunktFinderTreffer>();
-
         foreach (var k in kandidaten)
         {
             if (bereitsGemessen.Contains(k.PunktNr)) continue;
             double dr   = k.R - e_pred;
             double dh   = k.H - n_pred;
             double abst = Math.Sqrt(dr * dr + dh * dh);
-            result.Add(new PunktFinderTreffer(
-                k.PunktNr, k.R, k.H, abst,
+            result.Add(new PunktFinderTreffer(k.PunktNr, k.R, k.H, abst,
                 abst <= r_suche / 2.0));
         }
         return result.OrderBy(t => t.Abstand_m).ToList();
     }
 
-    // ── Suche nach Richtung (Winkel-only, kein Auto-Match) ───────────────────
+    // ── Suche nach Richtung in DxfPunktIndex (Fallback) ─────────────────────
 
     public static List<PunktFinderTreffer> SucheNachRichtung(
         double stationE, double stationN, double richtung_gon,
@@ -105,10 +159,9 @@ public static class PunktFinder
         HashSet<string> bereitsGemessen,
         PunktFinderKonfig konfig)
     {
-        double toleranz_gon = konfig.WinkelToleranz_cc / 100.0;   // cc → gon
+        double toleranz_gon = konfig.WinkelToleranz_cc / 100.0;
         var kandidaten = dxfIndex.SucheNachRichtung(
             stationE, stationN, richtung_gon, toleranz_gon);
-
         var result = new List<PunktFinderTreffer>();
         foreach (var (pkt, dist) in kandidaten)
         {

@@ -110,9 +110,10 @@ public partial class FormDxfViewer : Form
         canvas.ResidualVisible  = ProjektManager.ResidualVisible;
 
         // Events
-        canvas.PointPicked       += OnPointPicked!;
-        canvas.RectangleSelected += OnRectangleSelected;
-        canvas.RightClicked      += OnCanvasRightClicked;
+        canvas.PointPicked                    += OnPointPicked!;
+        canvas.RectangleSelected              += OnRectangleSelected;
+        canvas.RightClicked                   += OnCanvasRightClicked;
+        canvas.FehlerEllipsenSkalierungChanged += OnEllipsenSkalierungChanged;
         FormClosed               += OnFormClosed;
         Activated                += OnFormActivated;
 
@@ -128,6 +129,11 @@ public partial class FormDxfViewer : Form
         BaueOverlay();
         BaueNeupunkteOverlay();
         BaueImportOverlay();
+
+        // Residual-Overlay wenn bereits eine Stationierung vorhanden
+        var initErg = StationsdatenManager.AktuellesErgebnis;
+        if (initErg?.Residuen.Count > 0)
+            BaueResidualOverlay(initErg);
 
         // DXF laden
         if (ProjektManager.HatDxfDatei)
@@ -187,12 +193,16 @@ public partial class FormDxfViewer : Form
         };
         _chkResidual.CheckedChanged += (s, e) =>
         {
-            canvas.ResidualVisible   = _chkResidual.Checked;
+            canvas.ResidualVisible          = _chkResidual.Checked;
             ProjektManager.ResidualVisible  = _chkResidual.Checked;
             ProjektManager.SpeichereOptionen();
+            if (_chkResidual.Checked && canvas.FehlerEllipsenEntities.Count > 0)
+                AutoSkaliereEllipsen();
             canvas.Invalidate();
         };
-        new ToolTip().SetToolTip(_chkResidual, "Residual-Marker (Stationierung) ein-/ausblenden");
+        new ToolTip().SetToolTip(_chkResidual,
+            "Residuen + Fehlerellipsen ein-/ausblenden\n" +
+            "Wenn aktiv: Mausrad skaliert die Ellipsen");
 
         flpLayers.Controls.Add(_chkNeupunkte);
         flpLayers.Controls.Add(_chkResidual);
@@ -319,7 +329,14 @@ public partial class FormDxfViewer : Form
         AktualisiereSignallampe();
         BaueOverlay();
         BaueNeupunkteOverlay();
-        canvas.Invalidate();
+
+        // Residual-Overlay nur aufbauen wenn noch keine Ellipsen vorhanden
+        // (keine Unterbrechung wenn der Nutzer die Skalierung per Mausrad geändert hat)
+        var aktErg = StationsdatenManager.AktuellesErgebnis;
+        if (aktErg?.Residuen.Count > 0 && canvas.FehlerEllipsenEntities.Count == 0)
+            BaueResidualOverlay(aktErg);
+        else
+            canvas.Invalidate();
     }
 
     // ── Messmodus: Stationierung ↔ Neupunkt ──────────────────────────────────
@@ -803,14 +820,57 @@ public partial class FormDxfViewer : Form
     public void BaueResidualOverlay(StationierungsErgebnis ergebnis)
     {
         canvas.ResidualEntities.Clear();
+        canvas.FehlerEllipsenEntities.Clear();
+
         foreach (var res in ergebnis.Residuen)
         {
-            // Koordinaten des Anschlusspunktes suchen
             var (r, h, _) = SucheAnschlusspunkt(res.PunktNr);
-            if (r != 0 || h != 0)
-                canvas.ResidualEntities.Add(new OverlayResidualPunkt(res, r, h));
+            if (r == 0 && h == 0) continue;
+
+            canvas.ResidualEntities.Add(new OverlayResidualPunkt(res, r, h));
+
+            // Richtungswinkel Station→Punkt im Weltsystem
+            double phi = Math.Atan2(h - ergebnis.H, r - ergebnis.R);
+            canvas.FehlerEllipsenEntities.Add(new OverlayFehlerEllipse(
+                res.PunktNr, r, h, res.vStrecke_mm, res.vQuer_mm, phi)
+            {
+                Skalierung = canvas.FehlerEllipsenSkalierung
+            });
         }
+
+        if (canvas.ResidualVisible && canvas.FehlerEllipsenEntities.Count > 0)
+            AutoSkaliereEllipsen();
+
         canvas.Invalidate();
+    }
+
+    // ── Ellipsen-Skalierung (Mausrad-Event vom Canvas) ────────────────────────
+    private void OnEllipsenSkalierungChanged(double neueSkalierung)
+    {
+        foreach (var e in canvas.FehlerEllipsenEntities.OfType<OverlayFehlerEllipse>())
+            e.Skalierung = neueSkalierung;
+    }
+
+    // ── Auto-Skalierung: Ø-Ellipse ≈ 1 cm auf dem Bildschirm ─────────────────
+    private void AutoSkaliereEllipsen()
+    {
+        var ellipsen = canvas.FehlerEllipsenEntities.OfType<OverlayFehlerEllipse>().ToList();
+        if (ellipsen.Count == 0 || canvas.Scale <= 0) return;
+
+        double avgMm = ellipsen
+            .Select(e => Math.Sqrt(e.VStrecke_mm * e.VStrecke_mm + e.VQuer_mm * e.VQuer_mm))
+            .Where(v => v > 0)
+            .DefaultIfEmpty(1.0)
+            .Average();
+
+        float dpi = 96f;
+        try { using var gr = canvas.CreateGraphics(); dpi = gr.DpiX; } catch { }
+        double zielPx = dpi / 2.54;
+        double neueS  = zielPx / (avgMm * 0.001 * canvas.Scale);
+        neueS = Math.Clamp(neueS, 1e-4, 1e9);
+
+        canvas.FehlerEllipsenSkalierung = neueS;
+        foreach (var e in ellipsen) e.Skalierung = neueS;
     }
 
     // ── Hilfsmethoden ─────────────────────────────────────────────────────────
@@ -1435,6 +1495,9 @@ public partial class FormDxfViewer : Form
     private void btnExportDxf_Click(object? s, EventArgs e)
     {
         using var dlg = new FormDxfExport();
+        if (canvas.ResidualVisible && canvas.FehlerEllipsenEntities.Count > 0)
+            dlg.FehlerEllipsen = canvas.FehlerEllipsenEntities
+                .OfType<OverlayFehlerEllipse>().ToList();
         dlg.ShowDialog(this);
     }
 

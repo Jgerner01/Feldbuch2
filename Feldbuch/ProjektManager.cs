@@ -47,7 +47,7 @@ public static class ProjektManager
     /// <summary>Neupunkte-Overlay im DXF-Viewer eingeblendet.</summary>
     public static bool   NeupunkteVisible      { get; set; } = true;
     /// <summary>Residual-Marker im DXF-Viewer eingeblendet.</summary>
-    public static bool   ResidualVisible       { get; set; } = true;
+    public static bool   ResidualVisible       { get; set; } = false;
     /// <summary>Letzte aktive Standpunktnummer im DXF-Viewer.</summary>
     public static string LetzteStandpunktNr   { get; set; } = "";
 
@@ -152,7 +152,7 @@ public static class ProjektManager
                 System.Globalization.CultureInfo.InvariantCulture, out var ih);
             InstrumentenHoehe  = ih;
             NeupunkteVisible   = LadeBool(root, "NeupunkteVisible",  defaultVal: true);
-            ResidualVisible    = LadeBool(root, "ResidualVisible",   defaultVal: true);
+            ResidualVisible    = LadeBool(root, "ResidualVisible",   defaultVal: false);
             LetzteStandpunktNr = root.SelectSingleNode("LetzteStandpunktNr")?.InnerText?.Trim() ?? "";
 
             // Tachymeter-Modell (mit Migration alter Enum-Namen)

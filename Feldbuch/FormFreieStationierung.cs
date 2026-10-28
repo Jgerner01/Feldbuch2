@@ -283,6 +283,11 @@ public partial class FormFreieStationierung : Form
             // Panel nach Berechnungsdialog aktualisieren (FormErgebnis kann s0 verfeinert haben)
             AktualisiereAutoMatchPanel();
 
+            // Fehlerellipsen im DXF-Viewer aktualisieren (FormErgebnis kann Residuen geändert haben)
+            var finalErg = StationsdatenManager.AktuellesErgebnis;
+            if (finalErg != null)
+                FormDxfViewer.AktiveInstanz?.BaueResidualOverlay(finalErg);
+
             // Standpunkt-Zähler hochsetzen wenn STP{N}-Muster, Feld auf nächste Nr. setzen
             if (standpunkt.StartsWith("STP", StringComparison.OrdinalIgnoreCase)
                 && int.TryParse(standpunkt.Substring(3), out int stpNr))
@@ -416,9 +421,13 @@ public partial class FormFreieStationierung : Form
         if (!PunktFinder.IstBrauchbar(ergebnis.s0_mm, ergebnis.Redundanz, grenze)) return;
         if (!messung.IstVollmessung && chkDistanzPflicht.Checked) return;
 
-        // PunktIndex aus aktivem DXF-Viewer holen
-        var dxfIndex = FormDxfViewer.AktiveInstanz?.PunktIndex;
-        if (dxfIndex == null) { lblAutoMatchStatus.Text = "Kein DXF-Viewer offen"; return; }
+        // Referenzpunkte aus Import (KOR/CSV) – das ist die primäre Suchbasis
+        var importPunkte = ImportPunkteManager.Punkte;
+        if (importPunkte.Count == 0)
+        {
+            lblAutoMatchStatus.Text = "Keine Referenzpunkte geladen (KOR/CSV importieren)";
+            return;
+        }
 
         var bereitsGemessen = GetBereitsGemessene();
         var par             = RechenparameterManager.Params;
@@ -430,9 +439,9 @@ public partial class FormFreieStationierung : Form
 
         if (messung.IstVollmessung)
         {
-            double dh = Math.Sin((messung.V_gon!.Value) * Math.PI / 200.0) * messung.Schraegstrecke_m!.Value;
+            double d_h = Math.Sin(messung.V_gon!.Value * Math.PI / 200.0) * messung.Schraegstrecke_m!.Value;
             r_suche = PunktFinder.BerechneRadius(ergebnis.s0_mm,
-                ergebnis.Redundanz + 2, dh, _pfKonfig);
+                ergebnis.Redundanz + 2, d_h, _pfKonfig);
 
             (e_pred, n_pred) = PunktFinder.BerechnePriorPosition(
                 ergebnis.R, ergebnis.H, ergebnis.Orientierung_gon,
@@ -440,14 +449,14 @@ public partial class FormFreieStationierung : Form
                 par.FreierMassstab ? ergebnis.Massstab : 1.0);
 
             treffer = PunktFinder.SucheNachPosition(
-                e_pred, n_pred, r_suche, dxfIndex, bereitsGemessen);
+                e_pred, n_pred, r_suche, importPunkte, bereitsGemessen);
         }
         else
         {
             // Winkel-only (nur möglich wenn Distanz-Pflicht deaktiviert)
             double richtung = ((ergebnis.Orientierung_gon + messung.Hz_gon!.Value) % 400.0 + 400.0) % 400.0;
             treffer = PunktFinder.SucheNachRichtung(
-                ergebnis.R, ergebnis.H, richtung, dxfIndex, bereitsGemessen, _pfKonfig);
+                ergebnis.R, ergebnis.H, richtung, importPunkte, bereitsGemessen, _pfKonfig);
         }
 
         var ereignis = new AutoMatchEreignis(
@@ -472,17 +481,14 @@ public partial class FormFreieStationierung : Form
             return;
         }
 
-        if (treffer.Count == 1 && treffer[0].AutoMatch && messung.IstVollmessung)
-        {
-            // Auto-Match: direkt übernehmen
-            UebernehmeTreffer(treffer[0], messung, ergebnis, ereignis, standpunktNr);
-            return;
-        }
-
-        // Bestätigung erforderlich
+        // Jeder Treffer – auch eindeutiger Auto-Match – erfordert manuelle Bestätigung
         _pendingTreffer = treffer;
         _pendingMessung = messung;
         AutoMatchProtokoll.Schreiben(ereignis, standpunktNr);
+
+        lblAutoMatchStatus.Text = treffer.Count == 1 && treffer[0].AutoMatch
+            ? $"AutoMatch: {treffer[0].PunktNr} – bitte bestätigen"
+            : $"{treffer.Count} Kandidat(en) – bitte bestätigen";
 
         // DXF-Viewer-Overlay
         if (FormDxfViewer.AktiveInstanz != null)
@@ -577,18 +583,23 @@ public partial class FormFreieStationierung : Form
     {
         AbbrechenBestaetigungsDialog();
 
+        bool istAutoMatch = treffer.Count == 1 && treffer[0].AutoMatch;
+
         var p = new Panel
         {
-            Location  = new Point(20, 556),
-            Size      = new Size(940, 52),
-            BackColor = Color.FromArgb(255, 248, 200),
+            Location    = new Point(20, 556),
+            Size        = new Size(940, 52),
+            BackColor   = istAutoMatch ? Color.FromArgb(210, 245, 215) : Color.FromArgb(255, 248, 200),
             BorderStyle = BorderStyle.FixedSingle
         };
 
-        string kandidatenText = treffer.Count == 1
-            ? $"Vorschlag: \"{treffer[0].PunktNr}\"  R={treffer[0].R:F3}  H={treffer[0].H:F3}" +
+        string kandidatenText = istAutoMatch
+            ? $"AutoMatch: \"{treffer[0].PunktNr}\"  R={treffer[0].R:F3}  H={treffer[0].H:F3}" +
               $"  Abstand={treffer[0].Abstand_m * 1000:F0} mm"
-            : $"{treffer.Count} Kandidaten – bitte auswählen";
+            : treffer.Count == 1
+                ? $"Vorschlag: \"{treffer[0].PunktNr}\"  R={treffer[0].R:F3}  H={treffer[0].H:F3}" +
+                  $"  Abstand={treffer[0].Abstand_m * 1000:F0} mm"
+                : $"{treffer.Count} Kandidaten – bitte auswählen";
 
         var lbl = new Label
         {
