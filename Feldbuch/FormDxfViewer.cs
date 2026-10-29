@@ -85,14 +85,6 @@ public partial class FormDxfViewer : Form
     // Messung ist ausgelöst und wartet auf das Ende einer noch laufenden Winkelabfrage
     private bool _messungAusstehend;
 
-    // ── Signaltöne (Console.Beep) ─────────────────────────────────────────────
-    private const int FEHLER_TON_HZ   = 1600;   // Warnung: zwei kurze, hohe Töne
-    private const int FEHLER_TON_MS   = 150;
-    private const int FEHLER_ANZAHL   = 2;
-    private const int TON_PAUSE_MS    = 80;
-    private const int ERFOLG_TON_HZ   = 900;    // Erfolg: ein tieferer Ton, doppelt so lang
-    private const int ERFOLG_TON_MS   = FEHLER_TON_MS * 2;
-
     // ── Digitalisier-Modus ────────────────────────────────────────────────────
     private bool         _digitalisiermodus  = false;
     private int          _digitalisierZaehler = 1;
@@ -478,16 +470,6 @@ public partial class FormDxfViewer : Form
 
     private void VerarbeiteLiveWinkel(string zeile)
     {
-        _winkelAnfrageZeit = DateTime.MinValue;
-
-        // Die ausstehende Messung kann jetzt gefahrlos gestartet werden
-        if (_messungAusstehend)
-        {
-            StarteMessung();
-            return;
-        }
-        if (!_lokalesSystem || _winkelPausiert) return;
-
         double? hz = null;
         if (TachymeterBefehlsgeberFactory.IstGeoCOM(TachymeterVerbindung.Modell))
         {
@@ -500,7 +482,19 @@ public partial class FormDxfViewer : Form
                 hz = gsiParser.ParseZeile(zeile)?.Hz_gon;
         }
 
+        // Andere Antworten (z. B. die Quittung eines Signaltons) enthalten keinen
+        // Winkel und beenden die Winkelabfrage nicht.
         if (!hz.HasValue) return;
+        _winkelAnfrageZeit = DateTime.MinValue;
+
+        // Die ausstehende Messung kann jetzt gefahrlos gestartet werden
+        if (_messungAusstehend)
+        {
+            StarteMessung();
+            return;
+        }
+        if (!_lokalesSystem || _winkelPausiert) return;
+
         _zielrichtung.HzGon = hz;
         canvas.Invalidate();
     }
@@ -660,29 +654,8 @@ public partial class FormDxfViewer : Form
         {
             lblStatus.Text = $"Fehler: {ex.Message}";
             MessungAbschliessen();
-            SignalFehler();
+            TachymeterSignal.Fehler();
         }
-    }
-
-    // ── Signaltöne ────────────────────────────────────────────────────────────
-    private static void SignalFehler() => SpieleTon(FEHLER_TON_HZ, FEHLER_TON_MS, FEHLER_ANZAHL);
-    private static void SignalErfolg() => SpieleTon(ERFOLG_TON_HZ, ERFOLG_TON_MS, 1);
-
-    /// <summary>Spielt die Töne im Hintergrund, damit die Oberfläche nicht blockiert.</summary>
-    private static void SpieleTon(int frequenzHz, int dauerMs, int anzahl)
-    {
-        Task.Run(() =>
-        {
-            try
-            {
-                for (int i = 0; i < anzahl; i++)
-                {
-                    Console.Beep(frequenzHz, dauerMs);
-                    if (i < anzahl - 1) Thread.Sleep(TON_PAUSE_MS);
-                }
-            }
-            catch (Exception ex) { ErrorLogger.Log("FormDxfViewer.SpieleTon", ex); }
-        });
     }
 
     private void MessungAbschliessen()
@@ -735,19 +708,19 @@ public partial class FormDxfViewer : Form
             if (gsiMessung == null)
             {
                 lblStatus.Text = "Messwert nicht lesbar.";
-                SignalFehler();
+                TachymeterSignal.Fehler();
                 return;
             }
             if (gsiMessung.IstFehler)
             {
                 lblStatus.Text = $"Messfehler: {gsiMessung.Bemerkung}";
-                SignalFehler();
+                TachymeterSignal.Fehler();
                 return;
             }
             if (!gsiMessung.IstVollmessung)
             {
                 lblStatus.Text = "Unvollständige Messung (Hz/V/D fehlen).";
-                SignalFehler();
+                TachymeterSignal.Fehler();
                 return;
             }
             if (double.TryParse(txtZielhoehe.Text.Replace(',', '.'),
@@ -771,7 +744,7 @@ public partial class FormDxfViewer : Form
             {
                 lblStatus.Text = $"Messfehler: {messung.Bemerkung}";
                 MessungAbschliessen();
-                SignalFehler();
+                TachymeterSignal.Fehler();
                 return;
             }
             _messungZustand    = MessungZustand.WarteErgebnis;
@@ -788,14 +761,14 @@ public partial class FormDxfViewer : Form
             {
                 lblStatus.Text = $"Messung fehlgeschlagen: {messung.Bemerkung}";
                 MessungAbschliessen();
-                SignalFehler();
+                TachymeterSignal.Fehler();
                 return;
             }
             if (!messung.IstVollmessung)
             {
                 lblStatus.Text = "Unvollständige Messung (Hz/V/D fehlen).";
                 MessungAbschliessen();
-                SignalFehler();
+                TachymeterSignal.Fehler();
                 return;
             }
             // Zielhöhe aus Eingabefeld übernehmen
@@ -884,7 +857,7 @@ public partial class FormDxfViewer : Form
     {
         // Gültiger Messwert (Hz, V, Strecke): Winkelübertragung wieder aufnehmen
         _winkelPausiert = false;
-        SignalErfolg();
+        TachymeterSignal.Erfolg();
 
         string punktNr = AktuellePunktNr;
         string code    = AktuellerCode;

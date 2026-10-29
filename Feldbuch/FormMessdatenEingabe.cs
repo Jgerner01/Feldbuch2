@@ -161,6 +161,7 @@ public partial class FormMessdatenEingabe : Form
         {
             lblMessInfo.Text      = $"Fehler: {ex.Message}";
             lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+            TachymeterSignal.Fehler();
             MessungAbschliessen();
         }
     }
@@ -210,17 +211,19 @@ public partial class FormMessdatenEingabe : Form
             if (!gsiParser.KannVerarbeiten(zeile)) return;
             var gsiMessung = gsiParser.ParseZeile(zeile);
             MessungAbschliessen();
-            if (gsiMessung == null) return;
+            if (gsiMessung == null) { TachymeterSignal.Fehler(); return; }
             if (gsiMessung.IstFehler)
             {
                 lblMessInfo.Text      = $"Messfehler: {gsiMessung.Bemerkung}";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+                TachymeterSignal.Fehler();
                 return;
             }
             if (!gsiMessung.IstVollmessung)
             {
                 lblMessInfo.Text      = "Unvollständige Messung (Hz/V/D fehlen).";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 130, 40);
+                TachymeterSignal.Fehler();
                 return;
             }
             nudHz.Value      = (decimal)Math.Round(gsiMessung.Hz_gon!.Value,  4);
@@ -230,6 +233,7 @@ public partial class FormMessdatenEingabe : Form
                 "Hz={0:F4} gon   V={1:F4} gon   D={2:F3} m",
                 gsiMessung.Hz_gon.Value, gsiMessung.V_gon.Value, gsiMessung.Schraegstrecke_m.Value);
             lblMessInfo.ForeColor = Color.FromArgb(40, 180, 60);
+            TachymeterSignal.Erfolg();
             return;
         }
 
@@ -246,6 +250,7 @@ public partial class FormMessdatenEingabe : Form
             {
                 lblMessInfo.Text      = $"Messfehler (GRC={messung.ReturnCode}): {messung.Bemerkung}";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+                TachymeterSignal.Fehler();
                 MessungAbschliessen();
             }
             else
@@ -264,6 +269,7 @@ public partial class FormMessdatenEingabe : Form
             {
                 lblMessInfo.Text      = $"Kein Ergebnis (GRC={messung.ReturnCode}): {messung.Bemerkung}";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+                TachymeterSignal.Fehler();
                 return;
             }
 
@@ -271,6 +277,7 @@ public partial class FormMessdatenEingabe : Form
             {
                 lblMessInfo.Text      = "Unvollständige Messung (Hz/V/D fehlen).";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 130, 40);
+                TachymeterSignal.Fehler();
                 return;
             }
 
@@ -283,6 +290,7 @@ public partial class FormMessdatenEingabe : Form
                 "Hz={0:F4} gon   V={1:F4} gon   D={2:F3} m",
                 messung.Hz_gon.Value, messung.V_gon.Value, messung.Schraegstrecke_m.Value);
             lblMessInfo.ForeColor = Color.FromArgb(40, 180, 60);
+            TachymeterSignal.Erfolg();
         }
     }
 

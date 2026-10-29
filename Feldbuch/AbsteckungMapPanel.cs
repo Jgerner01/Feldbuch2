@@ -548,7 +548,7 @@ public class AbsteckungMapPanel : UserControl
                 TachymeterVerbindung.GeoCOM_Senden(_befehlsgeber.MessTriggerBefehl() ?? "");
             }
         }
-        catch { MessungAbschliessen(); }
+        catch { MessungAbschliessen(); TachymeterSignal.Fehler(); }
     }
 
     private void MessungAbschliessen()
@@ -590,7 +590,7 @@ public class AbsteckungMapPanel : UserControl
         if (_messungZustand == MessungZustand.WarteMessen
             && _letzterRpc == _befehlsgeber.MessSchritt1Rpc)
         {
-            if (messung.IstFehler) { MessungAbschliessen(); return; }
+            if (messung.IstFehler) { MessungAbschliessen(); TachymeterSignal.Fehler(); return; }
             _messungZustand = MessungZustand.WarteErgebnis;
             SendeTachBefehl(_befehlsgeber.MessErgebnisBefehl()!, _befehlsgeber.MessSchritt2Rpc);
         }
@@ -598,6 +598,8 @@ public class AbsteckungMapPanel : UserControl
             && _letzterRpc == _befehlsgeber.MessSchritt2Rpc)
         {
             MessungAbschliessen();
+            if (messung.IstVollmessung && !messung.IstFehler) TachymeterSignal.Erfolg();
+            else                                              TachymeterSignal.Fehler();
         }
     }
 

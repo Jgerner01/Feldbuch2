@@ -233,6 +233,7 @@ public partial class FormTestmessungen : Form
             if (messung.Typ == MessungsTyp.Fehler)
             {
                 AppendFehler($"[FEHLER] Messung konnte nicht gestartet werden: {messung.Bemerkung}");
+                TachymeterSignal.Fehler();
                 MessungAbschliessen();
             }
             else
@@ -246,6 +247,8 @@ public partial class FormTestmessungen : Form
             && rpcKontext == GeoCOMParser.RPC_TMC_GetSimpleMea)
         {
             MessungAbschliessen();
+            if (messung.IstVollmessung && !messung.IstFehler) TachymeterSignal.Erfolg();
+            else                                              TachymeterSignal.Fehler();
         }
     }
 
@@ -341,6 +344,7 @@ public partial class FormTestmessungen : Form
         {
             AppendFehler($"[FEHLER] {ex.Message}");
             MessungAbschliessen();
+            TachymeterSignal.Fehler();
         }
     }
 

@@ -212,6 +212,7 @@ public partial class FormAufnahmetest : Form
         {
             lblMessInfo.Text      = $"Fehler: {ex.Message}";
             lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+            TachymeterSignal.Fehler();
             MessungAbschliessen();
         }
     }
@@ -351,6 +352,7 @@ public partial class FormAufnahmetest : Form
             {
                 lblMessInfo.Text      = $"Messfehler: {m.Bemerkung}";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+                TachymeterSignal.Fehler();
                 MessungAbschliessen();
                 return;
             }
@@ -370,12 +372,14 @@ public partial class FormAufnahmetest : Form
             {
                 lblMessInfo.Text      = $"Kein Ergebnis: {m.Bemerkung}";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+                TachymeterSignal.Fehler();
                 return;
             }
             if (!m.IstVollmessung)
             {
                 lblMessInfo.Text      = "Unvollständige Messung (Hz/V/D fehlen).";
                 lblMessInfo.ForeColor = Color.FromArgb(200, 130, 40);
+                TachymeterSignal.Fehler();
                 return;
             }
 
@@ -507,6 +511,7 @@ public partial class FormAufnahmetest : Form
             "Hz={0:F4} gon   V={1:F4} gon   D={2:F3} m   →  X={3:F4}  Y={4:F4}  Z={5:F4}",
             hzGon, vGon, d, x, y, z);
         lblMessInfo.ForeColor = Color.FromArgb(40, 180, 60);
+        TachymeterSignal.Erfolg();
     }
 
     // ── UI-Zustand ────────────────────────────────────────────────────────────
