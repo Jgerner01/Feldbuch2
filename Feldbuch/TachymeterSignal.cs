@@ -17,14 +17,11 @@ namespace Feldbuch;
 // ──────────────────────────────────────────────────────────────────────────────
 public static class TachymeterSignal
 {
-    private const int RPC_BMM_BEEP_NORMAL = 11003;
-    private const int RPC_BMM_BEEP_ALARM  = 11004;
-
     /// <summary>Ein Piepton: Messung erfolgreich.</summary>
-    public static void Erfolg() => Senden(RPC_BMM_BEEP_NORMAL);
+    public static void Erfolg() => Senden(GeoCOMParser.RPC_BMM_BeepNormal);
 
     /// <summary>Dreifacher Piepton (Alarm): Messung fehlgeschlagen.</summary>
-    public static void Fehler() => Senden(RPC_BMM_BEEP_ALARM);
+    public static void Fehler() => Senden(GeoCOMParser.RPC_BMM_BeepAlarm);
 
     private static void Senden(int rpc)
     {

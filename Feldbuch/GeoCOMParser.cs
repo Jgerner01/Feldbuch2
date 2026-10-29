@@ -24,6 +24,8 @@ public class GeoCOMParser : ITachymeterDatenParser
     public const int RPC_COM_GetSWBaud    = 1000;
     public const int RPC_COM_SetSWBaud    = 1001;
     public const int RPC_EDM_Laserpointer = 1004;  // EDM_Laserpointer(0=off, 1=on)
+    public const int RPC_BMM_BeepNormal   = 11003; // BMM_BeepNormal – ein Piepton
+    public const int RPC_BMM_BeepAlarm    = 11004; // BMM_BeepAlarm  – dreifacher Piepton
     public const int RPC_TMC_DoMeasure    = 2008;
     public const int RPC_TMC_SetEdmMode   = 2020;
     public const int RPC_TMC_GetEdmMode   = 2021;
@@ -171,6 +173,8 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_BAP_SetTargetType    or
             RPC_COM_SetSWBaud        or
             RPC_EDM_Laserpointer     or
+            RPC_BMM_BeepNormal       or
+            RPC_BMM_BeepAlarm        or
             RPC_MOT_MoveAngle        or
             RPC_AUT_MakePositioning  => ParseStatus(m, daten, rpcKontext),
 
@@ -343,6 +347,8 @@ public class GeoCOMParser : ITachymeterDatenParser
             RPC_COM_SetSWBaud     => "Baudrate geändert",
             RPC_EDM_Laserpointer  => d.Length > 0 && d[0].Trim() == "1"
                                      ? "Laserpointer EIN" : "Laserpointer AUS",
+            RPC_BMM_BeepNormal    => "Signalton (einfach) ausgegeben",
+            RPC_BMM_BeepAlarm     => "Signalton (Alarm, dreifach) ausgegeben",
             _                     => "OK"
         };
         return m;

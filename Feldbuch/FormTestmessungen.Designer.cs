@@ -26,6 +26,7 @@ partial class FormTestmessungen
         btnModus        = new Button();
         btnWinkel       = new Button();
         btnLaser        = new Button();
+        btnSignal       = new Button();
 
         grpMesswerte    = new GroupBox();
         lblHzLabel      = new Label();
@@ -152,7 +153,7 @@ partial class FormTestmessungen
 
         btnWinkel.Text      = "Winkel-Live starten";
         btnWinkel.Location  = new Point(10, 160);
-        btnWinkel.Size      = new Size(360, 52);
+        btnWinkel.Size      = new Size(360, 44);
         btnWinkel.Font      = new Font("Segoe UI", 10.5F);
         btnWinkel.BackColor = Color.FromArgb(80, 50, 130);
         btnWinkel.ForeColor = Color.White;
@@ -162,8 +163,8 @@ partial class FormTestmessungen
         btnWinkel.Click    += btnWinkel_Click;
 
         btnLaser.Text      = "Laserpointer  EIN";
-        btnLaser.Location  = new Point(10, 222);
-        btnLaser.Size      = new Size(360, 52);
+        btnLaser.Location  = new Point(10, 212);
+        btnLaser.Size      = new Size(360, 44);
         btnLaser.Font      = new Font("Segoe UI", 10.5F);
         btnLaser.BackColor = Color.FromArgb(75, 60, 60);
         btnLaser.ForeColor = Color.White;
@@ -172,7 +173,18 @@ partial class FormTestmessungen
         btnLaser.Cursor    = Cursors.Hand;
         btnLaser.Click    += btnLaser_Click;
 
-        grpSteuerung.Controls.AddRange([btnMessung, btnModus, btnWinkel, btnLaser]);
+        btnSignal.Text      = "Signaltöne testen  (OK, dann Fehler)";
+        btnSignal.Location  = new Point(10, 264);
+        btnSignal.Size      = new Size(360, 44);
+        btnSignal.Font      = new Font("Segoe UI", 10.5F);
+        btnSignal.BackColor = Color.FromArgb(120, 90, 30);
+        btnSignal.ForeColor = Color.White;
+        btnSignal.FlatStyle = FlatStyle.Flat;
+        btnSignal.FlatAppearance.BorderColor = Color.FromArgb(95, 70, 20);
+        btnSignal.Cursor    = Cursors.Hand;
+        btnSignal.Click    += btnSignal_Click;
+
+        grpSteuerung.Controls.AddRange([btnMessung, btnModus, btnWinkel, btnLaser, btnSignal]);
 
         // ── GroupBox: Letzte Messung ──────────────────────────────────────────
         grpMesswerte.Text      = "Letzte Messung";
@@ -269,6 +281,7 @@ partial class FormTestmessungen
     private Button             btnModus;
     private Button             btnWinkel;
     private Button             btnLaser;
+    private Button             btnSignal;
     private GroupBox           grpMesswerte;
     private Label              lblHzLabel;
     private Label              lblHz;

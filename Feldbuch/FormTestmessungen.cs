@@ -38,6 +38,10 @@ public partial class FormTestmessungen : Form
 
     // ── Timer für Winkel-Dauerübertragung ─────────────────────────────────────
     private readonly System.Windows.Forms.Timer _winkelTimer = new() { Interval = 500 };
+
+    // Signaltest: Pause zwischen Erfolgs- und Fehlerton
+    private const int SIGNAL_TEST_PAUSE_MS = 2000;
+    private readonly System.Windows.Forms.Timer _signalTimer = new() { Interval = SIGNAL_TEST_PAUSE_MS };
     private bool _winkelAktiv = false;
 
     // ── Timer für Dosenlibelle Live ───────────────────────────────────────────
@@ -66,6 +70,7 @@ public partial class FormTestmessungen : Form
 
         TachymeterVerbindung.DatenEmpfangen += OnDatenEmpfangen;
         _winkelTimer.Tick  += WinkelTimer_Tick;
+        _signalTimer.Tick  += SignalTimer_Tick;
         _libelleTimer.Tick += LibelleTimer_Tick;
 
         AktualisiereStatus();
@@ -498,6 +503,56 @@ public partial class FormTestmessungen : Form
         }
     }
 
+    // ── Signaltöne testen ────────────────────────────────────────────────────
+    // Sendet erst BMM_BeepNormal (Erfolg: ein Ton), nach SIGNAL_TEST_PAUSE_MS
+    // BMM_BeepAlarm (Fehler: dreifacher Ton). Befehl und Antwort erscheinen im
+    // Rohdaten-Monitor; ein Fehlercode (GRC) zeigt, dass das Gerät den Befehl ablehnt.
+
+    private void btnSignal_Click(object? sender, EventArgs e)
+    {
+        if (!TachymeterVerbindung.IstVerbunden)
+        {
+            AppendFehler("[FEHLER] Kein Tachymeter verbunden.");
+            return;
+        }
+        if (_befehlsgeber is not GeoCOMBefehlsgeber)
+        {
+            AppendFehler("[FEHLER] Signaltöne am Instrument gibt es nur mit Leica GeoCOM.");
+            return;
+        }
+
+        try
+        {
+            btnSignal.Enabled = false;
+            AppendInfo("[INFO] Signaltest 1/2: Erfolgston (ein Piepton)");
+            SendeBefehl($"%R1Q,{GeoCOMParser.RPC_BMM_BeepNormal},0:", GeoCOMParser.RPC_BMM_BeepNormal);
+            _signalTimer.Start();
+        }
+        catch (Exception ex)
+        {
+            AppendFehler($"[FEHLER] {ex.Message}");
+            btnSignal.Enabled = true;
+        }
+    }
+
+    private void SignalTimer_Tick(object? sender, EventArgs e)
+    {
+        _signalTimer.Stop();
+        try
+        {
+            if (TachymeterVerbindung.IstVerbunden)
+            {
+                AppendInfo("[INFO] Signaltest 2/2: Fehlerton (dreifacher Piepton)");
+                SendeBefehl($"%R1Q,{GeoCOMParser.RPC_BMM_BeepAlarm},0:", GeoCOMParser.RPC_BMM_BeepAlarm);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendFehler($"[FEHLER] {ex.Message}");
+        }
+        btnSignal.Enabled = true;
+    }
+
     // ── Laserpointer ─────────────────────────────────────────────────────────
 
     private void btnLaser_Click(object? sender, EventArgs e)
@@ -739,6 +794,8 @@ public partial class FormTestmessungen : Form
         _winkelTimer.Dispose();
         _libelleTimer.Stop();
         _libelleTimer.Dispose();
+        _signalTimer.Stop();
+        _signalTimer.Dispose();
 
         if (_laserAn && TachymeterVerbindung.IstVerbunden)
         {
