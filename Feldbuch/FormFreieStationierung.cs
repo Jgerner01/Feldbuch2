@@ -18,7 +18,6 @@ public partial class FormFreieStationierung : Form
     public FormFreieStationierung()
     {
         InitializeComponent();
-        cmbSigma.SelectedIndex = RechenparameterManager.SigmaFaktor - 1;
         InitGrid();
         LadeAnschlusspunkte();   // automatisch aus DXF-Viewer-Picks
         AktualisiereNeuerStandpunktButton();
@@ -236,24 +235,17 @@ public partial class FormFreieStationierung : Form
         }
     }
 
-    private void cmbSigma_SelectedIndexChanged(object? sender, EventArgs e)
+    private void btnRechenparameter_Click(object? sender, EventArgs e)
     {
-        if (cmbSigma.SelectedIndex < 0) return;
-        RechenparameterManager.Params.SigmaFaktor = cmbSigma.SelectedIndex + 1;
-        RechenparameterManager.Save();
+        using var form = new FormRechenparameter();
+        if (form.ShowDialog(this) != DialogResult.OK) return;
 
-        // Alle Anzeigen mit dem neuen Faktor aktualisieren
+        // Anzeigen mit ggf. geändertem Sigma-Faktor aktualisieren
         var erg = StationsdatenManager.AktuellesErgebnis;
         if (erg != null)
             RechenparameterManager.SchreibeSigmaProjektdaten(erg.s0_mm);
         AktualisiereAutoMatchPanel();
         FormDxfViewer.AktiveInstanz?.AktualisiereSignallampe();
-    }
-
-    private void btnRechenparameter_Click(object? sender, EventArgs e)
-    {
-        using var form = new FormRechenparameter();
-        form.ShowDialog(this);
     }
 
     private void btnBerechnen_Click(object? sender, EventArgs e)

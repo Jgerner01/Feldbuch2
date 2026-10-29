@@ -30,7 +30,9 @@ partial class FormRechenparameter
         lblMassstabInfo   = new Label();
         grpBerechnungsModus  = new GroupBox();
         chkBerechnung3D      = new CheckBox();
-        btnOK             = new Button();
+        grpSigma             = new GroupBox();
+        cmbSigma             = new ComboBox();
+        btnOK            = new Button();
         btnAbbrechen      = new Button();
 
         ((System.ComponentModel.ISupportInitialize)nudWinkel).BeginInit();
@@ -40,7 +42,7 @@ partial class FormRechenparameter
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize    = new Size(420, 432);
+        ClientSize    = new Size(420, 528);
         Text          = "Rechenparameter – Freie Stationierung";
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Font;
@@ -171,9 +173,26 @@ partial class FormRechenparameter
 
         grpBerechnungsModus.Controls.Add(chkBerechnung3D);
 
+        // ── Gruppe: Standardabweichung (Ausgabe) ──────────────────────────────
+        grpSigma.Text     = "Ausgabe der Standardabweichung";
+        grpSigma.Font     = grpFont;
+        grpSigma.Location = new Point(14, 404);
+        grpSigma.Size     = new Size(392, 70);
+
+        cmbSigma.Location      = new Point(14, 28);
+        cmbSigma.Size          = new Size(250, 28);
+        cmbSigma.Font          = lblFont;
+        cmbSigma.DropDownStyle = ComboBoxStyle.DropDownList;
+        cmbSigma.Items.AddRange(new object[]
+        {
+            "einfach (1·s₀)", "doppelt (2·s₀)", "dreifach (3·s₀)"
+        });
+
+        grpSigma.Controls.Add(cmbSigma);
+
         // ── Buttons ───────────────────────────────────────────────────────────
         btnOK.Text      = "OK";
-        btnOK.Location  = new Point(200, 390);
+        btnOK.Location  = new Point(200, 486);
         btnOK.Size      = new Size(96, 32);
         btnOK.Font      = lblFont;
         btnOK.BackColor = Color.FromArgb(60, 100, 160);
@@ -182,14 +201,14 @@ partial class FormRechenparameter
         btnOK.Click    += btnOK_Click;
 
         btnAbbrechen.Text      = "Abbrechen";
-        btnAbbrechen.Location  = new Point(308, 390);
+        btnAbbrechen.Location  = new Point(308, 486);
         btnAbbrechen.Size      = new Size(100, 32);
         btnAbbrechen.Font      = lblFont;
         btnAbbrechen.Click    += btnAbbrechen_Click;
 
         Controls.AddRange(new Control[]
         {
-            grpFehlergrenzen, grpMassstab, grpBerechnungsModus, btnOK, btnAbbrechen
+            grpFehlergrenzen, grpMassstab, grpBerechnungsModus, grpSigma, btnOK, btnAbbrechen
         });
 
         ((System.ComponentModel.ISupportInitialize)nudWinkel).EndInit();
@@ -217,6 +236,8 @@ partial class FormRechenparameter
     private Label         lblMassstabInfo      = null!;
     private GroupBox      grpBerechnungsModus  = null!;
     private CheckBox      chkBerechnung3D      = null!;
+    private GroupBox      grpSigma             = null!;
+    private ComboBox      cmbSigma             = null!;
     private Button        btnOK             = null!;
     private Button        btnAbbrechen      = null!;
 }

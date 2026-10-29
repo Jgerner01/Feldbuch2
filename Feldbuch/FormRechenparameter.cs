@@ -17,6 +17,7 @@ public partial class FormRechenparameter : Form
         nudS0AutoMatch.Value = (decimal)p.FehlergrenzeMM_s0AutoMatch;
         chkFreierMassstab.Checked = p.FreierMassstab;
         chkBerechnung3D.Checked   = p.Berechnung3D;
+        cmbSigma.SelectedIndex    = Math.Clamp(p.SigmaFaktor, 1, 3) - 1;
     }
 
     private void btnOK_Click(object? sender, EventArgs e)
@@ -28,6 +29,7 @@ public partial class FormRechenparameter : Form
         p.FehlergrenzeMM_s0AutoMatch  = (double)nudS0AutoMatch.Value;
         p.FreierMassstab              = chkFreierMassstab.Checked;
         p.Berechnung3D                = chkBerechnung3D.Checked;
+        p.SigmaFaktor                 = cmbSigma.SelectedIndex + 1;
         RechenparameterManager.Save();
         DialogResult = DialogResult.OK;
     }

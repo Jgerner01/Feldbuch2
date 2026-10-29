@@ -16,8 +16,6 @@ partial class FormFreieStationierung
         txtStandpunkt       = new TextBox();
         lblInstHoehe        = new Label();
         nudInstHoehe        = new NumericUpDown();
-        lblSigma            = new Label();
-        cmbSigma            = new ComboBox();
         dgvPunkte           = new DataGridView();
         pnlAutoMatch        = new Panel();
         chkAutoMatch        = new CheckBox();
@@ -68,21 +66,6 @@ partial class FormFreieStationierung
         nudInstHoehe.DecimalPlaces = 3;
         nudInstHoehe.Increment     = 0.001m;
         nudInstHoehe.Value         = 1.500m;
-
-        lblSigma.Text     = "Standardabw.:";
-        lblSigma.Location = new Point(615, 22);
-        lblSigma.Size     = new Size(105, 24);
-        lblSigma.Font     = labelFont;
-
-        cmbSigma.Location      = new Point(722, 19);
-        cmbSigma.Size          = new Size(238, 28);
-        cmbSigma.Font          = new Font("Segoe UI", 10F);
-        cmbSigma.DropDownStyle = ComboBoxStyle.DropDownList;
-        cmbSigma.Items.AddRange(new object[]
-        {
-            "einfach (1·s₀)", "doppelt (2·s₀)", "dreifach (3·s₀)"
-        });
-        cmbSigma.SelectedIndexChanged += cmbSigma_SelectedIndexChanged;
 
         // ── Tabelle ───────────────────────────────────────────────────────────
         dgvPunkte.Location                   = new Point(20, 58);
@@ -193,7 +176,6 @@ partial class FormFreieStationierung
         {
             lblStandpunkt, txtStandpunkt,
             lblInstHoehe, nudInstHoehe,
-            lblSigma, cmbSigma,
             dgvPunkte,
             pnlAutoMatch,
             btnNeuerStandpunkt, btnPlatz1, btnPlatz2,
@@ -210,8 +192,6 @@ partial class FormFreieStationierung
     private TextBox        txtStandpunkt      = null!;
     private Label          lblInstHoehe       = null!;
     private NumericUpDown  nudInstHoehe       = null!;
-    private Label          lblSigma           = null!;
-    private ComboBox       cmbSigma           = null!;
     private DataGridView   dgvPunkte          = null!;
     private Panel          pnlAutoMatch       = null!;
     private CheckBox       chkAutoMatch       = null!;
