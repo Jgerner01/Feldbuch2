@@ -48,39 +48,64 @@ public partial class FormProjekt : Form
     }
 
     // ── "Neues Projekt anlegen" ───────────────────────────────────────────────
+    // Legt unter dem übergeordneten Ordner des aktuellen Projekts (ohne geladenes
+    // Projekt: neben der EXE) ein Verzeichnis mit dem eingegebenen Namen an und
+    // startet dort ein leeres Projekt.
     private void btnNeuAnlegen_Click(object? sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(txtName.Text))
+        string name = txtName.Text.Trim();
+        if (string.IsNullOrEmpty(name))
         {
             MessageBox.Show("Bitte zuerst einen Projektnamen eingeben.",
                 "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Information);
             txtName.Focus();
             return;
         }
-
-        using var dlg = new FolderBrowserDialog
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
-            Description            = "Übergeordnetes Verzeichnis für das neue Projekt wählen",
-            UseDescriptionForTitle = true,
-            ShowNewFolderButton    = true
-        };
-        if (dlg.ShowDialog(this) != DialogResult.OK) return;
+            MessageBox.Show("Der Projektname enthält ungültige Zeichen für einen Verzeichnisnamen.",
+                "Hinweis", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            txtName.Focus();
+            return;
+        }
 
-        string neuerPfad = Path.Combine(dlg.SelectedPath, txtName.Text.Trim());
+        string elternVerz = ErmittleElternVerzeichnis();
+        string neuerPfad  = Path.Combine(elternVerz, name);
+
+        if (Directory.Exists(neuerPfad))
+        {
+            MessageBox.Show(
+                $"Das Verzeichnis existiert bereits:{Environment.NewLine}{neuerPfad}{Environment.NewLine}{Environment.NewLine}" +
+                "Bitte einen anderen Namen wählen oder das vorhandene Projekt über „…“ und OK öffnen.",
+                "Neues Projekt", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            txtName.Focus();
+            return;
+        }
+
         try
         {
             Directory.CreateDirectory(neuerPfad);
+            ProjektManager.NeuesLeeresProjekt(name, neuerPfad);
         }
         catch (Exception ex)
         {
-            MessageBox.Show("Verzeichnis konnte nicht angelegt werden:\n" + ex.Message,
+            MessageBox.Show("Projekt konnte nicht angelegt werden:" + Environment.NewLine + ex.Message,
                 "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
-        txtVerzeichnis.Text = neuerPfad;
-        MessageBox.Show($"Verzeichnis angelegt:\n{neuerPfad}",
-            "Neues Projekt", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        DialogResult = DialogResult.OK;
+    }
+
+    /// <summary>Übergeordneter Ordner für neue Projekte.</summary>
+    private static string ErmittleElternVerzeichnis()
+    {
+        if (ProjektManager.IstGeladen)
+        {
+            string? eltern = Directory.GetParent(ProjektManager.ProjektVerzeichnis)?.FullName;
+            if (!string.IsNullOrEmpty(eltern) && Directory.Exists(eltern)) return eltern;
+        }
+        return AppPfade.Basis;
     }
 
     // ── OK ────────────────────────────────────────────────────────────────────

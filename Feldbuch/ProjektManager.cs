@@ -116,6 +116,25 @@ public static class ProjektManager
         Speichern();
     }
 
+    // ── Leeres neues Projekt anlegen ──────────────────────────────────────────
+    /// <summary>
+    /// Setzt das aktive Projekt und setzt alle projektbezogenen Zähler und
+    /// Merker zurück (Neupunkt-/Stationierungszähler, letzter Standpunkt, DXF-Zoom).
+    /// Geräte- und Anzeigeoptionen bleiben unverändert.
+    /// </summary>
+    public static void NeuesLeeresProjekt(string name, string verzeichnis)
+    {
+        NeupunktZaehler      = 1;
+        StationierungZaehler = 1;
+        LetzteStandpunktNr   = "";
+        InstrumentenHoehe    = 0.0;
+        _zoomDatei = "";
+        _zoomScale = 0;
+        _zoomPanX  = 0;
+        _zoomPanY  = 0;
+        SetProjekt(name, verzeichnis);
+    }
+
     // ── Letztes Projekt laden (beim Programmstart) ────────────────────────────
     public static void Laden()
     {

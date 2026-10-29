@@ -28,7 +28,7 @@ partial class FormProjekt
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(520, 310);
+        ClientSize      = new Size(520, 332);
         Text            = "Projekt";
         StartPosition   = FormStartPosition.CenterParent;
         AutoScaleMode   = AutoScaleMode.Font;
@@ -62,7 +62,7 @@ partial class FormProjekt
         grpAuswahl.Text     = "Projekt auswählen oder neu anlegen";
         grpAuswahl.Font     = grpFont;
         grpAuswahl.Location = new Point(14, 98);
-        grpAuswahl.Size     = new Size(492, 156);
+        grpAuswahl.Size     = new Size(492, 172);
 
         // Projektname
         lblName.Text     = "Projektname:";
@@ -84,20 +84,20 @@ partial class FormProjekt
 
         txtVerzeichnis.Font     = lblFont;
         txtVerzeichnis.Location = new Point(128, 70);
-        txtVerzeichnis.Size     = new Size(316, 26);
+        txtVerzeichnis.Size     = new Size(312, 26);
 
         btnBrowse.Text      = "…";
         btnBrowse.Font      = new Font("Segoe UI", 10F);
-        btnBrowse.Location  = new Point(450, 70);
-        btnBrowse.Size      = new Size(30, 26);
+        btnBrowse.Location  = new Point(446, 68);
+        btnBrowse.Size      = new Size(34, 30);
         btnBrowse.FlatStyle = FlatStyle.Flat;
         btnBrowse.Click    += btnBrowse_Click;
 
         // "Neues Projekt anlegen"
         btnNeuAnlegen.Text      = "Neues Projekt anlegen";
         btnNeuAnlegen.Font      = lblFont;
-        btnNeuAnlegen.Location  = new Point(12, 112);
-        btnNeuAnlegen.Size      = new Size(200, 32);
+        btnNeuAnlegen.Location  = new Point(12, 116);
+        btnNeuAnlegen.Size      = new Size(240, 40);
         btnNeuAnlegen.FlatStyle = FlatStyle.Flat;
         btnNeuAnlegen.BackColor = Color.FromArgb(60, 100, 160);
         btnNeuAnlegen.ForeColor = Color.White;
@@ -112,8 +112,8 @@ partial class FormProjekt
 
         // ── Buttons ───────────────────────────────────────────────────────────
         btnOK.Text      = "OK";
-        btnOK.Location  = new Point(290, 265);
-        btnOK.Size      = new Size(100, 32);
+        btnOK.Location  = new Point(262, 280);
+        btnOK.Size      = new Size(120, 40);
         btnOK.Font      = lblFont;
         btnOK.BackColor = Color.FromArgb(60, 130, 60);
         btnOK.ForeColor = Color.White;
@@ -121,8 +121,8 @@ partial class FormProjekt
         btnOK.Click    += btnOK_Click;
 
         btnAbbrechen.Text     = "Abbrechen";
-        btnAbbrechen.Location = new Point(404, 265);
-        btnAbbrechen.Size     = new Size(100, 32);
+        btnAbbrechen.Location = new Point(386, 280);
+        btnAbbrechen.Size     = new Size(120, 40);
         btnAbbrechen.Font     = lblFont;
         btnAbbrechen.Click   += btnAbbrechen_Click;
 
@@ -130,6 +130,16 @@ partial class FormProjekt
         {
             grpAktuell, grpAuswahl, btnOK, btnAbbrechen
         });
+
+        // Beschriftung aller Buttons mittig, ohne Innenabstand
+        foreach (var b in new[] { btnBrowse, btnNeuAnlegen, btnOK, btnAbbrechen })
+        {
+            b.TextAlign              = ContentAlignment.MiddleCenter;
+            b.Padding                = new Padding(0);
+            b.UseCompatibleTextRendering = false;
+        }
+        btnAbbrechen.FlatStyle = FlatStyle.Flat;
+        btnAbbrechen.FlatAppearance.BorderColor = Color.FromArgb(150, 150, 150);
 
         ResumeLayout(false);
     }
