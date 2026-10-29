@@ -100,17 +100,20 @@ public static class StationsdatenManager
     // ── Messung hinzufügen und sofort neu berechnen ───────────────────────────
 
     /// <summary>
-    /// Fügt einen Anschlusspunkt hinzu (oder aktualisiert ihn bei gleicher PunktNr)
-    /// und berechnet die Stationierung sofort neu.
-    /// Gibt das neue Ergebnis zurück, oder null wenn noch zu wenige Punkte.
+    /// Fügt eine Messung zum Anschlusspunkt-Datensatz hinzu und berechnet die Stationierung
+    /// sofort neu. Bestehende Messungen gleicher PunktNr bleiben erhalten – ein Punkt kann
+    /// mehrfach (z. B. in beiden Fernrohrlagen) in die Berechnung eingehen.
+    /// Gibt das neue Ergebnis zurück, oder null wenn noch zu wenige Messungen.
     /// </summary>
     public static StationierungsErgebnis? HinzufuegenUndBerechnen(
         StationierungsPunkt punkt)
     {
-        int idx = _aktiv.Messungen.FindIndex(p => p.PunktNr == punkt.PunktNr);
-        if (idx >= 0) _aktiv.Messungen[idx] = punkt;
-        else          _aktiv.Messungen.Add(punkt);
+        _aktiv.Messungen.Add(punkt);
+        return Neuberechnen();
+    }
 
+    private static StationierungsErgebnis? Neuberechnen()
+    {
         if (_aktiv.Messungen.Count < 2)
         {
             Speichern();
@@ -166,7 +169,7 @@ public static class StationsdatenManager
             Speichern();
             return null;
         }
-        return HinzufuegenUndBerechnen(_aktiv.Messungen.Last());   // Neuberechnung auslösen
+        return Neuberechnen();
     }
 
     // ── Ergebnis aus manueller Berechnung übernehmen ─────────────────────────
