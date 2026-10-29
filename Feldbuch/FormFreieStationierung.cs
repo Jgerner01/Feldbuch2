@@ -136,14 +136,60 @@ public partial class FormFreieStationierung : Form
 
         dgvPunkte.CurrentCell = dgvPunkte.Rows[e.RowIndex].Cells[e.ColumnIndex];
         var menu = new ContextMenuStrip();
-        menu.Items.Add($"Zeile '{pnr}' leeren", null, (_, __) => ZeileLeeren(e.RowIndex));
+        menu.Items.Add($"Zeile '{pnr}' entfernen", null, (_, __) => ZeileLeeren(e.RowIndex));
         menu.Show(dgvPunkte, dgvPunkte.PointToClient(Cursor.Position));
     }
 
     private void ZeileLeeren(int rowIdx)
     {
-        foreach (DataGridViewCell cell in dgvPunkte.Rows[rowIdx].Cells)
-            cell.Value = null;
+        // Zeile entfernen, Lücke schließen (leere Zeile hinten wieder anfügen)
+        dgvPunkte.Rows.RemoveAt(rowIdx);
+        while (dgvPunkte.Rows.Count < MAX_ROWS)
+            dgvPunkte.Rows.Add();
+
+        // Anschlusspunkte.csv (Quelle der Liste) und vorhandene Standpunkt-CSV neu schreiben
+        try
+        {
+            var zeilen = GridZeilen();
+            File.WriteAllLines(FormDxfViewer.AnschlusspunktePfad, zeilen, System.Text.Encoding.UTF8);
+
+            string spPfad = StandpunktCsvPfad();
+            if (File.Exists(spPfad))
+                File.WriteAllLines(spPfad, zeilen, System.Text.Encoding.UTF8);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Fehler beim Schreiben der CSV-Dateien: " + ex.Message,
+                "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private string StandpunktCsvPfad()
+    {
+        string standpunktNr = txtStandpunkt.Text.Trim();
+        string sicher = string.IsNullOrEmpty(standpunktNr)
+            ? "Unbekannt"
+            : string.Join("_", standpunktNr.Split(Path.GetInvalidFileNameChars()));
+        return ProjektManager.IstGeladen
+            ? ProjektManager.GetPfad($"Standpunkt-{sicher}.csv")
+            : Path.Combine(AppPfade.Basis, $"Standpunkt-{sicher}.csv");
+    }
+
+    // Header + alle belegten Gridzeilen als CSV-Zeilen
+    private List<string> GridZeilen()
+    {
+        var zeilen = new List<string> { "PunktNr,R,H,Hoehe,HZ,V,Strecke,Zielhoehe" };
+        foreach (DataGridViewRow row in dgvPunkte.Rows)
+        {
+            string? pnr = row.Cells[0].Value?.ToString();
+            if (string.IsNullOrWhiteSpace(pnr)) continue;
+
+            var werte = new string[8];
+            for (int j = 0; j < 8; j++)
+                werte[j] = row.Cells[j].Value?.ToString()?.Trim() ?? "";
+            zeilen.Add(string.Join(",", werte));
+        }
+        return zeilen;
     }
 
     private void btnTestdatenLaden_Click(object? sender, EventArgs e)
@@ -173,30 +219,8 @@ public partial class FormFreieStationierung : Form
 
     private void btnSpeichern_Click(object? sender, EventArgs e)
     {
-        string standpunktNr = txtStandpunkt.Text.Trim();
-        string sicher = string.IsNullOrEmpty(standpunktNr)
-            ? "Unbekannt"
-            : string.Join("_", standpunktNr.Split(Path.GetInvalidFileNameChars()));
-        string pfad = ProjektManager.IstGeladen
-            ? ProjektManager.GetPfad($"Standpunkt-{sicher}.csv")
-            : Path.Combine(AppPfade.Basis, $"Standpunkt-{sicher}.csv");
-
-        var zeilen = new List<string>
-        {
-            "PunktNr,R,H,Hoehe,HZ,V,Strecke,Zielhoehe"
-        };
-
-        foreach (DataGridViewRow row in dgvPunkte.Rows)
-        {
-            string? pnr = row.Cells[0].Value?.ToString();
-            if (string.IsNullOrWhiteSpace(pnr)) continue;
-
-            var werte = new string[8];
-            for (int j = 0; j < 8; j++)
-                werte[j] = row.Cells[j].Value?.ToString()?.Trim() ?? "";
-
-            zeilen.Add(string.Join(",", werte));
-        }
+        string pfad   = StandpunktCsvPfad();
+        var    zeilen = GridZeilen();
 
         try
         {
