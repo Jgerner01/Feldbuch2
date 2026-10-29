@@ -170,6 +170,12 @@ public partial class FormDxfViewer : Form
         // Ohne DXF-Daten und ohne Stationierung: lokales System (Standpunkt 0/0/0)
         _winkelTimer.Tick += WinkelTimer_Tick;
         _messWatchdog.Tick += MessWatchdog_Tick;
+
+        // Zoom auf Maßstab 1:1 begrenzen (1 m = 1 m auf dem Bildschirm)
+        float dpi = 96f;
+        try { using var gr = canvas.CreateGraphics(); dpi = gr.DpiX; } catch { }
+        canvas.MaxScale = dpi / 0.0254;
+
         AktualisiereLokalesSystem();
         // Erst nach dem Layout ist die Canvas-Größe für die Startansicht bekannt
         Shown += async (s, e) =>
@@ -428,7 +434,8 @@ public partial class FormDxfViewer : Form
         double hoehe  = canvas.Height > 0 ? canvas.Height : 600;
         canvas.PanX  = 0;
         canvas.PanY  = 0;
-        canvas.Scale = Math.Min(breite, hoehe) / (2 * radius);
+        canvas.Scale = Math.Min(Math.Min(breite, hoehe) / (2 * radius),
+                                canvas.MaxScale > 0 ? canvas.MaxScale : double.MaxValue);
         canvas.Invalidate();
     }
 
@@ -1657,7 +1664,8 @@ public partial class FormDxfViewer : Form
             var zoom = ProjektManager.LadeZoom(pfad);
             if (zoom.HasValue)
             {
-                canvas.Scale = zoom.Value.Scale;
+                canvas.Scale = canvas.MaxScale > 0
+                    ? Math.Min(zoom.Value.Scale, canvas.MaxScale) : zoom.Value.Scale;
                 canvas.PanX  = zoom.Value.PanX;
                 canvas.PanY  = zoom.Value.PanY;
                 canvas.Invalidate();

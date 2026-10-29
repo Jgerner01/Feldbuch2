@@ -101,25 +101,55 @@ public class OverlayZielrichtung : DxfEntity
     {
         if (!HzGon.HasValue || scale <= 0) return;
 
-        double hz  = HzGon.Value * GON2RAD;
-        double len = LaengePx / scale;                 // Länge in Weltkoordinaten
+        double hz = HzGon.Value * GON2RAD;
         var p0 = ts(0, 0);
-        var p1 = ts(len * Math.Sin(hz), len * Math.Cos(hz));
+        var pr = ts(Math.Sin(hz) / scale, Math.Cos(hz) / scale);   // 1 Pixel entlang der Richtung
+        double dx = pr.X - p0.X, dy = pr.Y - p0.Y;
+        double dl = Math.Sqrt(dx * dx + dy * dy);
+        if (dl < 1e-9) return;
+        dx /= dl; dy /= dl;                            // Einheitsvektor in Bildschirmpixeln
 
+        // Strahl auf den sichtbaren Bereich beschneiden: bei starkem Zoom liegt der
+        // Standpunkt weit außerhalb, GDI+ zeichnet Linien mit riesigen Koordinaten nicht.
+        var vis = g.VisibleClipBounds;
+        const float rand = 50f;
+        double xmin = vis.Left - rand, xmax = vis.Right + rand;
+        double ymin = vis.Top  - rand, ymax = vis.Bottom + rand;
+        double t0 = 0, t1 = double.MaxValue;
+        if (!ClipAchse(p0.X, dx, xmin, xmax, ref t0, ref t1)) return;
+        if (!ClipAchse(p0.Y, dy, ymin, ymax, ref t0, ref t1)) return;
+        if (t1 <= t0) return;
+
+        var a = new PointF((float)(p0.X + dx * t0), (float)(p0.Y + dy * t0));
+        var b = new PointF((float)(p0.X + dx * t1), (float)(p0.Y + dy * t1));
+
+        // Strichmuster in Pixel-Einheiten, Phase an Standpunkt gekoppelt (kein Wandern beim Pan)
+        const float strich = 6f, luecke = 4f;
         using var pen = new Pen(Farbe, LinienBreitePx)
         {
-            DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
+            DashPattern = new[] { strich / LinienBreitePx, luecke / LinienBreitePx },
+            DashOffset  = (float)((t0 % (strich + luecke)) / LinienBreitePx)
         };
-        g.DrawLine(pen, p0, p1);
+        g.DrawLine(pen, a, b);
 
-        // Winkelanzeige ein Stück entlang der Linie
-        double dx = p1.X - p0.X, dy = p1.Y - p0.Y;
-        double l  = Math.Sqrt(dx * dx + dy * dy);
-        if (l < 1e-6) return;
-        float tx = p0.X + (float)(dx / l * TextAbstandPx);
-        float ty = p0.Y + (float)(dy / l * TextAbstandPx);
+        // Winkelanzeige ein Stück entlang der sichtbaren Linie
+        double tText = Math.Min(Math.Max(t0, 0) + TextAbstandPx, t1);
+        float tx = (float)(p0.X + dx * tText);
+        float ty = (float)(p0.Y + dy * tText);
         using var fnt   = new Font("Consolas", SchriftPx, FontStyle.Bold, GraphicsUnit.Pixel);
         using var brush = new SolidBrush(Farbe);
         g.DrawString($"Hz {HzGon.Value:F4}", fnt, brush, tx + 4f, ty - SchriftPx - 2f);
+    }
+
+    // Liang-Barsky für eine Achse: schränkt [t0,t1] auf p + d*t ∈ [min,max] ein
+    private static bool ClipAchse(double p, double d, double min, double max,
+        ref double t0, ref double t1)
+    {
+        if (Math.Abs(d) < 1e-12) return p >= min && p <= max;
+        double ta = (min - p) / d, tb = (max - p) / d;
+        if (ta > tb) (ta, tb) = (tb, ta);
+        t0 = Math.Max(t0, ta);
+        t1 = Math.Min(t1, tb);
+        return t1 > t0;
     }
 }
