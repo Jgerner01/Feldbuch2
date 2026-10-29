@@ -1976,11 +1976,7 @@ public partial class FormDxfViewer : Form
             foreach (var line in File.ReadAllLines(AnschlusspunktePfad).Skip(1))
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
-                var parts = line.Split(',');
-                if (parts.Length > 0 &&
-                    string.Equals(parts[0].Trim(), p.PunktNr, StringComparison.Ordinal))
-                    continue;
-                zeilen.Add(line);
+                zeilen.Add(line);   // gleiche PunktNr bleibt erhalten (Mehrfachmessung)
             }
         }
         zeilen.Add(string.Join(",", new[]

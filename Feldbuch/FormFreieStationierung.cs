@@ -4,7 +4,7 @@ using System.Globalization;
 
 public partial class FormFreieStationierung : Form
 {
-    private const int MAX_ROWS = 15;
+    private const int MAX_ROWS = 40;
     private static readonly CultureInfo IC = CultureInfo.InvariantCulture;
 
     // ── Auto-Match-Zustand ────────────────────────────────────────────────────
