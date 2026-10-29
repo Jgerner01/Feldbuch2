@@ -48,6 +48,7 @@ public class GsiOnlineBefehlsgeber : ITachymeterBefehlsgeber
 
     // ── Winkel-Momentanwert (kein EDM, für Live-Anzeige) ─────────────────────
     public string? WinkelBefehl() => "GET/I/WI21/WI22";
+    public string? HzWinkelBefehl() => "GET/I/WI21";   // nur Hz für die Zielrichtungs-Animation
     public int     WinkelRpc     => 0;
 
     // ── Kompensator (nicht verfügbar über GSI Online) ──────────────────────────

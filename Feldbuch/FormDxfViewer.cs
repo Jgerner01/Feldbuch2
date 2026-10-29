@@ -467,7 +467,7 @@ public partial class FormDxfViewer : Form
             return;
 
         var bg  = TachymeterBefehlsgeberFactory.Erstellen(TachymeterVerbindung.Modell);
-        var cmd = bg.UnterstueztWinkelLive ? bg.WinkelBefehl() : null;
+        var cmd = bg.UnterstueztWinkelLive ? bg.HzWinkelBefehl() : null;   // nur Hz
         if (cmd == null) return;
 
         try
@@ -662,6 +662,7 @@ public partial class FormDxfViewer : Form
     private void StarteMessung()
     {
         _messungAusstehend = false;
+        _winkelTimer.Stop();   // keine Hz-Abfragen während der Messung (Neustart in MessungAbschliessen)
         try
         {
             btnMessung.Enabled = false;

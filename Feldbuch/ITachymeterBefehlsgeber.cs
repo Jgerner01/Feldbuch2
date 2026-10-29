@@ -47,6 +47,12 @@ public interface ITachymeterBefehlsgeber
     /// <summary>Befehl für Winkelabfrage (Dauerübertragung). Null = nicht unterstützt.</summary>
     string? WinkelBefehl();
 
+    /// <summary>
+    /// Befehl für die Live-Anzeige der Zielrichtung: nur der Horizontalwinkel Hz
+    /// (kleinere Antwort, weniger Datenverkehr). Standard: wie <see cref="WinkelBefehl"/>.
+    /// </summary>
+    string? HzWinkelBefehl() => WinkelBefehl();
+
     /// <summary>Befehl für Libellen-/Kompensatorabfrage. Null = nicht unterstützt.</summary>
     string? LibelleBefehl();
 
