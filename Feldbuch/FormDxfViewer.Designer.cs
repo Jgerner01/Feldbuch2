@@ -267,9 +267,9 @@ partial class FormDxfViewer
         pnlTop.Resize += (s, e) => PositioniereToolbarFelder();
         Load          += (s, e) => PositioniereToolbarFelder();
 
-        // ══ Statusleiste unten (28px) ═════════════════════════════════════════
+        // ══ Statusleiste unten (40px) ═════════════════════════════════════════
         pnlStatus.Dock      = DockStyle.Bottom;
-        pnlStatus.Height    = 28;
+        pnlStatus.Height    = 40;
         pnlStatus.BackColor = Color.FromArgb(210, 213, 222);
 
         lblStatus.Text      = "DXF-Datei öffnen …";
@@ -284,15 +284,15 @@ partial class FormDxfViewer
         flpLayers.AutoScroll    = false;
         flpLayers.WrapContents  = false;
         flpLayers.FlowDirection = FlowDirection.LeftToRight;
-        flpLayers.Padding       = new Padding(4, 5, 0, 0);
+        flpLayers.Padding       = new Padding(4, 8, 0, 0);
         flpLayers.BackColor     = Color.FromArgb(210, 213, 222);
 
         pnlStatus.Controls.Add(flpLayers);
         pnlStatus.Controls.Add(lblStatus);
 
-        // ══ Seitenleiste rechts (42px) ════════════════════════════════════════
+        // ══ Seitenleiste rechts (46px, gleiche Stärke wie Toolbar oben) ════════════════════════════════════════
         pnlSide.Dock      = DockStyle.Right;
-        pnlSide.Width     = 42;
+        pnlSide.Width     = 46;
         pnlSide.BackColor = Color.FromArgb(52, 56, 70);
 
         var fntIco  = new Font("Segoe UI", 12F, FontStyle.Bold);
@@ -429,7 +429,7 @@ partial class FormDxfViewer
     {
         b.Text      = text;
         b.Size      = new Size(size, size);
-        b.Location  = new Point(3, y);
+        b.Location  = new Point(5, y);
         b.Font      = font;
         b.FlatStyle = FlatStyle.Flat;
         b.BackColor = back;

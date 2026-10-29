@@ -6,6 +6,9 @@ public partial class Form1 : Form
     {
         InitializeComponent();
 
+        // Programmicon aus der EXE übernehmen (Fenster und Taskleiste)
+        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+
         // Letztes Projekt aus Einstellungen.xml laden
         ProjektManager.Laden();
 

@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Version>1.9.5</Version>
+    <ApplicationIcon>icons\feldbuch.ico</ApplicationIcon>
     <Authors>Johann Gerner</Authors>
     <Company>Johann Gerner</Company>
     <Copyright>© 2026 Johann Gerner</Copyright>
