@@ -243,9 +243,29 @@ public partial class FormErgebnis : Form
     // Grün:  |v| ≤ (Fehlergrenze − 1)
     // Gelb:  |v| ∈ (Fehlergrenze − 1 … Fehlergrenze + 5]
     // Rot:   |v| > (Fehlergrenze + 5)
+    public static bool IstGruen(double absVal, double limit) => absVal <= limit - 1.0;
+
+    /// <summary>
+    /// Gültige Berechnung: mindestens 3 Winkel- und 3 Streckenresiduen sind "grün".
+    /// </summary>
+    public static bool IstGueltigeBerechnung(StationierungsErgebnis? erg)
+    {
+        if (erg == null) return false;
+        var par = RechenparameterManager.Params;
+        int winkel = 0, strecken = 0;
+        foreach (var r in erg.Residuen)
+        {
+            if (r.RichtungAktiv && !double.IsNaN(r.vWinkel_cc)
+                && IstGruen(Math.Abs(r.vWinkel_cc), par.FehlergrenzCC_Winkel)) winkel++;
+            if (r.StreckeAktiv && !double.IsNaN(r.vStrecke_mm)
+                && IstGruen(Math.Abs(r.vStrecke_mm), par.FehlergrenzeMM_Strecke)) strecken++;
+        }
+        return winkel >= 3 && strecken >= 3;
+    }
+
     static void AmpelFarbe(DataGridViewCell cell, double absVal, double limit)
     {
-        if (absVal <= limit - 1.0)
+        if (IstGruen(absVal, limit))
             cell.Style.BackColor = Color.FromArgb(180, 230, 160);   // grün
         else if (absVal <= limit + 5.0)
             cell.Style.BackColor = Color.FromArgb(255, 230, 100);   // gelb

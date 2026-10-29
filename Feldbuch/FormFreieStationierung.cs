@@ -126,6 +126,10 @@ public partial class FormFreieStationierung : Form
 
         dgvPunkte.Rows.Add(MAX_ROWS);
         dgvPunkte.CellMouseClick += DgvPunkte_CellMouseClick;
+
+        // Gültigkeit verfällt, sobald die Punktdaten geändert werden
+        btnSpeichern.Enabled = false;
+        dgvPunkte.CellValueChanged += (_, __) => btnSpeichern.Enabled = false;
     }
 
     private void DgvPunkte_CellMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
@@ -314,6 +318,9 @@ public partial class FormFreieStationierung : Form
 
             // Panel nach Berechnungsdialog aktualisieren (FormErgebnis kann s0 verfeinert haben)
             AktualisiereAutoMatchPanel();
+
+            // Speichern erst bei gültiger Berechnung (≥ 3 grüne Winkel und ≥ 3 grüne Strecken)
+            btnSpeichern.Enabled = FormErgebnis.IstGueltigeBerechnung(StationsdatenManager.AktuellesErgebnis);
 
             // Fehlerellipsen im DXF-Viewer aktualisieren (FormErgebnis kann Residuen geändert haben)
             var finalErg = StationsdatenManager.AktuellesErgebnis;
