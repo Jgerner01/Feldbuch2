@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="Feldbuch/Feldbuch.csproj" />
+  <Project Path="Feldbuch.Tests/Feldbuch.Tests.csproj" />
   <Project Path="Feldbuch Universal/Feldbuch Universal.csproj" />
 </Solution>

@@ -45,7 +45,7 @@ public class StationierungsPunkt
     public double Zielhoehe { get; set; }   // Zielhöhe [m]
 }
 
-public class PunktResidum
+public class PunktResiduum
 {
     public string PunktNr      { get; set; } = "";
     public double StreckeH     { get; set; }   // Horizontalstrecke [m]
@@ -72,7 +72,7 @@ public class StationierungsErgebnis
     public bool   Konvergiert        { get; set; }
     public bool   Berechnung3D       { get; set; } = true;
     public string WarnungHoehe       { get; set; } = "";
-    public List<PunktResidum> Residuen { get; set; } = new();
+    public List<PunktResiduum> Residuen { get; set; } = new();
 }
 
 public static class FreieStationierungRechner
@@ -247,7 +247,7 @@ public static class FreieStationierungRechner
         }
 
         // ── Schritt 5: Residuen zusammenstellen ──────────────────────────────
-        var residuen = new List<PunktResidum>();
+        var residuen = new List<PunktResiduum>();
         for (int i = 0; i < n; i++)
         {
             double s0_i  = Math.Sqrt(Math.Pow(punkte[i].R - R_FS, 2) +
@@ -265,7 +265,7 @@ public static class FreieStationierungRechner
                 vH_mm = (hStation - hMittel) * 1000.0;
             }
 
-            residuen.Add(new PunktResidum
+            residuen.Add(new PunktResiduum
             {
                 PunktNr        = punkte[i].PunktNr,
                 StreckeH       = dh[i],

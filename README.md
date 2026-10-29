@@ -24,7 +24,7 @@
 - Live-Stationierungsberechnung im DXF-Viewer mit Signallampe (grün/gelb/rot)
 - Residual-Overlay im DXF-Viewer
 
-### Punktfinder – automatische Punktidentifikation *(neu in v1.9.3)*
+### Punktfinder – automatische Punktidentifikation *(seit v1.9.3)*
 - **Handbetrieb**: DXF-Punkt anklicken + aktuelle Tachymetermessung (automatisch vorausgefüllt) → `Anschlusspunkte.csv`
 - **Auto-Match**: sobald eine brauchbare Stationierung vorliegt (s₀ ≤ 20 mm, Redundanz > 0), wird jede neue Messung automatisch einem DXF-Punkt zugeordnet
   - Positionsvorhersage aus Station + Messung (Hz, V, D) mit Maßstabskorrektur
@@ -88,10 +88,12 @@
 
 ## Version
 
-Aktuelle Version: **v1.9.3**
+Aktuelle Version: **v1.9.5**
 
 | Version | Inhalt |
 |---|---|
+| v1.9.5 | DXF-Export/-Viewer erweitert, PunktFinder verbessert, Aufnahmetest-Dokumentation |
+| v1.9.4 | Freie Stationierung, DXF-Viewer und Anschlusspunkt verbessert |
 | v1.9.3 | Punktfinder – automatische Punktidentifikation für Freie Stationierung |
 | v1.9.2 | Leica TPS300 GSI Online-Protokoll |
 | v1.9.1 | Schnurgerüst neu, Koordinatentransformation Duplikat-Fix |

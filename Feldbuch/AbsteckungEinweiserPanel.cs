@@ -46,7 +46,7 @@ public class AbsteckungEinweiserPanel : UserControl
     }
 
     // ── Layout ────────────────────────────────────────────────────────────────
-    private void InitLayout()
+    private new void InitLayout()
     {
         var lf  = new Font("Segoe UI", 9F);
         var lfB = new Font("Segoe UI", 9.5F, FontStyle.Bold);

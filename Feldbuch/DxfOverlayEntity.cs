@@ -321,14 +321,14 @@ public class OverlayGemessenerNeupunkt : DxfEntity
 // proportional zum Residuum ist.  Tooltip zeigt Werte.
 public class OverlayResidualPunkt : DxfEntity
 {
-    public PunktResidum Residuum { get; }
+    public PunktResiduum Residuum { get; }
     public double WX { get; }
     public double WY { get; }
 
     private readonly Color _farbe;
     private readonly float _radius;
 
-    public OverlayResidualPunkt(PunktResidum res, double wx, double wy)
+    public OverlayResidualPunkt(PunktResiduum res, double wx, double wy)
     {
         Residuum = res;
         WX       = wx;
