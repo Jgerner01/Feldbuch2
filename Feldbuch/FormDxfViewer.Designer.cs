@@ -53,6 +53,7 @@ partial class FormDxfViewer
         btnFreieStationierung   = new Button();
         pnlStatus           = new Panel();
         lblStatus           = new Label();
+        lblSystem           = new Label();
         flpLayers           = new FlowLayoutPanel();
 
         SuspendLayout();
@@ -287,7 +288,19 @@ partial class FormDxfViewer
         flpLayers.Padding       = new Padding(4, 8, 0, 0);
         flpLayers.BackColor     = Color.FromArgb(210, 213, 222);
 
+        // Rechts in der Statuszeile: Hinweis auf das lokale Koordinatensystem
+        lblSystem.Text      = "Lokales System";
+        lblSystem.Dock      = DockStyle.Right;
+        lblSystem.AutoSize  = false;
+        lblSystem.Width     = 140;
+        lblSystem.Font      = new Font("Segoe UI", 9F, FontStyle.Bold);
+        lblSystem.ForeColor = Color.FromArgb(160, 40, 20);
+        lblSystem.TextAlign = ContentAlignment.MiddleRight;
+        lblSystem.Padding   = new Padding(0, 0, 8, 0);
+        lblSystem.Visible   = false;
+
         pnlStatus.Controls.Add(flpLayers);
+        pnlStatus.Controls.Add(lblSystem);
         pnlStatus.Controls.Add(lblStatus);
 
         // ══ Seitenleiste rechts (46px, gleiche Stärke wie Toolbar oben) ════════════════════════════════════════
@@ -481,5 +494,6 @@ partial class FormDxfViewer
     private Button           btnFreieStationierung   = null!;
     private Panel            pnlStatus           = null!;
     private Label            lblStatus           = null!;
+    private Label            lblSystem           = null!;
     private FlowLayoutPanel  flpLayers           = null!;
 }

@@ -79,7 +79,7 @@ public static class NeupunktRechner
         double h = station.H + dH;
 
         // Höhe (nur bei 3D-Stationierung mit gültiger Standpunkthöhe)
-        bool ist3D  = station.Berechnung3D && station.Hoehe != 0;
+        bool ist3D  = station.Berechnung3D && (station.Hoehe != 0 || station.IstLokalesSystem);
         double hoehe = 0.0;
         if (ist3D)
         {

@@ -71,6 +71,8 @@ public class StationierungsErgebnis
     public int    Iterationen        { get; set; }
     public bool   Konvergiert        { get; set; }
     public bool   Berechnung3D       { get; set; } = true;
+    /// <summary>True = lokales System ohne DXF: Standpunkt R=0/H=0/Höhe=0, Orientierung 0 gon.</summary>
+    public bool   IstLokalesSystem   { get; set; }
     public string WarnungHoehe       { get; set; } = "";
     public List<PunktResiduum> Residuen { get; set; } = new();
 }
