@@ -93,15 +93,15 @@ public partial class FormErgebnis : Form
               (erg.Konvergiert ? "  (konvergiert)" : "  !! NICHT konvergiert !!");
 
         // ── Residuen in Tabelle schreiben ─────────────────────────────────────
-        var resDict = erg.Residuen.ToDictionary(r => r.PunktNr);
-        var p       = RechenparameterManager.Params;
+        // Residuen sind index-gleich zu den Punkten (PunktNr kann mehrfach vorkommen)
+        var p = RechenparameterManager.Params;
 
         for (int i = 0; i < dgvResiduen.Rows.Count; i++)
         {
-            var    row = dgvResiduen.Rows[i];
-            string pNr = _allePunkte[i].PunktNr;
+            var row = dgvResiduen.Rows[i];
+            var res = i < erg.Residuen.Count ? erg.Residuen[i] : null;
 
-            if (resDict.TryGetValue(pNr, out var res))
+            if (res != null)
             {
                 row.Cells["StreckeH"].Value = $"{res.StreckeH:F3}";
 

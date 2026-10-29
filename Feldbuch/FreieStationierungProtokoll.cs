@@ -112,13 +112,12 @@ public static class FreieStationierungProtokoll
         bool[]                    aktHoe)
     {
         var ic      = System.Globalization.CultureInfo.InvariantCulture;
-        var resDict = erg.Residuen.ToDictionary(r => r.PunktNr);
-        var zeilen  = new List<Dictionary<string, string>>();
+        var zeilen = new List<Dictionary<string, string>>();
 
         for (int i = 0; i < punkte.Count; i++)
         {
-            var p = punkte[i];
-            resDict.TryGetValue(p.PunktNr, out var res);
+            var p   = punkte[i];
+            var res = i < erg.Residuen.Count ? erg.Residuen[i] : null;   // index-gleich, PunktNr kann doppelt sein
 
             // Aktivierungs-Marker (*) falls eine Beobachtung deaktiviert ist
             bool inaktiv = !aktHz[i] || !aktStr[i] || !aktHoe[i];
