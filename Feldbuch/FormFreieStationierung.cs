@@ -319,7 +319,7 @@ public partial class FormFreieStationierung : Form
             // Panel nach Berechnungsdialog aktualisieren (FormErgebnis kann s0 verfeinert haben)
             AktualisiereAutoMatchPanel();
 
-            // Speichern erst bei gültiger Berechnung (≥ 3 grüne Winkel und ≥ 3 grüne Strecken)
+            // Speichern erst bei gültiger Berechnung (≥ 3 grüne Quer- und ≥ 3 grüne Längsabweichungen)
             btnSpeichern.Enabled = FormErgebnis.IstGueltigeBerechnung(StationsdatenManager.AktuellesErgebnis);
 
             // Fehlerellipsen im DXF-Viewer aktualisieren (FormErgebnis kann Residuen geändert haben)

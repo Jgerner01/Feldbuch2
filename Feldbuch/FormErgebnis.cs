@@ -246,21 +246,21 @@ public partial class FormErgebnis : Form
     public static bool IstGruen(double absVal, double limit) => absVal <= limit - 1.0;
 
     /// <summary>
-    /// Gültige Berechnung: mindestens 3 Winkel- und 3 Streckenresiduen sind "grün".
+    /// Gültige Berechnung: mindestens 3 Quer- und 3 Längsresiduen sind "grün".
     /// </summary>
     public static bool IstGueltigeBerechnung(StationierungsErgebnis? erg)
     {
         if (erg == null) return false;
         var par = RechenparameterManager.Params;
-        int winkel = 0, strecken = 0;
+        int quer = 0, laengs = 0;
         foreach (var r in erg.Residuen)
         {
-            if (r.RichtungAktiv && !double.IsNaN(r.vWinkel_cc)
-                && IstGruen(Math.Abs(r.vWinkel_cc), par.FehlergrenzCC_Winkel)) winkel++;
+            if (r.RichtungAktiv && !double.IsNaN(r.vQuer_mm)
+                && IstGruen(Math.Abs(r.vQuer_mm), par.FehlergrenzeMM_Strecke)) quer++;
             if (r.StreckeAktiv && !double.IsNaN(r.vStrecke_mm)
-                && IstGruen(Math.Abs(r.vStrecke_mm), par.FehlergrenzeMM_Strecke)) strecken++;
+                && IstGruen(Math.Abs(r.vStrecke_mm), par.FehlergrenzeMM_Strecke)) laengs++;
         }
-        return winkel >= 3 && strecken >= 3;
+        return quer >= 3 && laengs >= 3;
     }
 
     static void AmpelFarbe(DataGridViewCell cell, double absVal, double limit)
