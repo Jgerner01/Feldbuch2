@@ -21,14 +21,7 @@ public partial class FormTestmessungen : Form
     private GeoCOMParser            _geocomParser;  // Instanz für Kontext-Tracking (GeoCOM)
 
     // ── EDM-Modus (GeoCOM) ────────────────────────────────────────────────────
-    private enum MessModus { Prisma, ReflektorlosKurz, ReflektorlosLang }
-    private MessModus _messModus = MessModus.Prisma;
-
-    private const int BAP_REFL_USE  = 0;
-    private const int BAP_REFL_LESS = 1;
-    private const int EDM_SINGLE_PRISM = 3;
-    private const int EDM_SINGLE_RL_K  = 5;
-    private const int EDM_SINGLE_RL_L  = 11;
+    // Der Messmodus liegt zentral in TachymeterKonfiguration (gilt für alle Messfenster).
 
     // ── Laserpointer ─────────────────────────────────────────────────────────
     private bool _laserAn = false;
@@ -71,6 +64,9 @@ public partial class FormTestmessungen : Form
         TachymeterVerbindung.DatenEmpfangen += OnDatenEmpfangen;
         _winkelTimer.Tick  += WinkelTimer_Tick;
         _signalTimer.Tick  += SignalTimer_Tick;
+        TachymeterKonfiguration.Geaendert   += OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen += OnKonfigurationAbgeglichen;
+        Shown += async (_, __) => await TachymeterKonfiguration.AbgleichenAsync();
         _libelleTimer.Tick += LibelleTimer_Tick;
 
         AktualisiereStatus();
@@ -309,6 +305,12 @@ public partial class FormTestmessungen : Form
     {
         if (_messungZustand != MessungZustand.Bereit) return;
 
+        if (TachymeterKonfiguration.Beschaeftigt)
+        {
+            AppendInfo("[INFO] Gerätekonfiguration wird abgeglichen – bitte kurz warten.");
+            return;
+        }
+
         if (!TachymeterVerbindung.IstVerbunden)
         {
             AppendFehler("[FEHLER] Kein Tachymeter verbunden.");
@@ -369,48 +371,32 @@ public partial class FormTestmessungen : Form
 
     // ── EDM-Modus umschalten (GeoCOM) ─────────────────────────────────────────
 
-    private void btnModus_Click(object? sender, EventArgs e)
+    private async void btnModus_Click(object? sender, EventArgs e)
     {
-        _messModus = _messModus switch
-        {
-            MessModus.Prisma           => MessModus.ReflektorlosKurz,
-            MessModus.ReflektorlosKurz => MessModus.ReflektorlosLang,
-            _                          => MessModus.Prisma
-        };
+        TachymeterKonfiguration.SetzeModus(TachymeterKonfiguration.Weiterschalten(dreiStufig: true));
 
         if (TachymeterVerbindung.IstVerbunden && _befehlsgeber.UnterstueztEdmModus)
-        {
-            try
-            {
-                int zieltyp  = _messModus == MessModus.Prisma ? BAP_REFL_USE : BAP_REFL_LESS;
-                int edmModus = _messModus switch
-                {
-                    MessModus.ReflektorlosKurz => EDM_SINGLE_RL_K,
-                    MessModus.ReflektorlosLang => EDM_SINGLE_RL_L,
-                    _                          => EDM_SINGLE_PRISM
-                };
-
-                var befehle = _befehlsgeber.EdmModusBefehle(zieltyp, edmModus);
-                if (befehle != null)
-                {
-                    SendeBefehl(befehle[0], GeoCOMParser.RPC_BAP_SetTargetType);
-                    if (befehle.Length > 1)
-                        SendeBefehl(befehle[1], GeoCOMParser.RPC_TMC_SetEdmMode);
-                }
-            }
-            catch (Exception ex) { AppendFehler($"[FEHLER] {ex.Message}"); }
-        }
+            await TachymeterKonfiguration.AbgleichenAsync(erzwingen: true);
         else
-        {
             AppendInfo("[INFO] Modus lokal geändert (kein Gerät verbunden oder Funktion nicht unterstützt).");
-        }
+    }
 
+    private void OnKonfigurationGeaendert()
+    {
+        if (InvokeRequired) { BeginInvoke(OnKonfigurationGeaendert); return; }
         AktualisiereModusButton();
+    }
+
+    private void OnKonfigurationAbgeglichen(AbgleichErgebnis ergebnis)
+    {
+        if (InvokeRequired) { BeginInvoke(() => OnKonfigurationAbgeglichen(ergebnis)); return; }
+        if (ergebnis.Ok) AppendInfo("[INFO] " + ergebnis.Text);
+        else             AppendFehler("[FEHLER] " + ergebnis.Text);
     }
 
     private void AktualisiereModusButton()
     {
-        switch (_messModus)
+        switch (TachymeterKonfiguration.Modus)
         {
             case MessModus.Prisma:
                 btnModus.Text      = "Modus: Prisma / Reflektor  →  weiter: RL Kurz";
@@ -803,6 +789,8 @@ public partial class FormTestmessungen : Form
         }
 
         TachymeterVerbindung.DatenEmpfangen -= OnDatenEmpfangen;
+        TachymeterKonfiguration.Geaendert   -= OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen -= OnKonfigurationAbgeglichen;
         base.OnFormClosing(e);
     }
 }

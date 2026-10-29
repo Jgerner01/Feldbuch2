@@ -53,10 +53,7 @@ public partial class FormDxfViewer : Form
     private readonly StringBuilder _zeilenPuffer = new();
 
     // ── EDM / Laser-Zustand ───────────────────────────────────────────────────
-    private bool    _edmIstPrisma        = true;   // false = Reflektorlos
     private bool    _laserAktiv          = false;
-    private decimal _prismaKonstante_mm  = 0m;     // Letzte Auswahl aus FormPrismenkonstante
-    private string  _prismaName          = "GPR1 Standard";
 
     // Punktnummer-Auto-Increment
     private int _neupunktZaehler;
@@ -84,6 +81,11 @@ public partial class FormDxfViewer : Form
     private bool _winkelPausiert;
     // Messung ist ausgelöst und wartet auf das Ende einer noch laufenden Winkelabfrage
     private bool _messungAusstehend;
+
+    // Zeitüberwachung: bleibt eine Antwort des Tachymeters aus, wird die Messung
+    // abgebrochen (die Folgeschritte nach der Strecke sind mehrere Anfragen).
+    private const int MESS_TIMEOUT_MS = 20000;
+    private readonly System.Windows.Forms.Timer _messWatchdog = new() { Interval = MESS_TIMEOUT_MS };
 
     // ── Digitalisier-Modus ────────────────────────────────────────────────────
     private bool         _digitalisiermodus  = false;
@@ -143,6 +145,8 @@ public partial class FormDxfViewer : Form
 
         // TachymeterVerbindung anschließen
         TachymeterVerbindung.DatenEmpfangen += OnTachymeterDaten;
+        TachymeterKonfiguration.Geaendert   += OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen += OnKonfigurationAbgeglichen;
 
         // Manager initialisieren
         ImportPunkteManager.Initialize(ProjektManager.GetPfad("ImportPunkte.json"));
@@ -165,9 +169,14 @@ public partial class FormDxfViewer : Form
 
         // Ohne DXF-Daten und ohne Stationierung: lokales System (Standpunkt 0/0/0)
         _winkelTimer.Tick += WinkelTimer_Tick;
+        _messWatchdog.Tick += MessWatchdog_Tick;
         AktualisiereLokalesSystem();
         // Erst nach dem Layout ist die Canvas-Größe für die Startansicht bekannt
-        Shown += (s, e) => { if (_lokalesSystem) ZeigeLokalesSystem(); };
+        Shown += async (s, e) =>
+        {
+            if (_lokalesSystem) ZeigeLokalesSystem();
+            await TachymeterKonfiguration.AbgleichenAsync();   // Gerät auf die gespeicherte Einstellung bringen
+        };
 
         if (!_lokalesSystem && !ProjektManager.HatDxfDatei
             && (canvas.OverlayEntities.Count > 0 || canvas.ImportLayers.Count > 0
@@ -445,7 +454,8 @@ public partial class FormDxfViewer : Form
             return;
         }
 
-        if (_winkelPausiert || !_lokalesSystem || _messungZustand != MessungZustand.Bereit
+        if (_winkelPausiert || TachymeterKonfiguration.Beschaeftigt
+            || !_lokalesSystem || _messungZustand != MessungZustand.Bereit
             || !TachymeterVerbindung.IstVerbunden || WinkelAntwortOffen)
             return;
 
@@ -531,38 +541,35 @@ public partial class FormDxfViewer : Form
     }
 
     // ── EDM-Modus umschalten: Prisma ↔ Reflektorlos ─────────────────────────
-    private void btnEdmToggle_Click(object? sender, EventArgs e)
+    // Die Einstellung gilt für alle Messfenster (TachymeterKonfiguration) und
+    // wird mit dem Gerät abgeglichen.
+    private async void btnEdmToggle_Click(object? sender, EventArgs e)
     {
-        _edmIstPrisma = !_edmIstPrisma;
+        TachymeterKonfiguration.SetzeModus(TachymeterKonfiguration.Weiterschalten(dreiStufig: false));
+        await TachymeterKonfiguration.AbgleichenAsync();
+    }
+
+    private void OnKonfigurationGeaendert()
+    {
+        if (InvokeRequired) { BeginInvoke(OnKonfigurationGeaendert); return; }
         AktualisiereEdmButton();
+    }
 
-        if (!TachymeterVerbindung.IstVerbunden) return;
-
-        if (_edmIstPrisma)
-        {
-            // Prisma-Modus setzen + gespeicherte Prismenkonstante übertragen
-            TachymeterVerbindung.GeoCOM_Senden("%R1Q,17021,0:0"); // BAP_SetTargetType = Reflektor
-            double pk_m = (double)_prismaKonstante_mm / 1000.0;
-            TachymeterVerbindung.GeoCOM_Senden(
-                $"%R1Q,{GeoCOMParser.RPC_TMC_SetPrismCorr},0:{pk_m.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}");
-        }
-        else
-        {
-            // Reflektorlos: BAP_SetTargetType = 1, PrismCorr = +0,0344 m (Leica-Konvention)
-            TachymeterVerbindung.GeoCOM_Senden("%R1Q,17021,0:1"); // BAP_SetTargetType = RL
-            TachymeterVerbindung.GeoCOM_Senden("%R1Q,2024,0:0.0344");
-        }
+    private void OnKonfigurationAbgeglichen(AbgleichErgebnis ergebnis)
+    {
+        if (InvokeRequired) { BeginInvoke(() => OnKonfigurationAbgeglichen(ergebnis)); return; }
+        lblStatus.Text = ergebnis.Text;
     }
 
     private void AktualisiereEdmButton()
     {
-        if (_edmIstPrisma)
+        if (!TachymeterKonfiguration.IstReflektorlos)
         {
             btnEdmToggle.BackColor = Color.FromArgb(60, 95, 160);
             btnEdmToggle.FlatAppearance.BorderColor = Color.FromArgb(80, 115, 185);
             IconLoader.Apply(btnEdmToggle, "toolbar_edm_prisma.png");
             new ToolTip().SetToolTip(btnEdmToggle,
-                $"EDM: Prisma ({_prismaName}, {_prismaKonstante_mm:+0.0;-0.0;0.0} mm) – Klick → Reflektorlos");
+                $"EDM: {TachymeterKonfiguration.Beschreibung} – Klick → Reflektorlos");
         }
         else
         {
@@ -570,7 +577,7 @@ public partial class FormDxfViewer : Form
             btnEdmToggle.FlatAppearance.BorderColor = Color.FromArgb(200, 100, 40);
             IconLoader.Apply(btnEdmToggle, "toolbar_edm_rl.png");
             new ToolTip().SetToolTip(btnEdmToggle,
-                "EDM: Reflektorlos (+34,4 mm, Leica-Konvention) – Klick → Prisma");
+                $"EDM: {TachymeterKonfiguration.Beschreibung} – Klick → Prisma");
         }
     }
 
@@ -607,6 +614,12 @@ public partial class FormDxfViewer : Form
     {
         if (_messungZustand != MessungZustand.Bereit) return;
 
+        if (TachymeterKonfiguration.Beschaeftigt)
+        {
+            lblStatus.Text = "Gerätekonfiguration wird abgeglichen – bitte kurz warten.";
+            return;
+        }
+
         // Hinweis wenn keine Stationierung und Neupunkt-Modus (nur einmal, kein Dialog)
         if (_istNeupunktModus && !StationsdatenManager.HatGueltigeStation
             && !_stationierungsWarnungGezeigt)
@@ -624,6 +637,8 @@ public partial class FormDxfViewer : Form
         // Winkelübertragung ruht, bis ein gültiger Messwert vorliegt
         _winkelPausiert    = true;
         btnMessung.Enabled = false;
+        _messWatchdog.Stop();
+        _messWatchdog.Start();
 
         // Läuft gerade noch eine Winkelabfrage, deren Antwort den Messablauf stören
         // würde, startet die Messung erst nach dieser Antwort (siehe VerarbeiteLiveWinkel).
@@ -658,8 +673,23 @@ public partial class FormDxfViewer : Form
         }
     }
 
+    private void MessWatchdog_Tick(object? sender, EventArgs e)
+    {
+        _messWatchdog.Stop();
+        if (_messungZustand == MessungZustand.Bereit && !_messungAusstehend) return;
+
+        _messungAusstehend = false;
+        lblStatus.Text     = "Zeitüberschreitung: keine Antwort vom Tachymeter.";
+        MessungAbschliessen();
+        TachymeterSignal.Fehler();
+    }
+
     private void MessungAbschliessen()
     {
+        _messWatchdog.Stop();
+        // Die Winkelabfrage läuft nach jedem Messende weiter, auch nach Fehlern
+        // und Zeitüberschreitung, damit sie nicht dauerhaft blockiert bleibt.
+        _winkelPausiert    = false;
         _messungZustand    = MessungZustand.Bereit;
         _sammlung          = null;
         _parser_letzterRpc = 0;
@@ -858,6 +888,14 @@ public partial class FormDxfViewer : Form
         // Gültiger Messwert (Hz, V, Strecke): Winkelübertragung wieder aufnehmen
         _winkelPausiert = false;
         TachymeterSignal.Erfolg();
+
+        // Meldet das Gerät andere Werte als eingestellt, wird das angezeigt und protokolliert
+        string? konfigWarnung = TachymeterKonfiguration.PruefeMessung(messung);
+        if (konfigWarnung != null)
+        {
+            ProtokollManager.Log("KONFIG", konfigWarnung);
+            BeginInvoke(() => lblStatus.Text += "  ⚠ " + konfigWarnung);
+        }
 
         string punktNr = AktuellePunktNr;
         string code    = AktuellerCode;
@@ -1500,24 +1538,14 @@ public partial class FormDxfViewer : Form
     }
 
     // ── Prismenkonstante ──────────────────────────────────────────────────────
-    private void btnPrismenkonstante_Click(object? sender, EventArgs e)
+    private async void btnPrismenkonstante_Click(object? sender, EventArgs e)
     {
-        using var form = new FormPrismenkonstante(_prismaKonstante_mm);
+        using var form = new FormPrismenkonstante(TachymeterKonfiguration.PrismenkonstanteMm);
         if (form.ShowDialog(this) != DialogResult.OK) return;
 
-        _prismaKonstante_mm = form.GewähltePrismenkonstante;
-        _prismaName         = form.GewählterPrismaName;
-        AktualisiereEdmButton(); // Tooltip mit neuem Prismanamen aktualisieren
-
-        // Prismenkonstante ans Gerät senden (nur wenn Prisma-Modus aktiv)
-        if (TachymeterVerbindung.IstVerbunden && _edmIstPrisma)
-        {
-            double pk_m = (double)_prismaKonstante_mm / 1000.0;
-            TachymeterVerbindung.GeoCOM_Senden(
-                $"%R1Q,{GeoCOMParser.RPC_TMC_SetPrismCorr},0:{pk_m.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}");
-        }
-
+        TachymeterKonfiguration.SetzePrisma(form.GewählterPrismaName, form.GewähltePrismenkonstante);
         lblStatus.Text = $"Prisma: {form.GewählterPrismaName}  {form.GewähltePrismenkonstante:+0.0;-0.0;0.0} mm";
+        await TachymeterKonfiguration.AbgleichenAsync();
     }
 
     // ── NEU: DXF-Inhalt löschen ───────────────────────────────────────────────
@@ -1669,8 +1697,12 @@ public partial class FormDxfViewer : Form
         }
 
         TachymeterVerbindung.DatenEmpfangen -= OnTachymeterDaten;
+        TachymeterKonfiguration.Geaendert   -= OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen -= OnKonfigurationAbgeglichen;
         _winkelTimer.Stop();
         _winkelTimer.Dispose();
+        _messWatchdog.Stop();
+        _messWatchdog.Dispose();
 
         if (AktiveInstanz == this) AktiveInstanz = null;
 

@@ -20,7 +20,6 @@ public partial class FormMessdatenEingabe : Form
 
     // ── Persistenter Zustand (bleibt zwischen Dialog-Öffnungen erhalten) ─────
     private static string  _letzterCode      = "";
-    private static bool    _istReflektorlos  = false;
     private static decimal _letzteZielhoehe  = 1.700m;
 
     // ── GeoCOM-Zustandsmaschine ───────────────────────────────────────────────
@@ -29,8 +28,9 @@ public partial class FormMessdatenEingabe : Form
     private int            _letzterRpc     = 0;
     private readonly StringBuilder _zeilenPuffer = new();
 
-    private const int EDM_SINGLE_PRISM = 3;
-    private const int EDM_SINGLE_RL_K  = 5;
+    // Zeitüberwachung: bleibt die Antwort des Tachymeters aus, wird die Messung abgebrochen
+    private const int MESS_TIMEOUT_MS = 12000;
+    private readonly System.Windows.Forms.Timer _messWatchdog = new() { Interval = MESS_TIMEOUT_MS };
 
     /// <summary>Ergebnis nach OK – null wenn Abbrechen.</summary>
     public StationierungsPunkt? Ergebnis { get; private set; }
@@ -66,12 +66,16 @@ public partial class FormMessdatenEingabe : Form
         txtCode.Text = string.IsNullOrEmpty(_letzterCode) ? "030" : _letzterCode;
 
         // Zielhöhe: 0 bei Reflektorlos, sonst letzter verwendeter Wert
-        nudZielhoehe.Value = _istReflektorlos ? 0m : _letzteZielhoehe;
+        nudZielhoehe.Value = TachymeterKonfiguration.IstReflektorlos ? 0m : _letzteZielhoehe;
 
         // HZ, V, Strecke bleiben leer (werden nicht aus Cache vorbelegt)
 
         // Tachymeter-Event anschließen
         TachymeterVerbindung.DatenEmpfangen += OnDatenEmpfangen;
+        TachymeterKonfiguration.Geaendert   += OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen += OnKonfigurationAbgeglichen;
+        _messWatchdog.Tick += MessWatchdog_Tick;
+        Shown += async (_, __) => await TachymeterKonfiguration.AbgleichenAsync();
 
         // Übernehmen-Button erst freigeben wenn Strecke > 0
         nudStrecke.ValueChanged += (_, __) => AktualisiereUebernahmeButton();
@@ -87,40 +91,32 @@ public partial class FormMessdatenEingabe : Form
         => btnUebernehmen.Enabled = nudStrecke.Value > 0;
 
     // ── Reflektormodus umschalten ─────────────────────────────────────────────
-    private void btnReflModus_Click(object? sender, EventArgs e)
+    // Gilt für alle Messfenster (TachymeterKonfiguration) und wird mit dem Gerät abgeglichen.
+    private async void btnReflModus_Click(object? sender, EventArgs e)
     {
-        _istReflektorlos = !_istReflektorlos;
-        // Zielhöhe sofort anpassen: reflektorlos → 0, Prisma → letzter Wert
-        nudZielhoehe.Value = _istReflektorlos ? 0m : _letzteZielhoehe;
-        AktualisiereReflModusButton();
+        TachymeterKonfiguration.SetzeModus(TachymeterKonfiguration.Weiterschalten(dreiStufig: false));
+        await TachymeterKonfiguration.AbgleichenAsync();
+    }
 
-        if (TachymeterVerbindung.IstVerbunden)
-        {
-            try
-            {
-                var bg = TachymeterBefehlsgeberFactory.Erstellen(TachymeterVerbindung.Modell);
-                int zieltyp = _istReflektorlos ? 1 : 0;
-                int edmProg = _istReflektorlos ? EDM_SINGLE_RL_K : EDM_SINGLE_PRISM;
-                var edmBefehle = bg.EdmModusBefehle(zieltyp, edmProg);
-                if (edmBefehle != null)
-                    foreach (var b in edmBefehle)
-                        TachymeterVerbindung.GeoCOM_Senden(b);
-                else
-                {
-                    // GeoCOM-Fallback
-                    _letzterRpc = GeoCOMParser.RPC_BAP_SetTargetType;
-                    TachymeterVerbindung.GeoCOM_Senden($"%R1Q,17021,0:{zieltyp}");
-                    _letzterRpc = GeoCOMParser.RPC_TMC_SetEdmMode;
-                    TachymeterVerbindung.GeoCOM_Senden($"%R1Q,2020,0:{edmProg}");
-                }
-            }
-            catch { /* ignorieren – Modus wurde lokal gesetzt */ }
-        }
+    private void OnKonfigurationGeaendert()
+    {
+        if (InvokeRequired) { BeginInvoke(OnKonfigurationGeaendert); return; }
+        // Zielhöhe sofort anpassen: reflektorlos → 0, Prisma → letzter Wert
+        nudZielhoehe.Value = TachymeterKonfiguration.IstReflektorlos ? 0m : _letzteZielhoehe;
+        AktualisiereReflModusButton();
+    }
+
+    private void OnKonfigurationAbgeglichen(AbgleichErgebnis ergebnis)
+    {
+        if (InvokeRequired) { BeginInvoke(() => OnKonfigurationAbgeglichen(ergebnis)); return; }
+        if (_messZustand != MessZustand.Bereit) return;   // Messanzeige nicht überschreiben
+        lblMessInfo.Text      = ergebnis.Text;
+        lblMessInfo.ForeColor = ergebnis.Ok ? Color.FromArgb(40, 180, 60) : Color.FromArgb(200, 130, 40);
     }
 
     private void AktualisiereReflModusButton()
     {
-        if (_istReflektorlos)
+        if (TachymeterKonfiguration.IstReflektorlos)
         {
             btnReflModus.Text      = "Reflektorlos";
             btnReflModus.BackColor = Color.FromArgb(130, 80, 20);
@@ -139,6 +135,13 @@ public partial class FormMessdatenEingabe : Form
     {
         if (_messZustand != MessZustand.Bereit) return;
 
+        if (TachymeterKonfiguration.Beschaeftigt)
+        {
+            lblMessInfo.Text      = "Gerätekonfiguration wird abgeglichen – bitte kurz warten.";
+            lblMessInfo.ForeColor = Color.FromArgb(200, 160, 40);
+            return;
+        }
+
         if (!TachymeterVerbindung.IstVerbunden)
         {
             lblMessInfo.Text      = "Kein Tachymeter verbunden.";
@@ -155,6 +158,8 @@ public partial class FormMessdatenEingabe : Form
             var bg = TachymeterBefehlsgeberFactory.Erstellen(TachymeterVerbindung.Modell);
             _messZustand = MessZustand.WarteMessen;
             _letzterRpc  = bg.MessSchritt1Rpc;
+            _messWatchdog.Stop();
+            _messWatchdog.Start();
             TachymeterVerbindung.GeoCOM_Senden(bg.MessTriggerBefehl()!);
         }
         catch (Exception ex)
@@ -166,8 +171,20 @@ public partial class FormMessdatenEingabe : Form
         }
     }
 
+    private void MessWatchdog_Tick(object? sender, EventArgs e)
+    {
+        _messWatchdog.Stop();
+        if (_messZustand == MessZustand.Bereit) return;
+
+        lblMessInfo.Text      = "Zeitüberschreitung: keine Antwort vom Tachymeter.";
+        lblMessInfo.ForeColor = Color.FromArgb(200, 60, 40);
+        MessungAbschliessen();
+        TachymeterSignal.Fehler();
+    }
+
     private void MessungAbschliessen()
     {
+        _messWatchdog.Stop();
         _messZustand = MessZustand.Bereit;
         if (InvokeRequired) BeginInvoke(AktualisiereMessButton);
         else                 AktualisiereMessButton();
@@ -315,7 +332,7 @@ public partial class FormMessdatenEingabe : Form
 
         // Letzten Code und Zielhöhe merken
         _letzterCode     = txtCode.Text.Trim();
-        if (!_istReflektorlos)
+        if (!TachymeterKonfiguration.IstReflektorlos)
             _letzteZielhoehe = nudZielhoehe.Value;
 
         Ergebnis = new StationierungsPunkt
@@ -339,6 +356,10 @@ public partial class FormMessdatenEingabe : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         TachymeterVerbindung.DatenEmpfangen -= OnDatenEmpfangen;
+        TachymeterKonfiguration.Geaendert   -= OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen -= OnKonfigurationAbgeglichen;
+        _messWatchdog.Stop();
+        _messWatchdog.Dispose();
         base.OnFormClosing(e);
     }
 }

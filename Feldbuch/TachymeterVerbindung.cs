@@ -39,6 +39,9 @@ public static class TachymeterVerbindung
     // ── Ereignis: Rohdaten empfangen (für Testmessungen-Fenster) ─────────────
     public static event EventHandler<string>? DatenEmpfangen;
 
+    /// <summary>Zählt jede neu geöffnete Verbindung (für den Abgleich der Gerätekonfiguration).</summary>
+    public static int VerbindungsNr { get; private set; }
+
     // ── Ereignis: Verbindungsabbruch erkannt ──────────────────────────────────
     public static event EventHandler? VerbindungGetrennt;
 
@@ -112,6 +115,8 @@ public static class TachymeterVerbindung
         }
 
         _port = neu;
+        VerbindungsNr++;
+        TachymeterKonfiguration.ZuruecksetzenNachVerbinden();
     }
 
     public static void Trennen()

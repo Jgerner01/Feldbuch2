@@ -65,6 +65,13 @@ public static class ProjektManager
     public static string           TachymeterParitaet { get; set; } = "None";
     public static string           TachymeterStopBits { get; set; } = "1";
 
+    // ── Messmodus (gilt für alle Messfenster, siehe TachymeterKonfiguration) ──
+    /// <summary>Name des MessModus: Prisma, ReflektorlosKurz, ReflektorlosLang.</summary>
+    public static string  MessModusName     { get; set; } = "Prisma";
+    public static string  PrismaName        { get; set; } = "GPR1 Standard";
+    /// <summary>Prismenkonstante [mm] in Leica-Konvention (GPR1 = 0).</summary>
+    public static decimal PrismaKonstanteMm { get; set; } = 0m;
+
     // ── Gespeicherter DXF-Zoom ────────────────────────────────────────────────
     // Zoom wird pro DXF-Dateipfad gespeichert, sodass er nach erneutem Öffnen
     // automatisch wiederhergestellt wird.
@@ -195,6 +202,15 @@ public static class ProjektManager
             TachymeterParitaet = root.SelectSingleNode("TachymeterParitaet")?.InnerText?.Trim() ?? "None";
             TachymeterStopBits = root.SelectSingleNode("TachymeterStopBits")?.InnerText?.Trim() ?? "1";
 
+            string messModus = root.SelectSingleNode("MessModus")?.InnerText?.Trim() ?? "";
+            if (messModus.Length > 0) MessModusName = messModus;
+            string prismaName = root.SelectSingleNode("PrismaName")?.InnerText?.Trim() ?? "";
+            if (prismaName.Length > 0) PrismaName = prismaName;
+            if (decimal.TryParse(root.SelectSingleNode("PrismaKonstanteMm")?.InnerText,
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var pkMm))
+                PrismaKonstanteMm = pkMm;
+
             _zoomDatei = root.SelectSingleNode("DxfZoomDatei")?.InnerText?.Trim() ?? "";
             double.TryParse(root.SelectSingleNode("DxfZoomScale")?.InnerText,
                 System.Globalization.NumberStyles.Any,
@@ -246,6 +262,9 @@ public static class ProjektManager
             Append(doc, root, "TachymeterDataBits", TachymeterDataBits.ToString());
             Append(doc, root, "TachymeterParitaet", TachymeterParitaet);
             Append(doc, root, "TachymeterStopBits", TachymeterStopBits);
+            Append(doc, root, "MessModus",          MessModusName);
+            Append(doc, root, "PrismaName",         PrismaName);
+            Append(doc, root, "PrismaKonstanteMm",  PrismaKonstanteMm.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
             Append(doc, root, "DxfZoomDatei",  _zoomDatei);
             Append(doc, root, "DxfZoomScale",  _zoomScale.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             Append(doc, root, "DxfZoomPanX",   _zoomPanX .ToString("R", System.Globalization.CultureInfo.InvariantCulture));

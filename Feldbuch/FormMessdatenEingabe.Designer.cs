@@ -50,7 +50,7 @@ partial class FormMessdatenEingabe
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize      = new Size(460, 530);
+        ClientSize      = new Size(540, 570);
         Text            = "Anschlusspunkt – Messdaten";
         StartPosition   = FormStartPosition.CenterParent;
         AutoScaleMode   = AutoScaleMode.Font;
@@ -66,16 +66,16 @@ partial class FormMessdatenEingabe
         grpKoordinaten.Text     = "Koordinaten (aus DXF)";
         grpKoordinaten.Font     = grpFont;
         grpKoordinaten.Location = new Point(14, 10);
-        grpKoordinaten.Size     = new Size(430, 80);
+        grpKoordinaten.Size     = new Size(512, 80);
 
         lblRVal.Font     = monoFont;
         lblRVal.Location = new Point(14, 26);
-        lblRVal.Size     = new Size(400, 22);
+        lblRVal.Size     = new Size(480, 22);
         lblRVal.Text     = "R (Rechtswert):   – m";
 
         lblHVal.Font     = monoFont;
         lblHVal.Location = new Point(14, 50);
-        lblHVal.Size     = new Size(400, 22);
+        lblHVal.Size     = new Size(480, 22);
         lblHVal.Text     = "H (Hochwert):     – m";
 
         grpKoordinaten.Controls.AddRange(new Control[] { lblRVal, lblHVal });
@@ -84,7 +84,7 @@ partial class FormMessdatenEingabe
         grpPunktdaten.Text     = "Punktdaten";
         grpPunktdaten.Font     = grpFont;
         grpPunktdaten.Location = new Point(14, 98);
-        grpPunktdaten.Size     = new Size(430, 110);
+        grpPunktdaten.Size     = new Size(512, 110);
 
         lblPunktNr.Text     = "Punktnummer:";
         lblPunktNr.Font     = lblFont;
@@ -126,7 +126,7 @@ partial class FormMessdatenEingabe
         grpMessdaten.Text     = "Messdaten";
         grpMessdaten.Font     = grpFont;
         grpMessdaten.Location = new Point(14, 216);
-        grpMessdaten.Size     = new Size(430, 216);
+        grpMessdaten.Size     = new Size(512, 216);
 
         int y = 28, step = 36;
 
@@ -243,14 +243,14 @@ partial class FormMessdatenEingabe
         lblMessInfo.Font      = new Font("Segoe UI", 8.5F, FontStyle.Italic);
         lblMessInfo.ForeColor = Color.FromArgb(100, 130, 170);
         lblMessInfo.Location  = new Point(14, 440);
-        lblMessInfo.Size      = new Size(340, 20);
+        lblMessInfo.Size      = new Size(512, 34);
         lblMessInfo.AutoSize  = false;
 
         // ── Buttons ───────────────────────────────────────────────────────────
         // [Prisma / Reflektorlos]   [▶ Messen]   [Übernehmen]   [Abbrechen]
 
-        btnReflModus.Size      = new Size(120, 32);
-        btnReflModus.Location  = new Point(14, 464);
+        btnReflModus.Size      = new Size(130, 40);
+        btnReflModus.Location  = new Point(14, 484);
         btnReflModus.Font      = lblFont;
         btnReflModus.ForeColor = Color.White;
         btnReflModus.FlatStyle = FlatStyle.Flat;
@@ -259,8 +259,8 @@ partial class FormMessdatenEingabe
         new ToolTip().SetToolTip(btnReflModus, "Messmodus umschalten: Prisma / Reflektorlos");
 
         btnMessen.Text      = "▶ Messen";
-        btnMessen.Size      = new Size(90, 32);
-        btnMessen.Location  = new Point(140, 464);
+        btnMessen.Size      = new Size(110, 40);
+        btnMessen.Location  = new Point(152, 484);
         btnMessen.Font      = lblFont;
         btnMessen.BackColor = Color.FromArgb(160, 60, 20);
         btnMessen.ForeColor = Color.White;
@@ -271,8 +271,8 @@ partial class FormMessdatenEingabe
         new ToolTip().SetToolTip(btnMessen, "Messung mit dem Tachymeter auslösen");
 
         btnUebernehmen.Text      = "Übernehmen";
-        btnUebernehmen.Location  = new Point(238, 464);
-        btnUebernehmen.Size      = new Size(110, 32);
+        btnUebernehmen.Location  = new Point(270, 484);
+        btnUebernehmen.Size      = new Size(130, 40);
         btnUebernehmen.Font      = lblFont;
         btnUebernehmen.BackColor = Color.FromArgb(60, 130, 60);
         btnUebernehmen.ForeColor = Color.White;
@@ -280,10 +280,17 @@ partial class FormMessdatenEingabe
         btnUebernehmen.Click    += btnUebernehmen_Click;
 
         btnAbbrechen.Text     = "Abbrechen";
-        btnAbbrechen.Location = new Point(354, 464);
-        btnAbbrechen.Size     = new Size(100, 32);
+        btnAbbrechen.Location = new Point(408, 484);
+        btnAbbrechen.Size     = new Size(118, 40);
         btnAbbrechen.Font     = lblFont;
         btnAbbrechen.Click   += btnAbbrechen_Click;
+
+        // Beschriftung mittig, ohne Innenabstand (kein Abschneiden)
+        foreach (var b in new[] { btnReflModus, btnMessen, btnUebernehmen, btnAbbrechen })
+        {
+            b.TextAlign = ContentAlignment.MiddleCenter;
+            b.Padding   = new Padding(0);
+        }
 
         Controls.AddRange(new Control[]
         {

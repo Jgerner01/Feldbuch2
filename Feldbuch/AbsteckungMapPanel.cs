@@ -37,20 +37,12 @@ public class AbsteckungMapPanel : UserControl
     // Tachymeter-Zustand
     private ITachymeterBefehlsgeber _befehlsgeber;
     private readonly GeoCOMParser   _geocomParser = new();
-    private enum MessModus { Prisma, ReflektorlosKurz, ReflektorlosLang }
-    private MessModus _messModus = MessModus.Prisma;
     private enum MessungZustand { Bereit, WarteMessen, WarteErgebnis }
     private MessungZustand _messungZustand = MessungZustand.Bereit;
     private bool    _laserAn = false;
-    private decimal _prismenkonstante_mm = 0m;
     private int     _letzterRpc = 0;
     private readonly StringBuilder _zeilenPuffer = new();
 
-    private const int BAP_REFL_USE   = 0;
-    private const int BAP_REFL_LESS  = 1;
-    private const int EDM_SINGLE_PRISM = 3;
-    private const int EDM_SINGLE_RL_K  = 5;
-    private const int EDM_SINGLE_RL_L  = 11;
 
     // Sidebar-Buttons
     private readonly Button _btnZoomIn         = new();
@@ -91,6 +83,13 @@ public class AbsteckungMapPanel : UserControl
         _canvas.PointPicked   += OnPointPicked;
         _canvas.ScaleChanged  += OnScaleChanged;
         Load                  += OnLoad;
+        Load                  += async (s, e) =>
+        {
+            AktualisiereEdmModusButton();
+            await TachymeterKonfiguration.AbgleichenAsync();   // Gerät auf die gespeicherte Einstellung bringen
+        };
+        TachymeterKonfiguration.Geaendert   += OnKonfigurationGeaendert;
+        TachymeterKonfiguration.Abgeglichen += OnKonfigurationAbgeglichen;
 
         TachymeterVerbindung.DatenEmpfangen   += OnTachDatenEmpfangen;
         TachymeterVerbindung.VerbindungGetrennt += OnVerbindungGetrennt;
@@ -443,63 +442,43 @@ public class AbsteckungMapPanel : UserControl
     }
 
     // ── Prismenkonstante ──────────────────────────────────────────────────────
-    private void PrismkonstanteAendern()
+    // Messmodus und Prismenkonstante gelten für alle Messfenster
+    // (TachymeterKonfiguration) und werden mit dem Gerät abgeglichen.
+    private async void PrismkonstanteAendern()
     {
-        using var form = new FormPrismenkonstante(_prismenkonstante_mm);
+        using var form = new FormPrismenkonstante(TachymeterKonfiguration.PrismenkonstanteMm);
         if (form.ShowDialog(FindForm()) != DialogResult.OK) return;
-        _prismenkonstante_mm = form.GewähltePrismenkonstante;
-        _btnPrismkonstante.Text = $"PK: {_prismenkonstante_mm:0.#} mm";
 
-        if (TachymeterVerbindung.IstVerbunden && _befehlsgeber.UnterstueztEdmModus)
-        {
-            try
-            {
-                double pk_m = (double)_prismenkonstante_mm / 1000.0;
-                string cmd  = $"%R1Q,{GeoCOMParser.RPC_TMC_SetPrismCorr},0:{pk_m.ToString("F4", CultureInfo.InvariantCulture)}";
-                SendeTachBefehl(cmd, GeoCOMParser.RPC_TMC_SetPrismCorr);
-            }
-            catch { }
-        }
+        TachymeterKonfiguration.SetzePrisma(form.GewählterPrismaName, form.GewähltePrismenkonstante);
+        await TachymeterKonfiguration.AbgleichenAsync();
     }
 
     // ── EDM-Modus ─────────────────────────────────────────────────────────────
-    private void EdmModusUmschalten()
+    private async void EdmModusUmschalten()
     {
-        _messModus = _messModus switch
-        {
-            MessModus.Prisma           => MessModus.ReflektorlosKurz,
-            MessModus.ReflektorlosKurz => MessModus.ReflektorlosLang,
-            _                          => MessModus.Prisma
-        };
+        TachymeterKonfiguration.SetzeModus(TachymeterKonfiguration.Weiterschalten(dreiStufig: true));
+        await TachymeterKonfiguration.AbgleichenAsync(erzwingen: true);
+    }
 
-        if (TachymeterVerbindung.IstVerbunden && _befehlsgeber.UnterstueztEdmModus)
-        {
-            try
-            {
-                int zieltyp  = _messModus == MessModus.Prisma ? BAP_REFL_USE : BAP_REFL_LESS;
-                int edmModus = _messModus switch
-                {
-                    MessModus.ReflektorlosKurz => EDM_SINGLE_RL_K,
-                    MessModus.ReflektorlosLang => EDM_SINGLE_RL_L,
-                    _                          => EDM_SINGLE_PRISM
-                };
-                var befehle = _befehlsgeber.EdmModusBefehle(zieltyp, edmModus);
-                if (befehle != null)
-                {
-                    SendeTachBefehl(befehle[0], GeoCOMParser.RPC_BAP_SetTargetType);
-                    if (befehle.Length > 1)
-                        SendeTachBefehl(befehle[1], GeoCOMParser.RPC_TMC_SetEdmMode);
-                }
-            }
-            catch { }
-        }
+    private void OnKonfigurationGeaendert()
+    {
+        if (InvokeRequired) { BeginInvoke(OnKonfigurationGeaendert); return; }
         AktualisiereEdmModusButton();
+    }
+
+    private void OnKonfigurationAbgeglichen(AbgleichErgebnis ergebnis)
+    {
+        if (InvokeRequired) { BeginInvoke(() => OnKonfigurationAbgeglichen(ergebnis)); return; }
+        AktualisiereEdmModusButton();
+        new ToolTip().SetToolTip(_btnEdmModus,
+            "EDM-Modus umschalten: Prisma → RL Kurz → RL Lang\n" + ergebnis.Text);
     }
 
     private void AktualisiereEdmModusButton()
     {
+        _btnPrismkonstante.Text = $"PK: {TachymeterKonfiguration.PrismenkonstanteMm:0.#} mm";
         (_btnEdmModus.Text, _btnEdmModus.BackColor, _btnEdmModus.FlatAppearance.BorderColor) =
-            _messModus switch
+            TachymeterKonfiguration.Modus switch
             {
                 MessModus.Prisma           => ("Prisma",   Color.FromArgb(38,110,72),  Color.FromArgb(26,86,54)),
                 MessModus.ReflektorlosKurz => ("RL Kurz",  Color.FromArgb(140,80,20),  Color.FromArgb(110,60,10)),
@@ -534,6 +513,7 @@ public class AbsteckungMapPanel : UserControl
     {
         if (_messungZustand != MessungZustand.Bereit) return;
         if (!TachymeterVerbindung.IstVerbunden) return;
+        if (TachymeterKonfiguration.Beschaeftigt) return;   // Abgleich läuft: kurz warten
         try
         {
             _btnMessen.Enabled = false;
@@ -629,6 +609,8 @@ public class AbsteckungMapPanel : UserControl
         {
             SpeichereZoom();
             TachymeterVerbindung.DatenEmpfangen   -= OnTachDatenEmpfangen;
+            TachymeterKonfiguration.Geaendert     -= OnKonfigurationGeaendert;
+            TachymeterKonfiguration.Abgeglichen   -= OnKonfigurationAbgeglichen;
             TachymeterVerbindung.VerbindungGetrennt -= OnVerbindungGetrennt;
             if (_laserAn)
             {
