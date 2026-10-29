@@ -15,6 +15,9 @@
   - **Manuell** – direkte Koordinateneingabe
 - Testmessungen-Fenster mit Rohdaten-Monitor
 - Automatisches Health-Monitoring der Bluetooth-Verbindung
+- **Gemeinsame Messkonfiguration** *(seit v1.9.6)*: Prisma / Reflektorlos (kurz, lang), EDM-Modus und Prismenkonstante gelten für alle Messfenster, werden gespeichert und mit dem Gerät abgeglichen (Rücklesen und Vergleich; Warnung bei Abweichung nach einer Messung)
+- **Signaltöne am Instrument** *(Leica GeoCOM, seit v1.9.6)*: ein Piepton bei erfolgreicher, dreifacher Alarmton bei fehlgeschlagener Messung; Test-Button im Fenster Testmessungen
+- Zeitüberwachung der Messabläufe (kein dauerhaftes Hängen bei ausbleibender Antwort)
 
 ### Freie Stationierung
 - Helmert-Direktlösung (2 Punkte) und vollständige Ausgleichung (≥ 3 Punkte)
@@ -37,6 +40,7 @@
 - JSON-Audit-Datei: `AutoMatch_Punkte.json` (Undo, Resume, Nachvollziehbarkeit)
 
 ### DXF-Viewer
+- **Lokales System** *(seit v1.9.6)*: ohne DXF-Daten, Importpunkte und Stationierung steht der Standpunkt bei 0/0/0; rote gestrichelte Zielrichtung folgt dem Hz-Winkel, Neupunkte werden mit Punktnummer dargestellt
 - Zoom (Mausrad), Pan, Fit-to-View
 - Snap auf DXF-Endpunkte
 - DXF-Punkt-Marker mit Nummern aus persistentem Index
@@ -88,10 +92,11 @@
 
 ## Version
 
-Aktuelle Version: **v1.9.5**
+Aktuelle Version: **v1.9.6**
 
 | Version | Inhalt |
 |---|---|
+| v1.9.6 | Lokales System im DXF-Viewer, gemeinsame Messkonfiguration mit Geräteabgleich, Signaltöne am Tachymeter, Programmicon, Neues Projekt |
 | v1.9.5 | DXF-Export/-Viewer erweitert, PunktFinder verbessert, Aufnahmetest-Dokumentation |
 | v1.9.4 | Freie Stationierung, DXF-Viewer und Anschlusspunkt verbessert |
 | v1.9.3 | Punktfinder – automatische Punktidentifikation für Freie Stationierung |
