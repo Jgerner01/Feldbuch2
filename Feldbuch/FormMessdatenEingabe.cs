@@ -22,6 +22,9 @@ public partial class FormMessdatenEingabe : Form
     private static string  _letzterCode      = "";
     private static decimal _letzteZielhoehe  = 1.700m;
 
+    // ── Messdaten-Aktivzustand: false = noch keine Messung übertragen ────────
+    private bool _messdatenAktiv = false;
+
     // ── GeoCOM-Zustandsmaschine ───────────────────────────────────────────────
     private enum MessZustand { Bereit, WarteMessen, WarteErgebnis }
     private MessZustand    _messZustand    = MessZustand.Bereit;
@@ -77,9 +80,21 @@ public partial class FormMessdatenEingabe : Form
         _messWatchdog.Tick += MessWatchdog_Tick;
         Shown += async (_, __) => await TachymeterKonfiguration.AbgleichenAsync();
 
-        // Übernehmen-Button erst freigeben wenn Strecke > 0
+        // Übernehmen-Button erst freigeben wenn Messdatensatz gültig (Messung oder Tastatureingabe)
         nudStrecke.ValueChanged += (_, __) => AktualisiereUebernahmeButton();
         btnUebernehmen.Enabled = false;
+
+        // Tastatureingabe in einem Messdatenfeld aktiviert die Felder wieder
+        KeyEventHandler manuelleEingabe = (_, __) =>
+        {
+            if (!_messdatenAktiv) SetzeMessdatenZustand(true);
+        };
+        nudHz.KeyDown        += manuelleEingabe;
+        nudV.KeyDown         += manuelleEingabe;
+        nudStrecke.KeyDown   += manuelleEingabe;
+        nudZielhoehe.KeyDown += manuelleEingabe;
+        txtCode.KeyDown      += manuelleEingabe;
+        SetzeMessdatenZustand(false);
 
         // Button-Zustand initialisieren
         AktualisiereReflModusButton();
@@ -88,7 +103,31 @@ public partial class FormMessdatenEingabe : Form
 
     // ── Übernehmen-Button freigeben wenn Messdaten vorhanden ─────────────────
     private void AktualisiereUebernahmeButton()
-        => btnUebernehmen.Enabled = nudStrecke.Value > 0;
+        => btnUebernehmen.Enabled = _messdatenAktiv && nudStrecke.Value > 0;
+
+    // ── Messdatenfelder grau (keine gültige Messung) / aktiv ──────────────────
+    private void SetzeMessdatenZustand(bool aktiv)
+    {
+        _messdatenAktiv = aktiv;
+
+        var feldHintergrund = aktiv ? SystemColors.Window     : Color.FromArgb(225, 225, 225);
+        var feldText        = aktiv ? SystemColors.WindowText : Color.FromArgb(150, 150, 150);
+        var labelText       = aktiv ? SystemColors.ControlText : Color.FromArgb(150, 150, 150);
+
+        foreach (var nud in new[] { nudHz, nudV, nudStrecke, nudZielhoehe })
+        {
+            nud.BackColor = feldHintergrund;
+            nud.ForeColor = feldText;
+        }
+        txtCode.BackColor = feldHintergrund;
+        txtCode.ForeColor = feldText;
+
+        foreach (var lbl in new[] { lblHz, lblHzUnit, lblV, lblVUnit, lblStrecke, lblStreckeUnit,
+                                    lblZielhoehe, lblZielhoeheUnit, lblCodeLabel })
+            lbl.ForeColor = labelText;
+
+        AktualisiereUebernahmeButton();
+    }
 
     // ── Reflektormodus umschalten ─────────────────────────────────────────────
     // Gilt für alle Messfenster (TachymeterKonfiguration) und wird mit dem Gerät abgeglichen.
@@ -243,6 +282,7 @@ public partial class FormMessdatenEingabe : Form
                 TachymeterSignal.Fehler();
                 return;
             }
+            SetzeMessdatenZustand(true);
             nudHz.Value      = (decimal)Math.Round(gsiMessung.Hz_gon!.Value,  4);
             nudV.Value       = (decimal)Math.Round(gsiMessung.V_gon!.Value,   4);
             nudStrecke.Value = (decimal)Math.Round(gsiMessung.Schraegstrecke_m!.Value, 3);
@@ -299,7 +339,8 @@ public partial class FormMessdatenEingabe : Form
             }
 
             // Messwerte in Felder eintragen
-            nudHz.Value      = (decimal)Math.Round(messung.Hz_gon!.Value,   4);
+            SetzeMessdatenZustand(true);
+            nudHz.Value     = (decimal)Math.Round(messung.Hz_gon!.Value,   4);
             nudV.Value       = (decimal)Math.Round(messung.V_gon!.Value,    4);
             nudStrecke.Value = (decimal)Math.Round(messung.Schraegstrecke_m!.Value, 3);
 
