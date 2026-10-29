@@ -85,8 +85,9 @@ public partial class FormErgebnis : Form
                              (RechenparameterManager.Params.FreierMassstab
                                 ? "" : "  [fixiert]");
         lblS0.Text   = erg.Redundanz > 0
-            ? $"Standardabw. s\u2080:        {erg.s0_mm:F2} mm   (Redundanz r = {erg.Redundanz})"
-            : $"Standardabw. s\u2080:        –   (Redundanz r = 0, eindeutig bestimmt)";
+            ? $"Standardabw. {RechenparameterManager.SigmaBez}:".PadRight(25)
+              + $"{RechenparameterManager.SigmaWert(erg.s0_mm):F2} mm   (Redundanz r = {erg.Redundanz})"
+            : $"Standardabw. {RechenparameterManager.SigmaBez}:".PadRight(25) + "–   (Redundanz r = 0, eindeutig bestimmt)";
         lblIter.Text = _allePunkte.Count == 2
             ? "Methode:                 Ähnlichkeitstransformation  (2 Punkte, Direktlösung)"
             : $"Iterationen:             {erg.Iterationen}" +
@@ -228,6 +229,7 @@ public partial class FormErgebnis : Form
             ProjektdatenManager.SetValue("Freie Stationierung", "Hoehe [m]",          erg.Hoehe.ToString("F3", ic));
             ProjektdatenManager.SetValue("Freie Stationierung", "Orientierung [gon]", erg.Orientierung_gon.ToString("F4", ic));
             ProjektdatenManager.SetValue("Freie Stationierung", "s0 [mm]",            erg.s0_mm.ToString("F2", ic));
+            RechenparameterManager.SchreibeSigmaProjektdaten(erg.s0_mm);
         }
         catch (Exception ex)
         {

@@ -75,7 +75,8 @@ public static class FreieStationierungProtokoll
         }
         else if (erg.Redundanz > 0)
         {
-            s0Info = $"Standardabw. s0:  {erg.s0_mm:F2} mm     " +
+            string bez = RechenparameterManager.SigmaFaktor == 1 ? "s0" : $"{RechenparameterManager.SigmaFaktor}*s0";
+            s0Info = $"Standardabw. {bez}:  {RechenparameterManager.SigmaWert(erg.s0_mm).ToString("F2", ic)} mm     " +
                      $"Redundanz r:  {erg.Redundanz}     " +
                      (erg.Konvergiert
                          ? $"Iterationen:  {erg.Iterationen}  (konvergiert)"

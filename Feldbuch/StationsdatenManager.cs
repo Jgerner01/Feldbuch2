@@ -139,6 +139,7 @@ public static class StationsdatenManager
         ProjektdatenManager.SetValue("Freie Stationierung", "Hoehe [m]",             ergebnis.Hoehe.ToString("F3", ic));
         ProjektdatenManager.SetValue("Freie Stationierung", "Orientierung [gon]",    ergebnis.Orientierung_gon.ToString("F4", ic));
         ProjektdatenManager.SetValue("Freie Stationierung", "s0 [mm]",               ergebnis.s0_mm.ToString("F2", ic));
+        RechenparameterManager.SchreibeSigmaProjektdaten(ergebnis.s0_mm);
         ProjektdatenManager.SetValue("Freie Stationierung", "Massstab",              ergebnis.Massstab.ToString("F6", ic));
         ProjektdatenManager.SetValue("Freie Stationierung", "Instrumentenhoehe [m]", _aktiv.InstrumentenHoehe.ToString("F3", ic));
 

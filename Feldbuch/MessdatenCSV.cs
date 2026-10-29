@@ -112,6 +112,10 @@ public static class MessdatenCSV
             standpunktNr, instrHoehe,
             ergebnis.R, ergebnis.H, ergebnis.Hoehe,
             ergebnis.Orientierung_gon, ergebnis.s0_mm, ergebnis.Redundanz);
+        if (RechenparameterManager.SigmaFaktor > 1)
+            zeile += string.Format(IC, "  {0}s0={1:F2} mm",
+                RechenparameterManager.SigmaFaktor,
+                RechenparameterManager.SigmaWert(ergebnis.s0_mm));
 
         AppendZeile(zeile);
         ProtokollManager.Log("STANDPKT", zeile.TrimStart('#', ' '));

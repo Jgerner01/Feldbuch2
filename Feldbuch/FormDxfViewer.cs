@@ -309,17 +309,17 @@ public partial class FormDxfViewer : Form
             if (s0 > 15 || ergebnis.Redundanz <= 0)
             {
                 _signalFarbe   = Color.FromArgb(220, 30,  30);
-                _signalTooltip = $"Schwache Stationierung: s₀={s0:F1} mm  r={ergebnis.Redundanz}";
+                _signalTooltip = $"Schwache Stationierung: {RechenparameterManager.SigmaText(s0)}  r={ergebnis.Redundanz}";
             }
             else if (s0 > 5)
             {
                 _signalFarbe   = Color.FromArgb(230, 160, 0);
-                _signalTooltip = $"Bedingt brauchbar: s₀={s0:F1} mm  r={ergebnis.Redundanz}";
+                _signalTooltip = $"Bedingt brauchbar: {RechenparameterManager.SigmaText(s0)}  r={ergebnis.Redundanz}";
             }
             else
             {
                 _signalFarbe   = Color.FromArgb(30,  190, 50);
-                _signalTooltip = $"Gute Stationierung: s₀={s0:F2} mm  r={ergebnis.Redundanz}";
+                _signalTooltip = $"Gute Stationierung: {RechenparameterManager.SigmaText(s0, "F2")}  r={ergebnis.Redundanz}";
             }
         }
 
@@ -327,7 +327,7 @@ public partial class FormDxfViewer : Form
         new ToolTip().SetToolTip(pnlLampe, _signalTooltip);
         lblLampeInfo.Text = _signalFarbe == Color.Black
             ? "–"
-            : $"s₀={ergebnis!.s0_mm:F1} mm";
+            : RechenparameterManager.SigmaText(ergebnis!.s0_mm);
     }
 
     private void PnlLampe_Paint(object? sender, PaintEventArgs e)
@@ -1040,7 +1040,7 @@ public partial class FormDxfViewer : Form
                 // Standpunktinfo in CSV kommentieren
                 MessdatenCSV.SchreibeStandpunktinfo(spNr, instrH, ergebnis);
 
-                lblStatus.Text = $"Stationierung {spNr}: s₀={ergebnis.s0_mm:F1} mm  " +
+                lblStatus.Text = $"Stationierung {spNr}: {RechenparameterManager.SigmaText(ergebnis.s0_mm)}  " +
                                  $"r={ergebnis.Redundanz}  n={StationsdatenManager.AktiveStation.Messungen.Count}";
             }
             else

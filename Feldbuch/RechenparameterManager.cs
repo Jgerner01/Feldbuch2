@@ -47,7 +47,8 @@ public static class RechenparameterManager
                 FehlergrenzeMM_Hoehe       = ReadDouble(root, "FehlergrenzeMM_Hoehe",       10.0),
                 FehlergrenzeMM_s0AutoMatch = ReadDouble(root, "FehlergrenzeMM_s0AutoMatch", 20.0),
                 FreierMassstab             = ReadBool  (root, "FreierMassstab",             true),
-                Berechnung3D               = ReadBool  (root, "Berechnung3D",               true)
+                Berechnung3D               = ReadBool  (root, "Berechnung3D",               true),
+                SigmaFaktor                = (int)ReadDouble(root, "SigmaFaktor",           1)
             };
         }
         catch (Exception ex)
@@ -75,9 +76,29 @@ public static class RechenparameterManager
         AppendElem(doc, root, "FehlergrenzeMM_s0AutoMatch", _params.FehlergrenzeMM_s0AutoMatch.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
         AppendElem(doc, root, "FreierMassstab",            _params.FreierMassstab ? "true" : "false");
         AppendElem(doc, root, "Berechnung3D",              _params.Berechnung3D   ? "true" : "false");
+        AppendElem(doc, root, "SigmaFaktor",               SigmaFaktor.ToString());
 
         doc.Save(_path);
     }
+
+    // ── Ausgabe der Standardabweichung als 1-, 2- oder 3-fache s0 ─────────────
+    /// <summary>Faktor für die Ausgabe der Standardabweichung (1, 2 oder 3).</summary>
+    public static int SigmaFaktor => Math.Clamp(_params.SigmaFaktor, 1, 3);
+
+    /// <summary>Bezeichnung: "s₀", "2·s₀" oder "3·s₀".</summary>
+    public static string SigmaBez => SigmaFaktor == 1 ? "s₀" : $"{SigmaFaktor}·s₀";
+
+    /// <summary>Wert in mm, mit dem eingestellten Faktor multipliziert.</summary>
+    public static double SigmaWert(double s0_mm) => s0_mm * SigmaFaktor;
+
+    /// <summary>z. B. "2·s₀=31.2 mm" (Anzeige, aktuelle Kultur).</summary>
+    public static string SigmaText(double s0_mm, string format = "F1")
+        => $"{SigmaBez}={SigmaWert(s0_mm).ToString(format)} mm";
+
+    /// <summary>Schreibt die Standardabweichung (mit Faktor) in die Projektdaten.</summary>
+    public static void SchreibeSigmaProjektdaten(double s0_mm)
+        => ProjektdatenManager.SetValue("Freie Stationierung", "Standardabweichung",
+            $"{SigmaFaktor}σ = {SigmaWert(s0_mm).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} mm");
 
     // ── Hilfsmethoden ─────────────────────────────────────────────────────────
     static double ReadDouble(XmlElement root, string tag, double def)
@@ -119,4 +140,6 @@ public class Rechenparameter
     public bool   FreierMassstab         { get; set; } = true;
     /// <summary>3D-Berechnung inkl. Höhen (true) oder rein 2D (false)</summary>
     public bool   Berechnung3D           { get; set; } = true;
+    /// <summary>Ausgabe der Standardabweichung: 1-, 2- oder 3-fach (nur Anzeige/Protokoll)</summary>
+    public int    SigmaFaktor            { get; set; } = 1;
 }

@@ -18,6 +18,7 @@ public partial class FormFreieStationierung : Form
     public FormFreieStationierung()
     {
         InitializeComponent();
+        cmbSigma.SelectedIndex = RechenparameterManager.SigmaFaktor - 1;
         InitGrid();
         LadeAnschlusspunkte();   // automatisch aus DXF-Viewer-Picks
         AktualisiereNeuerStandpunktButton();
@@ -235,6 +236,20 @@ public partial class FormFreieStationierung : Form
         }
     }
 
+    private void cmbSigma_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        if (cmbSigma.SelectedIndex < 0) return;
+        RechenparameterManager.Params.SigmaFaktor = cmbSigma.SelectedIndex + 1;
+        RechenparameterManager.Save();
+
+        // Alle Anzeigen mit dem neuen Faktor aktualisieren
+        var erg = StationsdatenManager.AktuellesErgebnis;
+        if (erg != null)
+            RechenparameterManager.SchreibeSigmaProjektdaten(erg.s0_mm);
+        AktualisiereAutoMatchPanel();
+        FormDxfViewer.AktiveInstanz?.AktualisiereSignallampe();
+    }
+
     private void btnRechenparameter_Click(object? sender, EventArgs e)
     {
         using var form = new FormRechenparameter();
@@ -283,6 +298,7 @@ public partial class FormFreieStationierung : Form
             ProjektdatenManager.SetValue("Freie Stationierung", "Hoehe [m]",          ergebnis.Hoehe.ToString("F3", IC));
             ProjektdatenManager.SetValue("Freie Stationierung", "Orientierung [gon]", ergebnis.Orientierung_gon.ToString("F4", IC));
             ProjektdatenManager.SetValue("Freie Stationierung", "s0 [mm]",            ergebnis.s0_mm.ToString("F2", IC));
+            RechenparameterManager.SchreibeSigmaProjektdaten(ergebnis.s0_mm);
 
             // Standpunkt in Feldbuchpunkte.json speichern
             FeldbuchpunkteManager.AddOrUpdate(new FeldbuchPunkt
@@ -372,7 +388,7 @@ public partial class FormFreieStationierung : Form
         else if (!brauchbar)
             lblAutoMatchStatus.Text = $"Station zu ungenau (s₀={ergebnis.s0_mm:F1} mm > {grenze:F0} mm) – Auto-Match gesperrt";
         else
-            lblAutoMatchStatus.Text = $"Station: s₀={ergebnis.s0_mm:F1} mm  r={ergebnis.Redundanz}  " +
+            lblAutoMatchStatus.Text = $"Station: {RechenparameterManager.SigmaText(ergebnis.s0_mm)}  r={ergebnis.Redundanz}  " +
                                       $"– Auto-Match {(chkAutoMatch.Checked ? "aktiv" : "bereit")}";
     }
 
