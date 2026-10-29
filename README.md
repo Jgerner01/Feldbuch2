@@ -92,10 +92,11 @@
 
 ## Version
 
-Aktuelle Version: **v1.9.6**
+Aktuelle Version: **v1.9.7**
 
 | Version | Inhalt |
 |---|---|
+| v1.9.7 | Freie Stationierung: Mehrfachmessungen gleicher Punkte, Zeile entfernen schließt Lücke, Standardabweichung 1-/2-/3-fach (Rechenparameter), Speichern erst bei gültiger Berechnung (≥ 3 grüne Quer-/Längsabweichungen); Messdaten-Dialog grau bis gültige Messung; Zielstrahl-Fix bei starkem Zoom, Zoom max. 1:1; Zielrichtung fragt nur Hz ab und pausiert während der Messung |
 | v1.9.6 | Lokales System im DXF-Viewer, gemeinsame Messkonfiguration mit Geräteabgleich, Signaltöne am Tachymeter, Programmicon, Neues Projekt |
 | v1.9.5 | DXF-Export/-Viewer erweitert, PunktFinder verbessert, Aufnahmetest-Dokumentation |
 | v1.9.4 | Freie Stationierung, DXF-Viewer und Anschlusspunkt verbessert |
