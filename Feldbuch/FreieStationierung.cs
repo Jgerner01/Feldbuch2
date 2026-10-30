@@ -57,6 +57,8 @@ public class PunktResiduum
     public bool   RichtungAktiv { get; set; } = true;
     public bool   StreckeAktiv  { get; set; } = true;
     public bool   HoeheAktiv    { get; set; } = true;
+    /// <summary>Relatives Richtungsgewicht (0..1, größtes = 1); NaN = nicht bestimmt (inaktiv oder n = 2).</summary>
+    public double GewichtRichtung { get; set; } = double.NaN;
 }
 
 public class StationierungsErgebnis
@@ -100,9 +102,23 @@ public static class FreieStationierungRechner
         bool[]? aktivStrecke          = null,
         bool[]? aktivHoehe            = null,
         bool berechnung3D             = true,
-        double fehlergrenzeMM_Hoehe   = 10.0)
+        double fehlergrenzeMM_Hoehe   = 10.0,
+        double zentrierfehlerZiel_mm       = 0.0,
+        double zentrierfehlerStandpunkt_mm = 0.0)
     {
         param ??= new InstrumentParameter();
+        // Gewichtung bei nahen Zielen (nur Polarmodul): Zentrierfehler gehen in die Varianz ein.
+        // Standard 0 = bisheriges Verhalten.
+        if (zentrierfehlerZiel_mm > 0 || zentrierfehlerStandpunkt_mm > 0)
+            param = new InstrumentParameter
+            {
+                mR_cc   = param.mR_cc,
+                msk_mm  = param.msk_mm,
+                msv_ppm = param.msv_ppm,
+                mSPZ_mm = zentrierfehlerStandpunkt_mm,
+                mZPZ_mm = zentrierfehlerZiel_mm,
+                m0_mm   = param.m0_mm
+            };
         int n = punkte.Count;
         if (n < 2)
             throw new InvalidOperationException("Mindestens 2 Anschlusspunkte erforderlich.");
@@ -249,6 +265,7 @@ public static class FreieStationierungRechner
         }
 
         // ── Schritt 5: Residuen zusammenstellen ──────────────────────────────
+        double[] gewichtRel = BerechneRichtungsgewichte(punkte, aktHz, R_FS, H_FS, param, n);
         var residuen = new List<PunktResiduum>();
         for (int i = 0; i < n; i++)
         {
@@ -277,7 +294,8 @@ public static class FreieStationierungRechner
                 vHoehe_mm      = vH_mm,
                 RichtungAktiv  = aktHz[i],
                 StreckeAktiv   = aktStr[i],
-                HoeheAktiv     = aktHoe[i]
+                HoeheAktiv     = aktHoe[i],
+                GewichtRichtung = gewichtRel[i]
             });
         }
 
@@ -296,6 +314,37 @@ public static class FreieStationierungRechner
             WarnungHoehe     = warnHoehe,
             Residuen         = residuen
         };
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Relatives Richtungsgewicht je Punkt (1 = größtes Gewicht aller aktiven Richtungen)
+    // Wirksame Richtungsunsicherheit der Orientierung: σ_o² = mR² + (c / s)²
+    // mit c² = mSPZ² + mZPZ² (Zentrierfehler).  Bei n = 2 (Direktlösung) unwirksam → NaN.
+    // ──────────────────────────────────────────────────────────────────────────
+    static double[] BerechneRichtungsgewichte(
+        List<StationierungsPunkt> punkte, bool[] aktHz,
+        double rStand, double hStand, InstrumentParameter param, int n)
+    {
+        double[] rel = Enumerable.Repeat(double.NaN, n).ToArray();
+        if (n < 3) return rel;
+
+        double mRrad = param.mR_cc * CC2RAD;
+        double c2    = Math.Pow(param.mSPZ_mm / 1000.0, 2) + Math.Pow(param.mZPZ_mm / 1000.0, 2);
+
+        double[] w   = new double[n];
+        double   max = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (!aktHz[i]) { w[i] = double.NaN; continue; }
+            double s = Math.Sqrt(Math.Pow(punkte[i].R - rStand, 2) + Math.Pow(punkte[i].H - hStand, 2));
+            double sigma2 = mRrad * mRrad + (s > 1e-6 ? c2 / (s * s) : c2 / 1e-12);
+            w[i] = 1.0 / Math.Max(sigma2, 1e-30);
+            if (w[i] > max) max = w[i];
+        }
+        if (max <= 0) return rel;
+        for (int i = 0; i < n; i++)
+            if (!double.IsNaN(w[i])) rel[i] = w[i] / max;
+        return rel;
     }
 
     // ──────────────────────────────────────────────────────────────────────────

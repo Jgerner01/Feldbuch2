@@ -545,6 +545,34 @@ public partial class FormDxfViewer : Form
             _istNeupunktModus
                 ? "Messmodus: Neupunkt (Klick zum Wechseln)"
                 : "Messmodus: Stationierung (Klick zum Wechseln)");
+
+        // Exzentrizitäten gibt es nur bei Neupunkten
+        lblExzLaengs.Visible = txtExzLaengs.Visible = _istNeupunktModus;
+        lblExzQuer.Visible   = txtExzQuer.Visible   = _istNeupunktModus;
+        PositioniereToolbarFelder();
+    }
+
+    // ── Exzentrizität (Neupunkt) ──────────────────────────────────────────────
+    private static readonly Color ExzNormalHintergrund = Color.FromArgb(55, 88, 150);
+    private static readonly Color ExzGrossHintergrund  = Color.FromArgb(255, 230, 100);
+
+    /// <summary>Liest ein Exzentrizitätsfeld [m]; ungültige oder leere Eingabe = 0.</summary>
+    private static double LeseExzentrizitaet(TextBox feld)
+        => double.TryParse(feld.Text.Trim().Replace(',', '.'), NumberStyles.Float,
+               CultureInfo.InvariantCulture, out double wert) ? wert : 0.0;
+
+    /// <summary>Markiert das Feld gelb, wenn die Exzentrizität größer als 2 m ist (nur Information).</summary>
+    private void AktualisiereExzFarbe(TextBox feld)
+    {
+        bool gross = Math.Abs(LeseExzentrizitaet(feld)) > PolarpunktRechner.EXZ_INFO_GRENZE_M;
+        feld.BackColor = gross ? ExzGrossHintergrund : ExzNormalHintergrund;
+        feld.ForeColor = gross ? Color.Black : Color.White;
+    }
+
+    private void ExzentrizitaetZuruecksetzen()
+    {
+        txtExzLaengs.Text = 0.0.ToString("F3", CultureInfo.InvariantCulture);
+        txtExzQuer.Text   = 0.0.ToString("F3", CultureInfo.InvariantCulture);
     }
 
     // ── EDM-Modus umschalten: Prisma ↔ Reflektorlos ─────────────────────────
@@ -934,7 +962,9 @@ public partial class FormDxfViewer : Form
                 Strecke_m    = messung.Schraegstrecke_m!.Value,
                 Zielhoehe_m  = messung.Zielhoehe_m ?? 0.0,
                 Zeitstempel  = messung.Zeitstempel,
-                StandpunktNr = spNr
+                StandpunktNr = spNr,
+                ExzLaengs_m  = LeseExzentrizitaet(txtExzLaengs),
+                ExzQuer_m    = LeseExzentrizitaet(txtExzQuer)
             };
 
             // Messung in CSV schreiben
@@ -966,7 +996,9 @@ public partial class FormDxfViewer : Form
                     canvas.Invalidate();
 
                     statusInfo = $"NP {punktNr}:  R={ergebnis.R:F3}  H={ergebnis.H:F3}"
-                        + (ergebnis.Ist3D ? $"  Höhe={ergebnis.Hoehe:F3}" : "");
+                        + (ergebnis.Ist3D ? $"  Höhe={ergebnis.Hoehe:F3}" : "")
+                        + (PolarpunktRechner.IstMassstabEins(ergebnis.VerwendeterMassstab)
+                            ? "" : $"  (m = {ergebnis.VerwendeterMassstab.ToString("F6", CultureInfo.InvariantCulture)})");
                 }
             }
             else
@@ -976,6 +1008,12 @@ public partial class FormDxfViewer : Form
                 // (Gauss-Krüger) einen GDI+-Overflow beim Zeichnen verursachen.
                 statusInfo = $"NP {punktNr} gespeichert (keine Stationierung – nur Rohdaten)";
             }
+
+            if (PolarpunktRechner.ExzentrizitaetGross(rohdaten.ExzLaengs_m, rohdaten.ExzQuer_m))
+                statusInfo += $"  ⚠ Exzentrizität eL={rohdaten.ExzLaengs_m.ToString("F3", CultureInfo.InvariantCulture)} " +
+                              $"eQ={rohdaten.ExzQuer_m.ToString("F3", CultureInfo.InvariantCulture)} m " +
+                              $"(> {PolarpunktRechner.EXZ_INFO_GRENZE_M.ToString("F0", CultureInfo.InvariantCulture)} m)";
+            ExzentrizitaetZuruecksetzen();      // gilt nur für diesen Punkt
 
             lblStatus.Text = statusInfo;
 
@@ -1524,6 +1562,13 @@ public partial class FormDxfViewer : Form
         lblNr.Location      = new Point(r - lblNr.Width, cy);       r -= lblNr.Width + 12;
         txtZielhoehe.Location = new Point(r - txtZielhoehe.Width, cy); r -= txtZielhoehe.Width + 4;
         lblZielhoehe.Location = new Point(r - lblZielhoehe.Width, cy); r -= lblZielhoehe.Width + 12;
+        if (txtExzLaengs.Visible)
+        {
+            txtExzQuer.Location   = new Point(r - txtExzQuer.Width, cy);   r -= txtExzQuer.Width + 4;
+            lblExzQuer.Location   = new Point(r - lblExzQuer.Width, cy);   r -= lblExzQuer.Width + 12;
+            txtExzLaengs.Location = new Point(r - txtExzLaengs.Width, cy); r -= txtExzLaengs.Width + 4;
+            lblExzLaengs.Location = new Point(r - lblExzLaengs.Width, cy); r -= lblExzLaengs.Width + 12;
+        }
         btnMessung.Location   = new Point(r - btnMessung.Width, 3);  r -= btnMessung.Width + 10;
 
         // Trennlinie vor Messung-Bereich

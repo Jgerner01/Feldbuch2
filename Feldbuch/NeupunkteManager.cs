@@ -26,6 +26,9 @@ public class NeupunkteDatei
 
 public static class NeupunkteManager
 {
+    /// <summary>Kennzeichnung für im Polarmodul berechnete Punkte.</summary>
+    public const string QUELLE_POLAR = "Polar";
+
     private static NeupunkteDatei _daten = new();
     private static string         _pfad  = "";
 
@@ -88,11 +91,17 @@ public static class NeupunkteManager
         StationierungsErgebnis station,
         string                 standpunktNr)
     {
+        // Im Polarmodul berechnete Punkte (Quelle = Polar) behalten ihre gewichtete Orientierung
+        var polarNr = _daten.Koordinaten
+            .Where(e => e.StandpunktNr == standpunktNr && e.Quelle == QUELLE_POLAR)
+            .Select(e => e.PunktNr)
+            .ToHashSet(StringComparer.Ordinal);
+
         var neueKoords = NeupunktRechner.BerechneAlle(
-            _daten.Rohdaten, station, standpunktNr);
+            _daten.Rohdaten.Where(r => !polarNr.Contains(r.PunktNr)), station, standpunktNr);
 
         // Alte Koordinaten dieses Standpunktes entfernen und neue einfügen
-        _daten.Koordinaten.RemoveAll(e => e.StandpunktNr == standpunktNr);
+        _daten.Koordinaten.RemoveAll(e => e.StandpunktNr == standpunktNr && e.Quelle != QUELLE_POLAR);
         _daten.Koordinaten.AddRange(neueKoords);
 
         Speichern();

@@ -27,6 +27,15 @@
 - Live-Stationierungsberechnung im DXF-Viewer mit Signallampe (grün/gelb/rot)
 - Residual-Overlay im DXF-Viewer
 
+### Polarpunkte *(seit v1.9.8)*
+- Berechnet Neupunkte aus den Messungen der `{Projekt}-dat.csv` (Hauptmenü → **Polarpunkte**)
+- **Orientierung** aus der gespeicherten Station oder neu aus den Anschlusspunkten der dat.csv; Ampel und einzelne Beobachtungen (Hz / Strecke / Höhe) schaltbar wie in der Freien Stationierung; mit einem Anschlussziel bei bekanntem Standpunkt möglich; Information bei weniger als drei Anschlusspunkten
+- **Exzentrizitäten**: Längs (positiv = weiter weg) und Quer (positiv = rechts der Messrichtung); Eingabe im DXF-Viewer (nur im Modus Neupunkt), nachträglich korrigierbar in der Maske; Information bei mehr als 2 m
+- **Maßstab** der Polarstrecken (Rechenparameter): 1 (Standard), aus der Stationierung berechnet oder vorgegeben; Hinweis bei m ≠ 1; wirkt nicht auf Exzentrizitäten und Höhe
+- **Gewichtung bei nahen Zielen** (Rechenparameter, Standard an): Zentrierfehler-Modell bei der Orientierung, Spalte „Gewicht“; wirkt nur im Polarmodul
+- Höhe nach Rechenparameter „3D-Berechnung“
+- Ausgabe: `Neupunkte.json` (Anzeige im DXF-Viewer) und per Button als `*-kor.csv`
+
 ### Punktfinder – automatische Punktidentifikation *(seit v1.9.3)*
 - **Handbetrieb**: DXF-Punkt anklicken + aktuelle Tachymetermessung (automatisch vorausgefüllt) → `Anschlusspunkte.csv`
 - **Auto-Match**: sobald eine brauchbare Stationierung vorliegt (s₀ ≤ 20 mm, Redundanz > 0), wird jede neue Messung automatisch einem DXF-Punkt zugeordnet
@@ -92,10 +101,11 @@
 
 ## Version
 
-Aktuelle Version: **v1.9.7**
+Aktuelle Version: **v1.9.8**
 
 | Version | Inhalt |
 |---|---|
+| v1.9.8 | **Polarpunkte** (neue Maske): Orientierung aus gespeicherter Station oder neu aus der dat.csv mit Ampel und schaltbaren Beobachtungen, Längs-/Querexzentrizität je Punkt (Eingabe im DXF-Viewer, Korrektur in der Maske), Maßstab der Polarstrecken wählbar (1 / berechnet / vorgegeben), Gewichtung bei nahen Zielen (nur Polarmodul), Orientierung auch aus einem Anschlussziel bei bekanntem Standpunkt, Speichern nach Neupunkte.json und als KOR-CSV; dat.csv um Exzentrizität, Standpunkt und Typ (AP/NP) erweitert (alte Dateien werden aufgerüstet); Hauptmenü: Buttons „Polarpunkte“ und „Test GeoCOM“ |
 | v1.9.7 | Freie Stationierung: Mehrfachmessungen gleicher Punkte, Zeile entfernen schließt Lücke, Standardabweichung 1-/2-/3-fach (Rechenparameter), Speichern erst bei gültiger Berechnung (≥ 3 grüne Quer-/Längsabweichungen); Messdaten-Dialog grau bis gültige Messung; Zielstrahl-Fix bei starkem Zoom, Zoom max. 1:1; Zielrichtung fragt nur Hz ab und pausiert während der Messung |
 | v1.9.6 | Lokales System im DXF-Viewer, gemeinsame Messkonfiguration mit Geräteabgleich, Signaltöne am Tachymeter, Programmicon, Neues Projekt |
 | v1.9.5 | DXF-Export/-Viewer erweitert, PunktFinder verbessert, Aufnahmetest-Dokumentation |

@@ -22,6 +22,7 @@ partial class Form1
         lblSekFeldarbeit      = new Label();
         btnDxfViewer          = new Button();
         btnFreieStationierung = new Button();
+        btnPolarpunkte        = new Button();
         btnTachymeterKommunikation = new Button();
         btnTestmessungen      = new Button();
         lblSekDaten           = new Label();
@@ -125,17 +126,24 @@ partial class Form1
         GrauButton(btnFreieStationierung);
         btnFreieStationierung.Click   += btnFreieStationierung_Click;
 
+        btnPolarpunkte.Text     = "Polarpunkte";
+        btnPolarpunkte.Size     = new Size(half, bh);
+        btnPolarpunkte.Location = new Point(x + half + gap, y);
+        btnPolarpunkte.Font     = btnFont;
+        GrauButton(btnPolarpunkte);
+        btnPolarpunkte.Click   += btnPolarpunkte_Click;
+        y += bh + 8;
+
         btnTachymeterKommunikation.Text     = "Tachymeter";
         btnTachymeterKommunikation.Size     = new Size(half, bh);
-        btnTachymeterKommunikation.Location = new Point(x + half + gap, y);
+        btnTachymeterKommunikation.Location = new Point(x, y);
         btnTachymeterKommunikation.Font     = btnFont;
         GruenerButton(btnTachymeterKommunikation);
         btnTachymeterKommunikation.Click   += btnTachymeterKommunikation_Click;
-        y += bh + 8;
 
-        btnTestmessungen.Text     = "Testmessungen  GeoCOM";
-        btnTestmessungen.Size     = new Size(w, bh);
-        btnTestmessungen.Location = new Point(x, y);
+        btnTestmessungen.Text     = "Test GeoCOM";
+        btnTestmessungen.Size     = new Size(half, bh);
+        btnTestmessungen.Location = new Point(x + half + gap, y);
         btnTestmessungen.Font     = btnFont;
         OrangeButton(btnTestmessungen);
         btnTestmessungen.Click   += btnTestmessungen_Click;
@@ -204,8 +212,8 @@ partial class Form1
         pnlBody.Controls.AddRange(new Control[]
         {
             lblSekProjekt, btnProjekt, btnProjektdaten,
-            lblSekFeldarbeit, btnDxfViewer, btnFreieStationierung, btnTachymeterKommunikation,
-            btnTestmessungen,
+            lblSekFeldarbeit, btnDxfViewer, btnFreieStationierung, btnPolarpunkte,
+            btnTachymeterKommunikation, btnTestmessungen,
             lblSekDaten, btnKonvertierung, btnProtokolle, btnDatenManager, btnBerechnungen,
             grpOptionen
         });
@@ -307,6 +315,7 @@ partial class Form1
     private Button    btnProjektdaten             = null!;
     private Button    btnDxfViewer                = null!;
     private Button    btnFreieStationierung        = null!;
+    private Button    btnPolarpunkte               = null!;
     private Button    btnTachymeterKommunikation   = null!;
     private Button    btnTestmessungen             = null!;
     private Button    btnKonvertierung             = null!;

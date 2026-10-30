@@ -39,7 +39,8 @@ public class CsvDatenDatei
     public static readonly string[] StandardSpaltenKor =
         ["PunktNr", "X", "Y", "Z", "Code"];
     public static readonly string[] StandardSpaltenDat =
-        ["PunktNr", "HZ_gon", "V_gon", "Strecke_m", "Zielhoehe_m", "Code", "Zeitstempel"];
+        ["PunktNr", "HZ_gon", "V_gon", "Strecke_m", "Zielhoehe_m", "Code", "Zeitstempel",
+         "ExzLaengs_m", "ExzQuer_m", "StandpunktNr", "Typ"];
 
     // ── Neues Objekt mit Defaults ─────────────────────────────────────────────
     public static CsvDatenDatei Neu(string datentyp)
@@ -130,7 +131,8 @@ public class CsvDatenDatei
             d.Zeilen.Add([
                 t[0], t[1], t[2], t[3], t[4],
                 t.Length > 5 ? t[5] : "",
-                zeitstempel
+                zeitstempel,
+                "0.000", "0.000", d.StandpunktNr, ""
             ]);
         }
         return d;

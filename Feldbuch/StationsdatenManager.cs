@@ -97,6 +97,30 @@ public static class StationsdatenManager
         }
     }
 
+    /// <summary>
+    /// Liest die Stationsdatei eines Standpunkts, ohne den aktiven Stand zu verändern
+    /// (für das Polarmodul). Gibt null zurück, wenn keine Datei vorhanden oder lesbar ist.
+    /// </summary>
+    public static StationsdatenDatei? LeseDatei(string standpunktNr)
+    {
+        if (!ProjektManager.IstGeladen || string.IsNullOrWhiteSpace(standpunktNr)) return null;
+        string pfad = ProjektManager.GetPfad($"Station-{standpunktNr}.json");
+        if (!File.Exists(pfad)) return null;
+        try
+        {
+            var data = JsonSerializer.Deserialize<StationsdatenDatei>(
+                File.ReadAllText(pfad, Encoding.UTF8),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (data != null) data.StandpunktNr = standpunktNr;
+            return data;
+        }
+        catch (Exception ex)
+        {
+            ErrorLogger.Log("StationsdatenManager.LeseDatei", ex);
+            return null;
+        }
+    }
+
     // ── Messung hinzufügen und sofort neu berechnen ───────────────────────────
 
     /// <summary>

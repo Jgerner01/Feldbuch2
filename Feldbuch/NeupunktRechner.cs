@@ -19,6 +19,10 @@ public class NeupunktRohdaten
     public double   Zielhoehe_m  { get; set; }
     public DateTime Zeitstempel  { get; set; }
     public string   StandpunktNr { get; set; } = "";
+    /// <summary>Längsexzentrizität [m]: positiv = Zielpunkt weiter vom Standpunkt weg als der Reflektor.</summary>
+    public double   ExzLaengs_m  { get; set; }
+    /// <summary>Querexzentrizität [m]: positiv = Zielpunkt rechts der Messrichtung.</summary>
+    public double   ExzQuer_m    { get; set; }
 }
 
 /// <summary>Berechnetes Ergebnis einer Neupunktmessung.</summary>
@@ -40,6 +44,12 @@ public class NeupunktErgebnis
     public string   StandpunktNr { get; set; } = "";
     /// <summary>Verwendete Orientierung [gon] bei der Berechnung.</summary>
     public double   VerwendeteOrientierung { get; set; }
+    public double   ExzLaengs_m  { get; set; }
+    public double   ExzQuer_m    { get; set; }
+    /// <summary>Bei der Berechnung angewandter Maßstab der Horizontalstrecke (Standard 1).</summary>
+    public double   VerwendeterMassstab { get; set; } = 1.0;
+    /// <summary>Herkunft: leer = DXF-Viewer, "Polar" = Polarmodul (wird bei Neuberechnung im Viewer nicht überschrieben).</summary>
+    public string   Quelle       { get; set; } = "";
 }
 
 public static class NeupunktRechner
@@ -55,7 +65,9 @@ public static class NeupunktRechner
     /// </summary>
     public static NeupunktErgebnis? Berechnen(
         NeupunktRohdaten rohdaten,
-        StationierungsErgebnis station)
+        StationierungsErgebnis station,
+        double? massstab    = null,
+        double? instrHoehe  = null)
     {
         if (rohdaten.Strecke_m <= 0) return null;
 
@@ -71,22 +83,25 @@ public static class NeupunktRechner
         // Horizontaldistanz: D_h = S * sin(V)
         double dHoriz = strecke * Math.Sin(v * GON2RAD);
 
+        // Maßstab nach Rechenparameter (Standard 1); Exzentrizitäten wirken längs/quer zur Messrichtung
+        double m = massstab
+            ?? PolarpunktRechner.ErmittleMassstab(RechenparameterManager.Params, station).Wert;
+
         // Lagekoordinaten (Rechtssystem: R = E, H = N)
-        double dR = dHoriz * Math.Sin(hzOri * GON2RAD);
-        double dH = dHoriz * Math.Cos(hzOri * GON2RAD);
+        var (r, h) = PolarpunktRechner.Lage(
+            station.R, station.H, hzOri, dHoriz, m,
+            rohdaten.ExzLaengs_m, rohdaten.ExzQuer_m);
 
-        double r = station.R + dR;
-        double h = station.H + dH;
-
-        // Höhe (nur bei 3D-Stationierung mit gültiger Standpunkthöhe)
-        bool ist3D  = station.Berechnung3D && (station.Hoehe != 0 || station.IstLokalesSystem);
+        // Höhe: nur bei 3D-Berechnung (Rechenparameter) mit gültiger Standpunkthöhe
+        bool ist3D  = RechenparameterManager.Params.Berechnung3D
+                      && (station.Hoehe != 0 || station.IstLokalesSystem);
         double hoehe = 0.0;
         if (ist3D)
         {
             // Δh_Instr_zu_Ziel = S * cos(V) + ih − zh
-            double instrHoehe = StationsdatenManager.InstrumentenHoehe;
-            double dHoehe     = strecke * Math.Cos(v * GON2RAD) + instrHoehe - zh;
-            hoehe             = station.Hoehe + dHoehe;
+            double ih     = instrHoehe ?? StationsdatenManager.InstrumentenHoehe;
+            double dHoehe = strecke * Math.Cos(v * GON2RAD) + ih - zh;
+            hoehe         = station.Hoehe + dHoehe;
         }
 
         return new NeupunktErgebnis
@@ -104,7 +119,10 @@ public static class NeupunktRechner
             Zielhoehe_m           = zh,
             Zeitstempel           = rohdaten.Zeitstempel,
             StandpunktNr          = rohdaten.StandpunktNr,
-            VerwendeteOrientierung = station.Orientierung_gon
+            VerwendeteOrientierung = station.Orientierung_gon,
+            ExzLaengs_m           = rohdaten.ExzLaengs_m,
+            ExzQuer_m             = rohdaten.ExzQuer_m,
+            VerwendeterMassstab   = m
         };
     }
 

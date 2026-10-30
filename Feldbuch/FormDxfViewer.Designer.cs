@@ -29,6 +29,10 @@ partial class FormDxfViewer
         btnMessung          = new Button();
         lblZielhoehe        = new Label();
         txtZielhoehe        = new TextBox();
+        lblExzLaengs        = new Label();
+        txtExzLaengs        = new TextBox();
+        lblExzQuer          = new Label();
+        txtExzQuer          = new TextBox();
         lblCode             = new Label();
         txtCode             = new TextBox();
         lblNr               = new Label();
@@ -224,6 +228,45 @@ partial class FormDxfViewer
         txtZielhoehe.Text        = "0.000";
         new ToolTip().SetToolTip(txtZielhoehe, "Zielhöhe / Reflektorhöhe [m]");
 
+        // ── Exzentrizität längs / quer (nur im Modus Neupunkt sichtbar) ───────
+        lblExzLaengs.Text      = "eL";
+        lblExzLaengs.AutoSize  = false;
+        lblExzLaengs.Size      = new Size(24, 24);
+        lblExzLaengs.Font      = lblFont;
+        lblExzLaengs.ForeColor = lblColor;
+        lblExzLaengs.TextAlign = ContentAlignment.MiddleRight;
+        lblExzLaengs.Visible   = false;
+
+        txtExzLaengs.Size        = new Size(54, 24);
+        txtExzLaengs.Font        = new Font("Consolas", 10F);
+        txtExzLaengs.BackColor   = Color.FromArgb(55, 88, 150);
+        txtExzLaengs.ForeColor   = Color.White;
+        txtExzLaengs.BorderStyle = BorderStyle.FixedSingle;
+        txtExzLaengs.Text        = "0.000";
+        txtExzLaengs.Visible     = false;
+        txtExzLaengs.TextChanged += (s, e) => AktualisiereExzFarbe(txtExzLaengs);
+        new ToolTip().SetToolTip(txtExzLaengs,
+            "Längsexzentrizität [m]: positiv = Zielpunkt liegt weiter vom Standpunkt weg als der Reflektor, negativ = näher");
+
+        lblExzQuer.Text      = "eQ";
+        lblExzQuer.AutoSize  = false;
+        lblExzQuer.Size      = new Size(24, 24);
+        lblExzQuer.Font      = lblFont;
+        lblExzQuer.ForeColor = lblColor;
+        lblExzQuer.TextAlign = ContentAlignment.MiddleRight;
+        lblExzQuer.Visible   = false;
+
+        txtExzQuer.Size        = new Size(54, 24);
+        txtExzQuer.Font        = new Font("Consolas", 10F);
+        txtExzQuer.BackColor   = Color.FromArgb(55, 88, 150);
+        txtExzQuer.ForeColor   = Color.White;
+        txtExzQuer.BorderStyle = BorderStyle.FixedSingle;
+        txtExzQuer.Text        = "0.000";
+        txtExzQuer.Visible     = false;
+        txtExzQuer.TextChanged += (s, e) => AktualisiereExzFarbe(txtExzQuer);
+        new ToolTip().SetToolTip(txtExzQuer,
+            "Querexzentrizität [m]: positiv = Zielpunkt liegt rechts der Messrichtung (Blick vom Standpunkt zum Ziel), negativ = links");
+
         // ── Code-Label + Feld ─────────────────────────────────────────────────
         lblCode.Text      = "Code";
         lblCode.AutoSize  = false;
@@ -261,7 +304,8 @@ partial class FormDxfViewer
             sep1, btnModus,
             lblSP, txtStandpunktNr, lblInstrH, txtInstrHoehe,
             sep2, btnMessung,
-            lblZielhoehe, txtZielhoehe, lblNr, txtPunktNr, lblCode, txtCode
+            lblZielhoehe, txtZielhoehe, lblNr, txtPunktNr, lblCode, txtCode,
+            lblExzLaengs, txtExzLaengs, lblExzQuer, txtExzQuer
         });
 
         // Rechtsbündige Positionierung – beim Laden und bei jedem Resize
@@ -470,6 +514,10 @@ partial class FormDxfViewer
     private Button           btnMessung          = null!;
     private Label            lblZielhoehe        = null!;
     private TextBox          txtZielhoehe        = null!;
+    private Label            lblExzLaengs        = null!;
+    private TextBox          txtExzLaengs        = null!;
+    private Label            lblExzQuer          = null!;
+    private TextBox          txtExzQuer          = null!;
     private Label            lblNr               = null!;
     private TextBox          txtPunktNr          = null!;
     private Label            lblCode             = null!;

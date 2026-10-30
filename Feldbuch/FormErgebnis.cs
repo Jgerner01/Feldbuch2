@@ -263,7 +263,7 @@ public partial class FormErgebnis : Form
         return quer >= 3 && laengs >= 3;
     }
 
-    static void AmpelFarbe(DataGridViewCell cell, double absVal, double limit)
+    internal static void AmpelFarbe(DataGridViewCell cell, double absVal, double limit)
     {
         if (IstGruen(absVal, limit))
             cell.Style.BackColor = Color.FromArgb(180, 230, 160);   // grün

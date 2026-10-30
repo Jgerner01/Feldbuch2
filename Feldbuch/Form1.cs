@@ -153,6 +153,12 @@ public partial class Form1 : Form
         form.ShowDialog(this);
     }
 
+    private void btnPolarpunkte_Click(object? sender, EventArgs e)
+    {
+        using var form = new FormPolarpunkte();
+        form.ShowDialog(this);
+    }
+
     private void btnDxfViewer_Click(object? sender, EventArgs e)
     {
         using var form = new FormDxfViewer();

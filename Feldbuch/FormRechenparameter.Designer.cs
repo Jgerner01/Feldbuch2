@@ -32,6 +32,22 @@ partial class FormRechenparameter
         chkBerechnung3D      = new CheckBox();
         grpSigma             = new GroupBox();
         cmbSigma             = new ComboBox();
+        grpPolarMassstab     = new GroupBox();
+        rbMassstabEins       = new RadioButton();
+        rbMassstabBerechnet  = new RadioButton();
+        rbMassstabVorgegeben = new RadioButton();
+        txtMassstabWert      = new TextBox();
+        btnMassstabUtm       = new Button();
+        lblMassstabHinweis   = new Label();
+        grpGewichtung        = new GroupBox();
+        chkGewichtung        = new CheckBox();
+        lblZentrZiel         = new Label();
+        nudZentrZiel         = new NumericUpDown();
+        lblZentrZielUnit     = new Label();
+        lblZentrStand        = new Label();
+        nudZentrStand        = new NumericUpDown();
+        lblZentrStandUnit    = new Label();
+        lblGewichtungHinweis = new Label();
         btnOK            = new Button();
         btnAbbrechen      = new Button();
 
@@ -39,11 +55,13 @@ partial class FormRechenparameter
         ((System.ComponentModel.ISupportInitialize)nudStrecke).BeginInit();
         ((System.ComponentModel.ISupportInitialize)nudHoehe).BeginInit();
         ((System.ComponentModel.ISupportInitialize)nudS0AutoMatch).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)nudZentrZiel).BeginInit();
+        ((System.ComponentModel.ISupportInitialize)nudZentrStand).BeginInit();
         SuspendLayout();
 
         // ── Fenster ───────────────────────────────────────────────────────────
-        ClientSize    = new Size(420, 528);
-        Text          = "Rechenparameter – Freie Stationierung";
+        ClientSize    = new Size(836, 528);
+        Text          = "Rechenparameter – Stationierung und Polarpunkte";
         StartPosition = FormStartPosition.CenterParent;
         AutoScaleMode = AutoScaleMode.Font;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -148,7 +166,7 @@ partial class FormRechenparameter
         });
 
         // ── Gruppe: Maßstab ───────────────────────────────────────────────────
-        grpMassstab.Text     = "Maßstab";
+        grpMassstab.Text     = "Maßstab (Stationierung)";
         grpMassstab.Font     = grpFont;
         grpMassstab.Location = new Point(14, 232);
         grpMassstab.Size     = new Size(392, 76);
@@ -190,9 +208,119 @@ partial class FormRechenparameter
 
         grpSigma.Controls.Add(cmbSigma);
 
+        // ── Rechte Spalte: Polarpunkte ────────────────────────────────────────
+        // Gruppe: Maßstab (Polarpunkte)
+        grpPolarMassstab.Text     = "Maßstab (Polarpunkte)";
+        grpPolarMassstab.Font     = grpFont;
+        grpPolarMassstab.Location = new Point(424, 12);
+        grpPolarMassstab.Size     = new Size(400, 214);
+
+        rbMassstabEins.Text     = "1  (ohne Maßstab) – Standard";
+        rbMassstabEins.Font     = lblFont;
+        rbMassstabEins.Location = new Point(14, 30);
+        rbMassstabEins.AutoSize = true;
+
+        rbMassstabBerechnet.Text     = "berechneter Maßstab aus der Stationierung";
+        rbMassstabBerechnet.Font     = lblFont;
+        rbMassstabBerechnet.Location = new Point(14, 60);
+        rbMassstabBerechnet.AutoSize = true;
+
+        rbMassstabVorgegeben.Text     = "vorgegebener Maßstab:";
+        rbMassstabVorgegeben.Font     = lblFont;
+        rbMassstabVorgegeben.Location = new Point(14, 90);
+        rbMassstabVorgegeben.AutoSize = true;
+
+        txtMassstabWert.Location = new Point(210, 88);
+        txtMassstabWert.Size     = new Size(100, 26);
+        txtMassstabWert.Font     = new Font("Consolas", 10F);
+        txtMassstabWert.TextAlign = HorizontalAlignment.Right;
+
+        btnMassstabUtm.Text     = "Aus UTM berechnen…";
+        btnMassstabUtm.Font     = new Font("Segoe UI", 9F);
+        btnMassstabUtm.Location = new Point(210, 122);
+        btnMassstabUtm.Size     = new Size(168, 28);
+        btnMassstabUtm.Enabled  = false;
+        new ToolTip().SetToolTip(btnMassstabUtm, "Folgt in einer späteren Ausbaustufe (UTM-Abbildung). Der Wert kann bis dahin von Hand eingegeben werden.");
+
+        lblMassstabHinweis.Text     = "Der Maßstab wirkt nur auf die gemessene Horizontalstrecke (nicht auf Exzentrizitäten und Höhe). Bei m ≠ 1 erscheint eine Information.";
+        lblMassstabHinweis.Font     = new Font("Segoe UI", 8.5F, FontStyle.Regular);
+        lblMassstabHinweis.Location = new Point(14, 158);
+        lblMassstabHinweis.Size     = new Size(372, 46);
+        lblMassstabHinweis.ForeColor = Color.FromArgb(90, 90, 90);
+
+        grpPolarMassstab.Controls.AddRange(new Control[]
+        {
+            rbMassstabEins, rbMassstabBerechnet, rbMassstabVorgegeben,
+            txtMassstabWert, btnMassstabUtm, lblMassstabHinweis
+        });
+
+        // Gruppe: Gewichtung bei nahen Zielen
+        grpGewichtung.Text     = "Gewichtung";
+        grpGewichtung.Font     = grpFont;
+        grpGewichtung.Location = new Point(424, 236);
+        grpGewichtung.Size     = new Size(400, 224);
+
+        chkGewichtung.Text     = "Gewichtung bei nahen Zielen";
+        chkGewichtung.Font     = lblFont;
+        chkGewichtung.Location = new Point(14, 30);
+        chkGewichtung.AutoSize = true;
+        chkGewichtung.CheckedChanged += (s, e) => AktualisiereGewichtungAktiv();
+
+        lblZentrZiel.Text     = "Zielzentrierung:";
+        lblZentrZiel.Font     = lblFont;
+        lblZentrZiel.Location = new Point(34, 68);
+        lblZentrZiel.Size     = new Size(150, 24);
+        lblZentrZiel.AutoSize = false;
+
+        nudZentrZiel.Location      = new Point(190, 65);
+        nudZentrZiel.Size          = new Size(80, 26);
+        nudZentrZiel.Font          = lblFont;
+        nudZentrZiel.Minimum       = 0m;
+        nudZentrZiel.Maximum       = 50m;
+        nudZentrZiel.DecimalPlaces = 1;
+        nudZentrZiel.Increment     = 0.5m;
+
+        lblZentrZielUnit.Text     = "mm";
+        lblZentrZielUnit.Font     = lblFont;
+        lblZentrZielUnit.Location = new Point(276, 68);
+        lblZentrZielUnit.AutoSize = true;
+
+        lblZentrStand.Text     = "Standpunktzentrierung:";
+        lblZentrStand.Font     = lblFont;
+        lblZentrStand.Location = new Point(34, 104);
+        lblZentrStand.Size     = new Size(150, 24);
+        lblZentrStand.AutoSize = false;
+
+        nudZentrStand.Location      = new Point(190, 101);
+        nudZentrStand.Size          = new Size(80, 26);
+        nudZentrStand.Font          = lblFont;
+        nudZentrStand.Minimum       = 0m;
+        nudZentrStand.Maximum       = 50m;
+        nudZentrStand.DecimalPlaces = 1;
+        nudZentrStand.Increment     = 0.5m;
+
+        lblZentrStandUnit.Text     = "mm";
+        lblZentrStandUnit.Font     = lblFont;
+        lblZentrStandUnit.Location = new Point(276, 104);
+        lblZentrStandUnit.AutoSize = true;
+
+        lblGewichtungHinweis.Text     = "Nahe Ziele haben wegen kleiner Lotfehler eine schlechte Richtung und erhalten ein geringeres Gewicht " +
+                                        "bei der Orientierung. Wirkt nur im Polarmodul (nicht in der Freien Stationierung). " +
+                                        "Die Standpunktzentrierung ist nur bei bekanntem Standpunkt wirksam.";
+        lblGewichtungHinweis.Font     = new Font("Segoe UI", 8.5F, FontStyle.Regular);
+        lblGewichtungHinweis.Location = new Point(14, 142);
+        lblGewichtungHinweis.Size     = new Size(372, 72);
+        lblGewichtungHinweis.ForeColor = Color.FromArgb(90, 90, 90);
+
+        grpGewichtung.Controls.AddRange(new Control[]
+        {
+            chkGewichtung, lblZentrZiel, nudZentrZiel, lblZentrZielUnit,
+            lblZentrStand, nudZentrStand, lblZentrStandUnit, lblGewichtungHinweis
+        });
+
         // ── Buttons ───────────────────────────────────────────────────────────
         btnOK.Text      = "OK";
-        btnOK.Location  = new Point(200, 486);
+        btnOK.Location  = new Point(616, 486);
         btnOK.Size      = new Size(96, 32);
         btnOK.Font      = lblFont;
         btnOK.BackColor = Color.FromArgb(60, 100, 160);
@@ -201,20 +329,23 @@ partial class FormRechenparameter
         btnOK.Click    += btnOK_Click;
 
         btnAbbrechen.Text      = "Abbrechen";
-        btnAbbrechen.Location  = new Point(308, 486);
+        btnAbbrechen.Location  = new Point(724, 486);
         btnAbbrechen.Size      = new Size(100, 32);
         btnAbbrechen.Font      = lblFont;
         btnAbbrechen.Click    += btnAbbrechen_Click;
 
         Controls.AddRange(new Control[]
         {
-            grpFehlergrenzen, grpMassstab, grpBerechnungsModus, grpSigma, btnOK, btnAbbrechen
+            grpFehlergrenzen, grpMassstab, grpBerechnungsModus, grpSigma,
+            grpPolarMassstab, grpGewichtung, btnOK, btnAbbrechen
         });
 
         ((System.ComponentModel.ISupportInitialize)nudWinkel).EndInit();
         ((System.ComponentModel.ISupportInitialize)nudStrecke).EndInit();
         ((System.ComponentModel.ISupportInitialize)nudHoehe).EndInit();
         ((System.ComponentModel.ISupportInitialize)nudS0AutoMatch).EndInit();
+        ((System.ComponentModel.ISupportInitialize)nudZentrZiel).EndInit();
+        ((System.ComponentModel.ISupportInitialize)nudZentrStand).EndInit();
         ResumeLayout(false);
     }
 
@@ -238,6 +369,22 @@ partial class FormRechenparameter
     private CheckBox      chkBerechnung3D      = null!;
     private GroupBox      grpSigma             = null!;
     private ComboBox      cmbSigma             = null!;
+    private GroupBox      grpPolarMassstab     = null!;
+    private RadioButton   rbMassstabEins       = null!;
+    private RadioButton   rbMassstabBerechnet  = null!;
+    private RadioButton   rbMassstabVorgegeben = null!;
+    private TextBox       txtMassstabWert      = null!;
+    private Button        btnMassstabUtm       = null!;
+    private Label         lblMassstabHinweis   = null!;
+    private GroupBox      grpGewichtung        = null!;
+    private CheckBox      chkGewichtung        = null!;
+    private Label         lblZentrZiel         = null!;
+    private NumericUpDown nudZentrZiel         = null!;
+    private Label         lblZentrZielUnit     = null!;
+    private Label         lblZentrStand        = null!;
+    private NumericUpDown nudZentrStand        = null!;
+    private Label         lblZentrStandUnit    = null!;
+    private Label         lblGewichtungHinweis = null!;
     private Button        btnOK             = null!;
     private Button        btnAbbrechen      = null!;
 }

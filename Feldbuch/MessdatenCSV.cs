@@ -20,8 +20,15 @@ using System.Text;
 //   # DATENTYP
 //   Messdaten
 //   # DATEN
-//   PunktNr; HZ_gon; V_gon; Strecke_m; Zielhoehe_m; Code; Zeitstempel
+//   PunktNr; HZ_gon; V_gon; Strecke_m; Zielhoehe_m; Code; Zeitstempel;
+//     ExzLaengs_m; ExzQuer_m; StandpunktNr; Typ
 //   {wert1}; {wert2}; ...
+//
+// Zusatzspalten (seit v1.9.8):
+//   ExzLaengs_m / ExzQuer_m  Exzentrizität des Zielpunkts [m] (siehe PolarpunktRechner)
+//   StandpunktNr             Standpunkt, von dem aus gemessen wurde
+//   Typ                      AP = Anschlusspunkt, NP = Neupunkt
+// Alte Dateien mit 7 Spalten werden beim Schreiben automatisch aufgerüstet.
 //
 // Standpunktwechsel / Neuberechnung während der Session:
 //   # STATIONIERUNG: SP={nr}  IH={ih}  Ori={ori}  s0={s0}  n={n}
@@ -34,8 +41,23 @@ public static class MessdatenCSV
 {
     private static readonly CultureInfo IC = CultureInfo.InvariantCulture;
 
-    private const string Spaltenzeile =
+    private const string SpaltenzeileAlt =
         "PunktNr; HZ_gon; V_gon; Strecke_m; Zielhoehe_m; Code; Zeitstempel";
+
+    private const string Spaltenzeile =
+        SpaltenzeileAlt + "; ExzLaengs_m; ExzQuer_m; StandpunktNr; Typ";
+
+    /// <summary>Zusatzwerte für Datenzeilen alter Dateien: Exzentrizität 0, Standpunkt und Typ leer.</summary>
+    private const string ZusatzwerteAlteZeile = "; 0.000; 0.000; ; ";
+
+    /// <summary>Typ-Kennzeichen in der Spalte „Typ“.</summary>
+    public const string TYP_ANSCHLUSSPUNKT = "AP";
+    public const string TYP_NEUPUNKT       = "NP";
+
+    /// <summary>Index der ersten Zusatzspalte (ExzLaengs_m) in einer Datenzeile.</summary>
+    private const int SPALTE_EXZ_LAENGS = 7;
+    private const int SPALTE_EXZ_QUER   = 8;
+    private const int SPALTENANZAHL     = 11;
 
     /// <summary>Pfad zur Messdaten-Datei (basierend auf aktuellem Projekt).</summary>
     public static string Pfad =>
@@ -62,7 +84,11 @@ public static class MessdatenCSV
             rohdaten.Strecke_m  .ToString("F3", IC),
             rohdaten.Zielhoehe_m.ToString("F3", IC),
             rohdaten.Code,
-            rohdaten.Zeitstempel.ToString("yyyy-MM-dd HH:mm"));
+            rohdaten.Zeitstempel.ToString("yyyy-MM-dd HH:mm"),
+            rohdaten.ExzLaengs_m.ToString("F3", IC),
+            rohdaten.ExzQuer_m  .ToString("F3", IC),
+            standpunktNr,
+            TYP_NEUPUNKT);
 
         AppendZeile(zeile);
     }
@@ -89,7 +115,11 @@ public static class MessdatenCSV
             punkt.Strecke .ToString("F3", IC),
             punkt.Zielhoehe.ToString("F3", IC),
             "",
-            zeitstempel.ToString("yyyy-MM-dd HH:mm"));
+            zeitstempel.ToString("yyyy-MM-dd HH:mm"),
+            0.0.ToString("F3", IC),
+            0.0.ToString("F3", IC),
+            standpunktNr,
+            TYP_ANSCHLUSSPUNKT);
 
         AppendZeile(zeile);
     }
@@ -138,7 +168,11 @@ public static class MessdatenCSV
             {
                 string ersteLine = File.ReadLines(pfad, Encoding.UTF8)
                                        .FirstOrDefault()?.Trim() ?? "";
-                if (ersteLine == "# METADATA") return;  // Format korrekt
+                if (ersteLine == "# METADATA")
+                {
+                    MigriereSpalten(pfad);              // 7-Spalten-Format aufrüsten
+                    return;                             // Format korrekt
+                }
             }
             catch { return; }
 
@@ -178,6 +212,65 @@ public static class MessdatenCSV
         sb.Append(Spaltenzeile);   // kein AppendLine – AppendZeile hängt \r\n an
 
         File.WriteAllText(pfad, sb.ToString() + Environment.NewLine, Encoding.UTF8);
+    }
+
+    // ── Migration / Rückschreiben ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Rüstet eine Datei mit alter 7-Spalten-Zeile auf das 11-Spalten-Format auf
+    /// (Sicherungskopie, Spaltenzeile ersetzen, Datenzeilen auffüllen).
+    /// Gibt true zurück, wenn die Datei geändert wurde.
+    /// </summary>
+    public static bool MigriereSpalten(string pfad)
+    {
+        try
+        {
+            string[] zeilen = File.ReadAllLines(pfad, Encoding.UTF8);
+            int idx = Array.FindIndex(zeilen, z => z.Trim() == SpaltenzeileAlt);
+            if (idx < 0) return false;
+
+            string dir    = Path.GetDirectoryName(pfad) ?? "";
+            string basis  = Path.GetFileNameWithoutExtension(pfad);
+            string backup = Path.Combine(dir, $"{basis}_backup_{DateTime.Now:yyyyMMdd-HHmmss}.csv");
+            File.Copy(pfad, backup, overwrite: true);
+
+            zeilen[idx] = Spaltenzeile;
+            for (int i = idx + 1; i < zeilen.Length; i++)
+            {
+                string z = zeilen[i];
+                if (string.IsNullOrWhiteSpace(z) || z.TrimStart().StartsWith('#')) continue;
+                zeilen[i] = z.TrimEnd() + ZusatzwerteAlteZeile;
+            }
+            File.WriteAllLines(pfad, zeilen, Encoding.UTF8);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ErrorLogger.Log("MessdatenCSV.MigriereSpalten", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Schreibt geänderte Exzentrizitäten in die angegebenen Datenzeilen (0-basierter Zeilenindex der Datei,
+    /// wie von <see cref="PolarMessdatenLeser"/> geliefert).
+    /// </summary>
+    public static void SchreibeExzentrizitaeten(
+        string pfad, IEnumerable<(int ZeilenIndex, double ExzLaengs, double ExzQuer)> aenderungen)
+    {
+        MigriereSpalten(pfad);
+        string[] zeilen = File.ReadAllLines(pfad, Encoding.UTF8);
+
+        foreach (var (index, eL, eQ) in aenderungen)
+        {
+            if (index < 0 || index >= zeilen.Length) continue;
+            var teile = zeilen[index].Split(';').Select(t => t.Trim()).ToList();
+            while (teile.Count < SPALTENANZAHL) teile.Add("");
+            teile[SPALTE_EXZ_LAENGS] = eL.ToString("F3", IC);
+            teile[SPALTE_EXZ_QUER]   = eQ.ToString("F3", IC);
+            zeilen[index] = string.Join("; ", teile);
+        }
+        File.WriteAllLines(pfad, zeilen, Encoding.UTF8);
     }
 
     private static void AppendZeile(string zeile)

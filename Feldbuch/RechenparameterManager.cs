@@ -48,7 +48,13 @@ public static class RechenparameterManager
                 FehlergrenzeMM_s0AutoMatch = ReadDouble(root, "FehlergrenzeMM_s0AutoMatch", 20.0),
                 FreierMassstab             = ReadBool  (root, "FreierMassstab",             true),
                 Berechnung3D               = ReadBool  (root, "Berechnung3D",               true),
-                SigmaFaktor                = (int)ReadDouble(root, "SigmaFaktor",           1)
+                SigmaFaktor                = (int)ReadDouble(root, "SigmaFaktor",           1),
+                PolarMassstabModus         = ReadModus (root, "PolarMassstabModus",         MassstabModus.Eins),
+                PolarMassstabWert          = ReadDouble(root, "PolarMassstabWert",          1.0),
+                PolarMassstabQuelle        = ReadString(root, "PolarMassstabQuelle",        "manuell"),
+                GewichtungNaheZiele        = ReadBool  (root, "GewichtungNaheZiele",        true),
+                ZentrierfehlerZiel_mm      = ReadDouble(root, "ZentrierfehlerZiel_mm",      Rechenparameter.ZENTRIERFEHLER_ZIEL_STANDARD_MM),
+                ZentrierfehlerStandpunkt_mm = ReadDouble(root, "ZentrierfehlerStandpunkt_mm", Rechenparameter.ZENTRIERFEHLER_STANDPUNKT_STANDARD_MM)
             };
         }
         catch (Exception ex)
@@ -77,6 +83,13 @@ public static class RechenparameterManager
         AppendElem(doc, root, "FreierMassstab",            _params.FreierMassstab ? "true" : "false");
         AppendElem(doc, root, "Berechnung3D",              _params.Berechnung3D   ? "true" : "false");
         AppendElem(doc, root, "SigmaFaktor",               SigmaFaktor.ToString());
+        var ic = System.Globalization.CultureInfo.InvariantCulture;
+        AppendElem(doc, root, "PolarMassstabModus",        _params.PolarMassstabModus.ToString());
+        AppendElem(doc, root, "PolarMassstabWert",         _params.PolarMassstabWert.ToString("F6", ic));
+        AppendElem(doc, root, "PolarMassstabQuelle",       _params.PolarMassstabQuelle);
+        AppendElem(doc, root, "GewichtungNaheZiele",       _params.GewichtungNaheZiele ? "true" : "false");
+        AppendElem(doc, root, "ZentrierfehlerZiel_mm",     _params.ZentrierfehlerZiel_mm.ToString("F1", ic));
+        AppendElem(doc, root, "ZentrierfehlerStandpunkt_mm", _params.ZentrierfehlerStandpunkt_mm.ToString("F1", ic));
 
         doc.Save(_path);
     }
@@ -108,6 +121,18 @@ public static class RechenparameterManager
         return double.TryParse(node.InnerText,
             System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : def;
+    }
+
+    static string ReadString(XmlElement root, string tag, string def)
+    {
+        var node = root.SelectSingleNode(tag);
+        return node == null || string.IsNullOrWhiteSpace(node.InnerText) ? def : node.InnerText.Trim();
+    }
+
+    static MassstabModus ReadModus(XmlElement root, string tag, MassstabModus def)
+    {
+        var node = root.SelectSingleNode(tag);
+        return node != null && Enum.TryParse(node.InnerText.Trim(), true, out MassstabModus m) ? m : def;
     }
 
     static bool ReadBool(XmlElement root, string tag, bool def)
@@ -142,4 +167,21 @@ public class Rechenparameter
     public bool   Berechnung3D           { get; set; } = true;
     /// <summary>Ausgabe der Standardabweichung: 1-, 2- oder 3-fach (nur Anzeige/Protokoll)</summary>
     public int    SigmaFaktor            { get; set; } = 1;
+
+    // ── Polarpunkte ───────────────────────────────────────────────────────────
+    public const double ZENTRIERFEHLER_ZIEL_STANDARD_MM       = 2.0;
+    public const double ZENTRIERFEHLER_STANDPUNKT_STANDARD_MM = 0.0;
+
+    /// <summary>Maßstab der Polarstrecken: 1 (Standard), aus der Stationierung berechnet oder vorgegeben</summary>
+    public MassstabModus PolarMassstabModus { get; set; } = MassstabModus.Eins;
+    /// <summary>Vorgegebener Maßstab (Modus Vorgegeben)</summary>
+    public double PolarMassstabWert         { get; set; } = 1.0;
+    /// <summary>Herkunft des vorgegebenen Maßstabs: "manuell" oder "UTM"</summary>
+    public string PolarMassstabQuelle       { get; set; } = "manuell";
+    /// <summary>Gewichtung bei nahen Zielen (Zentrierfehler-Modell) – wirkt nur im Polarmodul</summary>
+    public bool   GewichtungNaheZiele       { get; set; } = true;
+    /// <summary>Zentrier-/Lotfehler am Ziel [mm]</summary>
+    public double ZentrierfehlerZiel_mm     { get; set; } = ZENTRIERFEHLER_ZIEL_STANDARD_MM;
+    /// <summary>Zentrierfehler am Standpunkt [mm] (nur bei bekanntem Standpunkt wirksam)</summary>
+    public double ZentrierfehlerStandpunkt_mm { get; set; } = ZENTRIERFEHLER_STANDPUNKT_STANDARD_MM;
 }
