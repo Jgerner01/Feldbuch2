@@ -55,6 +55,7 @@ partial class FormDxfViewer
         btnAbsteckung           = new Button();
         btnAufnahmetest         = new Button();
         btnFreieStationierung   = new Button();
+        btnFestpunkte           = new Button();
         pnlStatus           = new Panel();
         lblStatus           = new Label();
         lblSystem           = new Label();
@@ -457,13 +458,18 @@ partial class FormDxfViewer
         btnFreieStationierung.Click += btnFreieStationierung_Click;
         new ToolTip().SetToolTip(btnFreieStationierung, "Freie Stationierung");
 
+        sy += ss + sp;
+        SideBtn(btnFestpunkte, "→FP", fntSm, sy, ss, Color.FromArgb(40, 90, 70), Color.White, Color.FromArgb(25, 65, 50));
+        btnFestpunkte.Click += btnFestpunkte_Click;
+        new ToolTip().SetToolTip(btnFestpunkte, "Gemessene Neupunkte als Festpunkte übernehmen (lokales System)");
+
         pnlSide.Controls.AddRange(new Control[]
         {
             btnOpen, btnZoomIn, btnZoomOut, btnFit,
             btnSnap, btnPunkte, btnDxfToggle, btnExportDxf,
             btnNeu, btnImportKorCsv, btnImportJson, btnLoeschen,
             btnPunktIndexReset, btnDigitalisierung, btnAbsteckung,
-            btnAufnahmetest, btnFreieStationierung
+            btnAufnahmetest, btnFreieStationierung, btnFestpunkte
         });
 
         // ══ Canvas ════════════════════════════════════════════════════════════
@@ -540,6 +546,7 @@ partial class FormDxfViewer
     private Button           btnAbsteckung           = null!;
     private Button           btnAufnahmetest         = null!;
     private Button           btnFreieStationierung   = null!;
+    private Button           btnFestpunkte           = null!;
     private Panel            pnlStatus           = null!;
     private Label            lblStatus           = null!;
     private Label            lblSystem           = null!;

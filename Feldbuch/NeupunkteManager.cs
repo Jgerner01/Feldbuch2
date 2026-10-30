@@ -70,16 +70,23 @@ public static class NeupunkteManager
         NeupunktRohdaten  rohdaten,
         NeupunktErgebnis  ergebnis)
     {
-        int ri = _daten.Rohdaten.FindIndex(r => r.PunktNr == rohdaten.PunktNr);
+        // Eindeutig ist ein Punkt erst mit Nummer und Standpunkt
+        int ri = _daten.Rohdaten.FindIndex(r =>
+            r.PunktNr == rohdaten.PunktNr && r.StandpunktNr == rohdaten.StandpunktNr);
         if (ri >= 0) _daten.Rohdaten[ri] = rohdaten;
         else          _daten.Rohdaten.Add(rohdaten);
 
-        int ei = _daten.Koordinaten.FindIndex(e => e.PunktNr == ergebnis.PunktNr);
+        int ei = _daten.Koordinaten.FindIndex(e =>
+            e.PunktNr == ergebnis.PunktNr && e.StandpunktNr == ergebnis.StandpunktNr);
         if (ei >= 0) _daten.Koordinaten[ei] = ergebnis;
         else          _daten.Koordinaten.Add(ergebnis);
 
         Speichern();
     }
+
+    /// <summary>Berechnete Koordinaten eines Punktes von einem bestimmten Standpunkt oder null.</summary>
+    public static NeupunktErgebnis? FindeKoordinate(string punktNr, string standpunktNr)
+        => _daten.Koordinaten.FirstOrDefault(e => e.PunktNr == punktNr && e.StandpunktNr == standpunktNr);
 
     // ── Neuberechnung nach Stationierungsänderung ─────────────────────────────
 
@@ -112,13 +119,13 @@ public static class NeupunkteManager
     /// <summary>Löscht alle Punkte die das Prädikat erfüllen.  Gibt Anzahl zurück.</summary>
     public static int RemoveWhere(Func<NeupunktRohdaten, bool> predicate)
     {
-        var nrs = _daten.Rohdaten
+        var schluessel = _daten.Rohdaten
             .Where(predicate)
-            .Select(r => r.PunktNr)
-            .ToHashSet(StringComparer.Ordinal);
+            .Select(r => (r.PunktNr, r.StandpunktNr))
+            .ToHashSet();
 
-        int removed = _daten.Rohdaten.RemoveAll(r => nrs.Contains(r.PunktNr));
-        _daten.Koordinaten.RemoveAll(e => nrs.Contains(e.PunktNr));
+        int removed = _daten.Rohdaten.RemoveAll(r => schluessel.Contains((r.PunktNr, r.StandpunktNr)));
+        _daten.Koordinaten.RemoveAll(e => schluessel.Contains((e.PunktNr, e.StandpunktNr)));
 
         if (removed > 0) Speichern();
         return removed;

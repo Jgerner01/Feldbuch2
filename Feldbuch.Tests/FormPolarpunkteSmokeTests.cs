@@ -31,6 +31,8 @@ public class FormPolarpunkteSmokeTests : IDisposable
         string ip = Path.Combine(Path.GetTempPath(), $"feldbuch-ip-{Guid.NewGuid():N}.json");
         ImportPunkteManager.Initialize(ip);
         File.Delete(ip);
+        string fp = Path.Combine(Path.GetTempPath(), $"feldbuch-fp-{Guid.NewGuid():N}.json");
+        FeldbuchpunkteManager.Initialize(fp);
     }
 
     private static T Feld<T>(object o, string name)
@@ -160,6 +162,175 @@ public class FormPolarpunkteSmokeTests : IDisposable
 
         Assert.Equal(R_STAND + 50.0 * 0.9996, r, TOL_M);
         Assert.Contains("0.999600", hinweis);
+    }
+
+    [Theory]
+    [InlineData(150)]      // kleiner als beide Teilbereiche zusammen (Regression: SplitterDistance-Ausnahme beim Öffnen)
+    [InlineData(400)]
+    [InlineData(900)]
+    public void Maske_LaesstSichBeiJederFensterhoeheAnzeigen(int hoehe)
+    {
+        bool sichtbar = InSta(() =>
+        {
+            using var form = new FormPolarpunkte();
+            form.StartPosition = FormStartPosition.Manual;
+            form.ClientSize    = new Size(1180, hoehe);
+            form.Show();
+            Application.DoEvents();
+            form.ClientSize = new Size(1180, hoehe + 120);
+            Application.DoEvents();
+            bool ok = form.Visible;
+            form.Close();
+            return ok;
+        });
+        Assert.True(sichtbar);
+    }
+
+    private static void KlickSpeichern(FormPolarpunkte form)
+        => typeof(FormPolarpunkte)
+            .GetMethod("btnSpeichern_Click", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(form, [null, EventArgs.Empty]);
+
+    private static void LegeNeupunktAn(string nr, string sp, double r, double h)
+        => NeupunkteManager.HinzufuegenOderErsetzen(
+            new NeupunktRohdaten  { PunktNr = nr, StandpunktNr = sp },
+            new NeupunktErgebnis  { PunktNr = nr, StandpunktNr = sp, R = r, H = h });
+
+    /// <summary>Temporäres Protokollverzeichnis mit Vorlage (die Testumgebung hat keine EXE-Vorlage).</summary>
+    private static string ProtokollVerzeichnisVorbereiten()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), $"feldbuch-pr-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Polarpunkte_Protokoll.xml"),
+                  Path.Combine(dir, "Polarpunkte_Protokoll.xml"));
+        PolarpunkteProtokoll.VerzeichnisUeberschreibung = dir;
+        return dir;
+    }
+
+    private static string NeuerTempPfad(string prefix)
+        => Path.Combine(Path.GetTempPath(), $"{prefix}-{Guid.NewGuid():N}.json");
+
+    [Fact]
+    public void Speichern_FragtBeiStarkerAbweichungNachUndSchreibtProtokoll()
+    {
+        RechenparameterManager.Params.Berechnung3D = false;      // sonst blockiert der Hinweisdialog (Station ohne Höhe)
+        string np = NeuerTempPfad("feldbuch-np");
+        NeupunkteManager.Initialize(np);
+        LegeNeupunktAn("7", "SP01", 1.0, 2.0);
+        string ausgabe = ProtokollVerzeichnisVorbereiten();
+
+        string? frage = null;
+        try
+        {
+            string status = InSta(() =>
+            {
+                using var form = MaskeMitDaten(0.0);
+                form.RueckfrageUeberschreiben = t => { frage = t; return true; };
+                KlickSpeichern(form);
+                return Feld<Label>(form, "lblStatus").Text;
+            });
+
+            var punkt = NeupunkteManager.Koordinaten.Single(k => k.PunktNr == "7");
+            Assert.Equal(R_STAND + 50.0, punkt.R, TOL_M);
+            Assert.Equal(NeupunkteManager.QUELLE_POLAR, punkt.Quelle);
+            Assert.Contains("1 ersetzt", status);
+            Assert.NotNull(frage);
+            Assert.Contains("7", frage);
+
+            string? protokoll = PolarpunkteProtokoll.LetztesProtokoll();
+            Assert.NotNull(protokoll);
+            string rtf = File.ReadAllText(protokoll!);
+            Assert.Contains("ersetzt", rtf);
+            Assert.Contains("Polarpunkte", rtf);
+        }
+        finally
+        {
+            PolarpunkteProtokoll.VerzeichnisUeberschreibung = null;
+            Directory.Delete(ausgabe, true);
+            File.Delete(np);
+        }
+    }
+
+    [Fact]
+    public void Speichern_BrichtBeiVerneinterRueckfrageAbUndLaesstPunktUnveraendert()
+    {
+        RechenparameterManager.Params.Berechnung3D = false;
+        string np = NeuerTempPfad("feldbuch-np");
+        NeupunkteManager.Initialize(np);
+        LegeNeupunktAn("7", "SP01", 1.0, 2.0);
+
+        try
+        {
+            string status = InSta(() =>
+            {
+                using var form = MaskeMitDaten(0.0);
+                form.RueckfrageUeberschreiben = _ => false;
+                KlickSpeichern(form);
+                return Feld<Label>(form, "lblStatus").Text;
+            });
+
+            Assert.Equal(1.0, NeupunkteManager.Koordinaten.Single(k => k.PunktNr == "7").R, TOL_M);
+            Assert.Contains("abgebrochen", status);
+        }
+        finally { File.Delete(np); }
+    }
+
+    [Fact]
+    public void Speichern_UeberschreibtNichtDenGleichnamigenPunktEinesAnderenStandpunkts()
+    {
+        RechenparameterManager.Params.Berechnung3D = false;
+        string np = NeuerTempPfad("feldbuch-np");
+        NeupunkteManager.Initialize(np);
+        LegeNeupunktAn("7", "SP02", 1.0, 2.0);
+        string ausgabe = ProtokollVerzeichnisVorbereiten();
+
+        bool gefragt = false;
+        try
+        {
+            string status = InSta(() =>
+            {
+                using var form = MaskeMitDaten(0.0);
+                form.RueckfrageUeberschreiben = _ => { gefragt = true; return true; };
+                KlickSpeichern(form);
+                return Feld<Label>(form, "lblStatus").Text;
+            });
+
+            Assert.False(gefragt);
+            Assert.Contains("1 neu", status);
+            Assert.Equal(2, NeupunkteManager.Koordinaten.Count(k => k.PunktNr == "7"));
+            Assert.Equal(1.0, NeupunkteManager.FindeKoordinate("7", "SP02")!.R, TOL_M);
+            Assert.Equal(R_STAND + 50.0, NeupunkteManager.FindeKoordinate("7", "SP01")!.R, TOL_M);
+        }
+        finally
+        {
+            PolarpunkteProtokoll.VerzeichnisUeberschreibung = null;
+            Directory.Delete(ausgabe, true);
+            File.Delete(np);
+        }
+    }
+
+    [Fact]
+    public void Maske_ZeigtHinweisBeiAbweichungZumFestpunkt()
+    {
+        string fb = NeuerTempPfad("feldbuch-fb");
+        FeldbuchpunkteManager.Initialize(fb);
+        FeldbuchpunkteManager.AddOrUpdate(new FeldbuchPunkt
+        {
+            PunktNr = "7", Typ = FestpunktUebernahme.TYP_NEUPUNKT, R = R_STAND + 51.0, H = H_STAND - 1.0     // Messpunkt liegt bei R+50 / H-1 (eQ = 1 m)
+        });
+
+        try
+        {
+            string hinweis = InSta(() =>
+            {
+                using var form = MaskeMitDaten(0.0);
+                return Feld<Label>(form, "lblHinweise").Text;
+            });
+
+            Assert.Contains("Festpunkt", hinweis);
+            Assert.Contains("7 (1.000 m)", hinweis);
+        }
+        finally { File.Delete(fb); }
     }
 
     [Fact]

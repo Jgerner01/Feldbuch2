@@ -50,6 +50,8 @@ public static class ProjektManager
     public static bool   ResidualVisible       { get; set; } = false;
     /// <summary>Letzte aktive Standpunktnummer im DXF-Viewer.</summary>
     public static string LetzteStandpunktNr   { get; set; } = "";
+    /// <summary>Zuletzt im DXF-Viewer gewählter Messmodus: true = Neupunkt, false = Stationierung.</summary>
+    public static bool   LetzterModusNeupunkt { get; set; } = true;
 
     // ── Messgerät-Verbindungseinstellungen ────────────────────────────────────
     /// <summary>
@@ -134,6 +136,7 @@ public static class ProjektManager
         NeupunktZaehler      = 1;
         StationierungZaehler = 1;
         LetzteStandpunktNr   = "";
+        LetzterModusNeupunkt = true;
         InstrumentenHoehe    = 0.0;
         _zoomDatei = "";
         _zoomScale = 0;
@@ -180,6 +183,7 @@ public static class ProjektManager
             NeupunkteVisible   = LadeBool(root, "NeupunkteVisible",  defaultVal: true);
             ResidualVisible    = LadeBool(root, "ResidualVisible",   defaultVal: false);
             LetzteStandpunktNr = root.SelectSingleNode("LetzteStandpunktNr")?.InnerText?.Trim() ?? "";
+            LetzterModusNeupunkt = LadeBool(root, "LetzterModusNeupunkt", defaultVal: true);
 
             // Tachymeter-Modell (mit Migration alter Enum-Namen)
             var tachModellText = root.SelectSingleNode("TachymeterModell")?.InnerText?.Trim() ?? "";
@@ -256,6 +260,7 @@ public static class ProjektManager
             Append(doc, root, "NeupunkteVisible",     NeupunkteVisible.ToString().ToLower());
             Append(doc, root, "ResidualVisible",      ResidualVisible.ToString().ToLower());
             Append(doc, root, "LetzteStandpunktNr",  LetzteStandpunktNr);
+            Append(doc, root, "LetzterModusNeupunkt", LetzterModusNeupunkt.ToString().ToLower());
             Append(doc, root, "TachymeterModell",   TachymeterModell.ToString());
             Append(doc, root, "TachymeterPort",     TachymeterPort);
             Append(doc, root, "TachymeterBaudRate", TachymeterBaudRate.ToString());

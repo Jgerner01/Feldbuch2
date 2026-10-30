@@ -40,6 +40,8 @@ public partial class FormFreieStationierung : Form
 
         // Anschlusspunkte neu laden wenn DXF-Viewer etwas gespeichert hat
         FormDxfViewer.AnschlusspunktGeschrieben += OnAnschlusspunktGeschrieben;
+
+        LiveWinkelSperre.Binden(this);     // keine Winkelabfragen des DXF-Viewers während der Messung hier
     }
 
     protected override void OnFormClosed(FormClosedEventArgs e)

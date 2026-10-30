@@ -35,6 +35,10 @@ public partial class FormMessdatenEingabe : Form
     private const int MESS_TIMEOUT_MS = 12000;
     private readonly System.Windows.Forms.Timer _messWatchdog = new() { Interval = MESS_TIMEOUT_MS };
 
+    // Eine Winkelantwort des DXF-Viewers, die noch unterwegs ist, wird vor dem Messstart abgewartet
+    private const int WARTE_INTERVALL_MS = 100;
+    private readonly System.Windows.Forms.Timer _warteAufWinkel = new() { Interval = WARTE_INTERVALL_MS };
+
     /// <summary>Ergebnis nach OK – null wenn Abbrechen.</summary>
     public StationierungsPunkt? Ergebnis { get; private set; }
 
@@ -52,6 +56,13 @@ public partial class FormMessdatenEingabe : Form
         TachymeterMessung? vorausgefuellt = null)
     {
         InitializeComponent();
+        LiveWinkelSperre.Binden(this);      // keine Winkelabfragen des DXF-Viewers, solange dieses Fenster misst
+        _warteAufWinkel.Tick += (_, __) =>
+        {
+            if (LiveWinkelSperre.AntwortOffen) return;
+            _warteAufWinkel.Stop();
+            StarteMessung();
+        };
         _r = r;
         _h = h;
 
@@ -188,6 +199,20 @@ public partial class FormMessdatenEingabe : Form
             return;
         }
 
+        if (LiveWinkelSperre.AntwortOffen)
+        {
+            btnMessen.Enabled     = false;
+            lblMessInfo.Text      = "Messung startet …";
+            lblMessInfo.ForeColor = Color.FromArgb(200, 160, 40);
+            _warteAufWinkel.Start();
+            return;
+        }
+
+        StarteMessung();
+    }
+
+    private void StarteMessung()
+    {
         try
         {
             btnMessen.Enabled = false;
@@ -266,6 +291,10 @@ public partial class FormMessdatenEingabe : Form
             var gsiParser = new GsiOnlineParser();
             if (!gsiParser.KannVerarbeiten(zeile)) return;
             var gsiMessung = gsiParser.ParseZeile(zeile);
+
+            // Eine reine Hz-Antwort stammt von der Winkelabfrage, nicht von dieser Messung
+            if (gsiMessung is { Hz_gon: not null, V_gon: null, Schraegstrecke_m: null, IstFehler: false }) return;
+
             MessungAbschliessen();
             if (gsiMessung == null) { TachymeterSignal.Fehler(); return; }
             if (gsiMessung.IstFehler)
@@ -296,6 +325,14 @@ public partial class FormMessdatenEingabe : Form
 
         // ── GeoCOM: zweistufige Messung ───────────────────────────────────────
         int rpcKontext = _letzterRpc;
+
+        // TMC_DoMeasure beantwortet das Gerät nur mit dem Returncode; eine Antwort mit
+        // Nutzdaten (z. B. Winkel) gehört zu einer anderen Anfrage und wird übergangen.
+        if (_messZustand == MessZustand.WarteMessen && rpcKontext == GeoCOMParser.RPC_TMC_DoMeasure
+            && zeile.StartsWith("%R1P,", StringComparison.Ordinal)
+            && zeile[(zeile.IndexOf(':') + 1)..].Contains(','))
+            return;
+
         var messung    = GeoCOMParser.ParseAntwort(zeile, rpcKontext);
         if (messung == null) return;
 
@@ -401,6 +438,8 @@ public partial class FormMessdatenEingabe : Form
         TachymeterKonfiguration.Abgeglichen -= OnKonfigurationAbgeglichen;
         _messWatchdog.Stop();
         _messWatchdog.Dispose();
+        _warteAufWinkel.Stop();
+        _warteAufWinkel.Dispose();
         base.OnFormClosing(e);
     }
 }

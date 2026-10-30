@@ -17,6 +17,8 @@ public partial class FormPolarpunkte : Form
     private const string STRICH              = "–";
     private const int    PROZENT              = 100;
     private const string QUELLE_POLAR         = NeupunkteManager.QUELLE_POLAR;
+    private const string STATUS_NEU           = "neu";
+    private const string STATUS_ERSETZT       = "ersetzt";
 
     private static readonly Color FarbeGrau     = Color.LightGray;
     private static readonly Color FarbeExzGross = Color.FromArgb(255, 230, 100);
@@ -28,6 +30,7 @@ public partial class FormPolarpunkte : Form
     private List<PolarMessung>           _np              = new();
     private List<(double L, double Q)>   _exzOriginal     = new();
     private NeupunktErgebnis?[]          _ergebnisse      = [];
+    private PunktResiduum?[]             _residuen        = [];
     private StationierungsErgebnis?      _station;
     private MassstabErgebnis             _massstab        = new(1.0, "");
     private readonly List<string>        _ladeHinweise    = new();
@@ -39,9 +42,14 @@ public partial class FormPolarpunkte : Form
     public FormPolarpunkte()
     {
         InitializeComponent();
+        RueckfrageUeberschreiben = FragePerDialog;
 
-        Load += (s, e) =>
-            splitMain.SplitterDistance = Math.Max(splitMain.Panel1MinSize, splitMain.Height / 2);
+        pnlUnten.SizeChanged += (s, e) => PositioniereButtons();
+        PositioniereButtons();
+
+        // Teilung erst nach dem ersten Layout setzen und in den gültigen Bereich zwingen
+        Shown  += (s, e) => SetzeTeilung();
+        Resize += (s, e) => { if (IsHandleCreated && Visible) SetzeTeilung(); };
 
         cmbStandpunkt.SelectedIndexChanged += (s, e) => StandpunktGewaehlt();
         rbQuelleStation.CheckedChanged     += (s, e) => { if (!_init && rbQuelleStation.Checked) FuelleTabellen(); };
@@ -52,6 +60,7 @@ public partial class FormPolarpunkte : Form
         btnNeuBerechnen.Click    += (s, e) => Neuberechnen();
         btnSpeichern.Click       += btnSpeichern_Click;
         btnKorCsv.Click          += btnKorCsv_Click;
+        btnProtokoll.Click       += btnProtokoll_Click;
         btnSchliessen.Click      += (s, e) => Close();
 
         txtInstrHoehe.Leave   += (s, e) => Neuberechnen();
@@ -73,6 +82,43 @@ public partial class FormPolarpunkte : Form
         dgvPolar.CellValueChanged             += dgvPolar_CellValueChanged;
 
         LadeDatei();
+    }
+
+    /// <summary>Rückfrage vor dem Überschreiben stark abweichender Punkte (true = fortfahren); Standard: Meldungsfenster.</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Func<string, bool> RueckfrageUeberschreiben { get; set; } = null!;
+
+    private bool FragePerDialog(string text)
+        => MessageBox.Show(this, text, "Polarpunkte überschreiben",
+               MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+
+    private const int BUTTON_RAND    = 14;
+    private const int BUTTON_ABSTAND = 8;
+    private const int BUTTON_OBEN    = 9;
+
+    /// <summary>Ordnet die Buttons von rechts her im unteren Panel an (unabhängig von der Panelbreite beim Aufbau).</summary>
+    private void PositioniereButtons()
+    {
+        int x = pnlUnten.ClientSize.Width - BUTTON_RAND;
+        foreach (var b in new[] { btnSchliessen, btnKorCsv, btnProtokoll, btnSpeichern, btnNeuBerechnen })
+        {
+            b.Location = new Point(x - b.Width, BUTTON_OBEN);
+            x -= b.Width + BUTTON_ABSTAND;
+        }
+    }
+
+    private int _letzteSplitHoehe;
+
+    /// <summary>Teilt den Hauptbereich je zur Hälfte; ungültige Bereiche (zu kleines Fenster) werden übersprungen.</summary>
+    private void SetzeTeilung()
+    {
+        int hoehe = splitMain.Height;
+        if (hoehe == _letzteSplitHoehe) return;           // Größe unverändert: Teilung des Nutzers behalten
+        int min = splitMain.Panel1MinSize;
+        int max = hoehe - splitMain.Panel2MinSize - splitMain.SplitterWidth;
+        if (max < min) return;
+        _letzteSplitHoehe = hoehe;
+        splitMain.SplitterDistance = Math.Clamp(hoehe / 2, min, max);
     }
 
     // ── Laden ─────────────────────────────────────────────────────────────────
@@ -291,6 +337,7 @@ public partial class FormPolarpunkte : Form
             }
         }
 
+        _residuen = residuenJeZeile;
         ZeigeResiduen(residuenJeZeile, par);
 
         // ── Informationen ─────────────────────────────────────────────────────
@@ -369,6 +416,7 @@ public partial class FormPolarpunkte : Form
         _ergebnisse = new NeupunktErgebnis?[_np.Count];
         int berechnet = 0;
         var grosseExz = new List<string>();
+        var festAbweichung = new List<string>();
 
         for (int i = 0; i < _np.Count; i++)
         {
@@ -395,11 +443,24 @@ public partial class FormPolarpunkte : Form
 
             zeile.DefaultCellStyle.BackColor = e == null ? FarbeGrau : Color.Empty;
             if (e != null) berechnet++;
+
+            // Vergleich mit einem bereits übernommenen Festpunkt gleicher Nummer
+            var fest = e == null ? null : FeldbuchpunkteManager.Punkte.FirstOrDefault(p =>
+                p.Typ == FestpunktUebernahme.TYP_NEUPUNKT && p.PunktNr == e.PunktNr);
+            if (e != null && fest != null)
+            {
+                double abw = PolarpunktRechner.Abstand(e.R - fest.R, e.H - fest.H);
+                if (abw > PolarpunktRechner.FESTPUNKT_ABWEICHUNG_INFO_M)
+                    festAbweichung.Add($"{e.PunktNr} ({abw.ToString("F3", IC)} m)");
+            }
         }
 
         if (grosseExz.Count > 0)
             hinweise.Add($"Exzentrizität größer als {PolarpunktRechner.EXZ_INFO_GRENZE_M.ToString("F0", IC)} m bei Punkt(en): " +
                          string.Join(", ", grosseExz));
+        if (festAbweichung.Count > 0)
+            hinweise.Add($"Abweichung zum Festpunkt (> {PolarpunktRechner.FESTPUNKT_ABWEICHUNG_INFO_M.ToString("F2", IC)} m): " +
+                         string.Join(", ", festAbweichung));
         return berechnet;
     }
 
@@ -589,18 +650,140 @@ public partial class FormPolarpunkte : Form
                 "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
         string sp = SpName;
+
+        // Rückfrage, wenn vorhandene Punkte (gleiche Nummer, gleicher Standpunkt) stark abweichen
+        var starkAbweichend = new List<string>();
+        for (int i = 0; i < _np.Count; i++)
+        {
+            var neuErg    = _ergebnisse[i];
+            var vorhanden = neuErg == null ? null : NeupunkteManager.FindeKoordinate(neuErg.PunktNr, sp);
+            if (neuErg == null || vorhanden == null) continue;
+            double abw = PolarpunktRechner.Abstand(neuErg.R - vorhanden.R, neuErg.H - vorhanden.H);
+            if (abw > PolarpunktRechner.UEBERSCHREIBEN_RUECKFRAGE_M)
+                starkAbweichend.Add($"{neuErg.PunktNr}: {abw.ToString("F3", IC)} m");
+        }
+        if (starkAbweichend.Count > 0)
+        {
+            string text =
+                $"{starkAbweichend.Count} vorhandene(r) Punkt(e) von {sp} weichen um mehr als " +
+                $"{PolarpunktRechner.UEBERSCHREIBEN_RUECKFRAGE_M.ToString("F2", IC)} m vom neuen Ergebnis ab:" +
+                Environment.NewLine + Environment.NewLine +
+                string.Join(Environment.NewLine, starkAbweichend.Take(10)) +
+                (starkAbweichend.Count > 10 ? Environment.NewLine + "…" : "") +
+                Environment.NewLine + Environment.NewLine + "Trotzdem überschreiben?";
+            if (!RueckfrageUeberschreiben(text))
+            {
+                lblStatus.Text = "Speichern abgebrochen – vorhandene Punkte unverändert.";
+                return;
+            }
+        }
+
+        var protokollPunkte = new List<PolarProtokollPunkt>();
+        int neu = 0, ersetzt = 0;
         for (int i = 0; i < _np.Count; i++)
         {
             var erg = _ergebnisse[i];
             if (erg == null) continue;
             erg.StandpunktNr = sp;
             erg.Quelle       = QUELLE_POLAR;
+
+            // Vorhandene Koordinaten gleicher Punktnummer werden überschrieben; Differenz fürs Protokoll merken
+            var alt = NeupunkteManager.FindeKoordinate(erg.PunktNr, sp);
+            if (alt == null) neu++; else ersetzt++;
+            protokollPunkte.Add(new PolarProtokollPunkt(
+                erg.PunktNr, _np[i].Hz_gon, _np[i].V_gon, _np[i].Strecke_m, _np[i].Zielhoehe_m,
+                erg.ExzLaengs_m, erg.ExzQuer_m, erg.R, erg.H, erg.Ist3D ? erg.Hoehe : null,
+                alt == null ? STATUS_NEU : STATUS_ERSETZT,
+                alt == null ? double.NaN : erg.R - alt.R,
+                alt == null ? double.NaN : erg.H - alt.H));
+
             NeupunkteManager.HinzufuegenOderErsetzen(BaueRohdaten(_np[i]), erg);
         }
 
         SchreibeGeaenderteExzentrizitaeten();
         ProtokolliereSpeichern(sp, anzahl);
-        lblStatus.Text = $"{anzahl} Polarpunkt(e) gespeichert (Neupunkte.json).";
+        string? protokoll = PolarpunkteProtokoll.Schreiben(BaueProtokollDaten(protokollPunkte));
+
+        // Ein bereits geöffneter DXF-Viewer zeigt die neuen Koordinaten sofort
+        FormDxfViewer.AktiveInstanz?.BaueNeupunkteOverlay();
+
+        lblStatus.Text = $"{anzahl} Polarpunkt(e) gespeichert ({neu} neu, {ersetzt} ersetzt) – Neupunkte.json" +
+                         (protokoll != null ? $", Protokoll {Path.GetFileName(protokoll)}" : "") + ".";
+    }
+
+    // ── Protokoll ─────────────────────────────────────────────────────────────
+
+    private PolarProtokollDaten BaueProtokollDaten(List<PolarProtokollPunkt> punkte)
+    {
+        var par = RechenparameterManager.Params;
+        var st  = _station!;
+
+        var anschluss = new List<PolarProtokollAnschluss>();
+        for (int i = 0; i < _apPunkte.Count; i++)
+        {
+            var r = i < _residuen.Length ? _residuen[i] : null;
+            bool inaktiv = !IstAktiv(dgvAnschluss, i, COL_AKT_HZ) ||
+                           !IstAktiv(dgvAnschluss, i, COL_AKT_STR) ||
+                           !IstAktiv(dgvAnschluss, i, COL_AKT_HOE);
+            anschluss.Add(new PolarProtokollAnschluss(
+                _apPunkte[i].PunktNr, inaktiv, r?.StreckeH ?? 0.0,
+                r != null && r.RichtungAktiv ? r.vWinkel_cc  : double.NaN,
+                r != null && r.RichtungAktiv ? r.vQuer_mm    : double.NaN,
+                r != null && r.StreckeAktiv  ? r.vStrecke_mm : double.NaN,
+                r != null && r.HoeheAktiv    ? r.vHoehe_mm   : double.NaN,
+                r?.GewichtRichtung ?? double.NaN));
+        }
+
+        string s0Info;
+        if (_lokal)
+            s0Info = "Lokales System: Standpunkt 0/0/0, Orientierung 0 gon, keine Anschlusspunkte";
+        else if (st.Redundanz > 0)
+        {
+            string bez = RechenparameterManager.SigmaFaktor == 1 ? "s0" : $"{RechenparameterManager.SigmaFaktor}*s0";
+            s0Info = $"Standardabw. {bez}:  {RechenparameterManager.SigmaWert(st.s0_mm).ToString("F2", IC)} mm     Redundanz r:  {st.Redundanz}";
+        }
+        else
+            s0Info = "Standardabw. s0:  -  (Redundanz r = 0, eindeutig bestimmt)";
+
+        string gewichtung = par.GewichtungNaheZiele
+            ? $"ein (Zielzentrierung {par.ZentrierfehlerZiel_mm.ToString("F1", IC)} mm, Standpunkt {par.ZentrierfehlerStandpunkt_mm.ToString("F1", IC)} mm)"
+            : "aus";
+        string quelle = _lokal ? "lokales System"
+                      : rbQuelleStation.Checked ? "gespeicherter Stationierung" : "Anschlusspunkten der dat.csv";
+        bool dreiD = par.Berechnung3D && (_lokal || st.Hoehe != 0.0);
+
+        return new PolarProtokollDaten(
+            SpName, LeseInstrHoehe(), quelle, _lokal,
+            st.R, st.H, dreiD ? st.Hoehe : null, st.Orientierung_gon, _massstab.Wert,
+            s0Info, gewichtung, _hinweise, anschluss, punkte);
+    }
+
+    private void btnProtokoll_Click(object? sender, EventArgs e)
+    {
+        string? pfad = PolarpunkteProtokoll.LetztesProtokoll();
+        if (pfad == null)
+        {
+            MessageBox.Show(
+                "Kein Polarpunkte-Protokoll gefunden." + Environment.NewLine +
+                "Es wird beim Speichern erzeugt (sofern das Protokoll in den Projektoptionen aktiviert ist).",
+                "Kein Protokoll", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName        = pfad,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            ErrorLogger.Log("FormPolarpunkte.btnProtokoll_Click", ex);
+            MessageBox.Show($"Protokoll konnte nicht geöffnet werden:{Environment.NewLine}{ex.Message}{Environment.NewLine}{Environment.NewLine}Datei: {pfad}",
+                "Protokoll", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private void SchreibeGeaenderteExzentrizitaeten()

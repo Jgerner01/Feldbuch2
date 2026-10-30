@@ -43,6 +43,7 @@ partial class FormPolarpunkte
         btnNeuBerechnen      = new Button();
         btnSpeichern         = new Button();
         btnKorCsv            = new Button();
+        btnProtokoll         = new Button();
         btnSchliessen        = new Button();
 
         ((System.ComponentModel.ISupportInitialize)splitMain).BeginInit();
@@ -56,7 +57,7 @@ partial class FormPolarpunkte
         // ── Fenster ───────────────────────────────────────────────────────────
         Text            = "Polarpunkte";
         ClientSize      = new Size(1180, 780);
-        MinimumSize     = new Size(980, 600);
+        MinimumSize     = new Size(1150, 600);
         StartPosition   = FormStartPosition.CenterParent;
         AutoScaleMode   = AutoScaleMode.Font;
         BackColor       = Color.FromArgb(245, 245, 245);
@@ -193,7 +194,7 @@ partial class FormPolarpunkte
         pnlUnten.Height = 54;
 
         lblStatus.Location  = new Point(14, 8);
-        lblStatus.Size      = new Size(520, 38);
+        lblStatus.Size      = new Size(420, 38);
         lblStatus.TextAlign = ContentAlignment.MiddleLeft;
         lblStatus.Anchor    = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
 
@@ -203,15 +204,17 @@ partial class FormPolarpunkte
         btnSpeichern.Size    = new Size(110, 36);
         btnKorCsv.Text       = "Als KOR-CSV speichern";
         btnKorCsv.Size       = new Size(180, 36);
+        btnProtokoll.Text    = "Protokoll anzeigen";
+        btnProtokoll.Size    = new Size(150, 36);
         btnSchliessen.Text   = "Schließen";
         btnSchliessen.Size   = new Size(100, 36);
 
-        foreach (var b in new[] { btnNeuBerechnen, btnSpeichern, btnKorCsv, btnSchliessen })
+        foreach (var b in new[] { btnNeuBerechnen, btnSpeichern, btnKorCsv, btnProtokoll, btnSchliessen })
         {
             b.Font   = btnFont;
-            b.Anchor = AnchorStyles.Right | AnchorStyles.Top;
+            b.Anchor = AnchorStyles.Left | AnchorStyles.Top;      // Lage setzt PositioniereButtons() je nach Panelbreite
         }
-        btnSpeichern.BackColor = Color.FromArgb(60, 100, 160);
+        btnSpeichern.BackColor = Color.FromArgb(46, 125, 50);
         btnSpeichern.ForeColor = Color.White;
         btnSpeichern.FlatStyle = FlatStyle.Flat;
 
@@ -219,12 +222,13 @@ partial class FormPolarpunkte
         int x = ClientSize.Width - 14;
         btnSchliessen.Location   = new Point(x - btnSchliessen.Width, 9);   x -= btnSchliessen.Width + 8;
         btnKorCsv.Location       = new Point(x - btnKorCsv.Width, 9);       x -= btnKorCsv.Width + 8;
+        btnProtokoll.Location    = new Point(x - btnProtokoll.Width, 9);    x -= btnProtokoll.Width + 8;
         btnSpeichern.Location    = new Point(x - btnSpeichern.Width, 9);    x -= btnSpeichern.Width + 8;
         btnNeuBerechnen.Location = new Point(x - btnNeuBerechnen.Width, 9);
 
         pnlUnten.Controls.AddRange(new Control[]
         {
-            lblStatus, btnNeuBerechnen, btnSpeichern, btnKorCsv, btnSchliessen
+            lblStatus, btnNeuBerechnen, btnSpeichern, btnKorCsv, btnProtokoll, btnSchliessen
         });
 
         // Reihenfolge: Fill-Steuerelement zuerst, Dock-Ränder danach
@@ -325,5 +329,6 @@ partial class FormPolarpunkte
     private Button         btnNeuBerechnen    = null!;
     private Button         btnSpeichern       = null!;
     private Button         btnKorCsv          = null!;
+    private Button         btnProtokoll       = null!;
     private Button         btnSchliessen      = null!;
 }

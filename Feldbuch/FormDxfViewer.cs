@@ -60,7 +60,6 @@ public partial class FormDxfViewer : Form
 
     // ── Lokales System (keine DXF-Daten, Standpunkt bei 0/0/0) ───────────────
     private const int    WINKEL_INTERVALL_MS       = 500;    // Abfrage des Hz-Winkels
-    private const int    WINKEL_ANTWORT_TIMEOUT_MS = 1500;   // danach gilt die Anfrage als verloren
     private const double LOKAL_MIN_RADIUS_M        = 20.0;   // kleinste Ansicht um den Standpunkt
     private const double LOKAL_RAND_FAKTOR         = 1.15;   // Rand um die äußersten Punkte
     private const double SICHTBAR_ANTEIL           = 0.9;    // Punkt gilt innerhalb 90 % der Ansicht als sichtbar
@@ -75,7 +74,12 @@ public partial class FormDxfViewer : Form
     private OverlayLokalerStandpunkt?    _lokalerStandpunkt;
     private readonly System.Windows.Forms.Timer _winkelTimer =
         new() { Interval = WINKEL_INTERVALL_MS };
-    private DateTime _winkelAnfrageZeit = DateTime.MinValue;
+    // Zeitpunkt der letzten Winkelabfrage; zentral, damit messende Fenster eine offene Antwort abwarten können
+    private static DateTime _winkelAnfrageZeit
+    {
+        get => LiveWinkelSperre.LetzteAnfrage;
+        set => LiveWinkelSperre.LetzteAnfrage = value;
+    }
 
     // Winkelabfrage ruht von der Messauslösung bis zum gültigen Messwert (Hz, V, Strecke)
     private bool _winkelPausiert;
@@ -175,6 +179,10 @@ public partial class FormDxfViewer : Form
         float dpi = 96f;
         try { using var gr = canvas.CreateGraphics(); dpi = gr.DpiX; } catch { }
         canvas.MaxScale = dpi / 0.0254;
+
+        // Messmodus: ohne Stationierung Stationierung, sonst der zuletzt benutzte Modus
+        // (das lokale System schaltet unten selbst auf Neupunkt)
+        _istNeupunktModus = StationsdatenManager.HatGueltigeStation && ProjektManager.LetzterModusNeupunkt;
 
         AktualisiereLokalesSystem();
         // Erst nach dem Layout ist die Canvas-Größe für die Startansicht bekannt
@@ -328,6 +336,8 @@ public partial class FormDxfViewer : Form
         lblLampeInfo.Text = _signalFarbe == Color.Black
             ? "–"
             : RechenparameterManager.SigmaText(ergebnis!.s0_mm);
+
+        AktualisiereZielrichtung();
     }
 
     private void PnlLampe_Paint(object? sender, PaintEventArgs e)
@@ -412,14 +422,49 @@ public partial class FormDxfViewer : Form
             }
             BaueOverlay();
             if (wechsel) ZeigeLokalesSystem();
+        }
+        else if (wechsel)
+        {
+            BaueOverlay();
+        }
+
+        AktualisiereZielrichtung();
+    }
+
+    // ── Zielrichtung ──────────────────────────────────────────────────────────
+    // Die Zielrichtung läuft im lokalen System und bei gültiger Stationierung mit der
+    // Fernrohrbewegung mit. Bei einer Stationierung geht die Linie vom berechneten
+    // Standpunkt aus, der Richtungswinkel ist t = Hz + Orientierung.
+    private bool ZielrichtungAktiv => _lokalesSystem || StationsdatenManager.HatGueltigeStation;
+
+    private void SetzeZielrichtungStandpunkt()
+    {
+        var erg    = StationsdatenManager.AktuellesErgebnis;
+        bool station = !_lokalesSystem && StationsdatenManager.HatGueltigeStation && erg != null;
+        _zielrichtung.StandpunktR     = station ? erg!.R : 0.0;
+        _zielrichtung.StandpunktH     = station ? erg!.H : 0.0;
+        _zielrichtung.OrientierungGon = station ? erg!.Orientierung_gon : 0.0;
+    }
+
+    /// <summary>Übernimmt Standpunkt und Orientierung, zeigt oder verbirgt die Linie und steuert die Winkelabfrage.</summary>
+    private void AktualisiereZielrichtung()
+    {
+        SetzeZielrichtungStandpunkt();
+        bool aktiv     = ZielrichtungAktiv;
+        bool imOverlay = canvas.OverlayEntities.Contains(_zielrichtung);
+        if (aktiv && !imOverlay)      canvas.OverlayEntities.Add(_zielrichtung);
+        else if (!aktiv && imOverlay) canvas.OverlayEntities.Remove(_zielrichtung);
+
+        if (aktiv)
+        {
             if (!_winkelTimer.Enabled) _winkelTimer.Start();
         }
         else
         {
             _winkelTimer.Stop();
             _zielrichtung.HzGon = null;
-            if (wechsel) BaueOverlay();
         }
+        canvas.Invalidate();
     }
 
     /// <summary>Zentriert die Ansicht auf den Standpunkt und passt sie an alle Neupunkte an.</summary>
@@ -449,8 +494,7 @@ public partial class FormDxfViewer : Form
     }
 
     // ── Live-Winkel: Zielrichtung läuft mit dem Hz-Winkel mit ─────────────────
-    private bool WinkelAntwortOffen =>
-        (DateTime.UtcNow - _winkelAnfrageZeit).TotalMilliseconds < WINKEL_ANTWORT_TIMEOUT_MS;
+    private static bool WinkelAntwortOffen => LiveWinkelSperre.AntwortOffen;
 
     private void WinkelTimer_Tick(object? sender, EventArgs e)
     {
@@ -461,8 +505,8 @@ public partial class FormDxfViewer : Form
             return;
         }
 
-        if (_winkelPausiert || TachymeterKonfiguration.Beschaeftigt
-            || !_lokalesSystem || _messungZustand != MessungZustand.Bereit
+        if (_winkelPausiert || TachymeterKonfiguration.Beschaeftigt || LiveWinkelSperre.Gesperrt
+            || !ZielrichtungAktiv || _messungZustand != MessungZustand.Bereit
             || !TachymeterVerbindung.IstVerbunden || WinkelAntwortOffen)
             return;
 
@@ -510,7 +554,7 @@ public partial class FormDxfViewer : Form
             StarteMessung();
             return;
         }
-        if (!_lokalesSystem || _winkelPausiert) return;
+        if (!ZielrichtungAktiv || _winkelPausiert) return;
 
         _zielrichtung.HzGon = hz;
         canvas.Invalidate();
@@ -731,7 +775,7 @@ public partial class FormDxfViewer : Form
         _parser_letzterRpc = 0;
         if (InvokeRequired) BeginInvoke(() => btnMessung.Enabled = true);
         else                 btnMessung.Enabled = true;
-        if (_lokalesSystem && !_winkelTimer.Enabled) _winkelTimer.Start();
+        if (ZielrichtungAktiv && !_winkelTimer.Enabled) _winkelTimer.Start();
     }
 
     // ── GeoCOM-Datenempfang ───────────────────────────────────────────────────
@@ -1066,6 +1110,7 @@ public partial class FormDxfViewer : Form
 
             AktualisiereSignallampe();
             BaueOverlay();          // Standpunkt neu im Overlay
+            AktualisiereZielrichtung();
 
             if (ergebnis != null)
             {
@@ -1110,6 +1155,11 @@ public partial class FormDxfViewer : Form
             _lokalerStandpunkt ??= new OverlayLokalerStandpunkt(txtStandpunktNr.Text.Trim());
             _lokalerStandpunkt.Name = txtStandpunktNr.Text.Trim();
             canvas.OverlayEntities.Add(_lokalerStandpunkt);
+            canvas.OverlayEntities.Add(_zielrichtung);
+        }
+        else if (StationsdatenManager.HatGueltigeStation)
+        {
+            SetzeZielrichtungStandpunkt();
             canvas.OverlayEntities.Add(_zielrichtung);
         }
         canvas.Invalidate();
@@ -1750,6 +1800,10 @@ public partial class FormDxfViewer : Form
             catch { }
         }
 
+        // Zuletzt benutzten Messmodus (Stationierung oder Neupunkt) für den nächsten Start merken
+        ProjektManager.LetzterModusNeupunkt = _istNeupunktModus;
+        ProjektManager.SpeichereOptionen();
+
         TachymeterVerbindung.DatenEmpfangen -= OnTachymeterDaten;
         TachymeterKonfiguration.Geaendert   -= OnKonfigurationGeaendert;
         TachymeterKonfiguration.Abgeglichen -= OnKonfigurationAbgeglichen;
@@ -2093,6 +2147,16 @@ public partial class FormDxfViewer : Form
         _formFreieStationierung.BringToFront();
     }
 
+    // ── Neupunkte als Festpunkte übernehmen (von Hand) ────────────────────────
+    private void btnFestpunkte_Click(object? sender, EventArgs e)
+    {
+        using var dlg = new FormFestpunkte();
+        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Ergebnis == null) return;
+
+        lblStatus.Text = $"Festpunkte übernommen: {dlg.Ergebnis.Neu} neu, {dlg.Ergebnis.Ersetzt} ersetzt (Feldbuchpunkte.json).";
+        BaueOverlay();
+    }
+
     private void OnCanvasRightClicked(double wx, double wy, DxfEntity? entity)
     {
         var menu = new ContextMenuStrip();
@@ -2152,10 +2216,8 @@ public partial class FormDxfViewer : Form
             .Where(p => InRect(p.R, p.H)).ToList();
         var neupunktTreffer = NeupunkteManager.Rohdaten
             .Where(p => InRect(
-                NeupunkteManager.Koordinaten
-                    .FirstOrDefault(e => e.PunktNr == p.PunktNr)?.R ?? 0,
-                NeupunkteManager.Koordinaten
-                    .FirstOrDefault(e => e.PunktNr == p.PunktNr)?.H ?? 0))
+                NeupunkteManager.FindeKoordinate(p.PunktNr, p.StandpunktNr)?.R ?? 0,
+                NeupunkteManager.FindeKoordinate(p.PunktNr, p.StandpunktNr)?.H ?? 0))
             .ToList();
         var importTreffer = ImportPunkteManager.Punkte
             .Where(p => InRect(p.R, p.H)).ToList();
@@ -2192,8 +2254,8 @@ public partial class FormDxfViewer : Form
         }
         if (neupunktTreffer.Count > 0)
         {
-            var nrs = neupunktTreffer.Select(p => p.PunktNr).ToHashSet();
-            gelNeu = NeupunkteManager.RemoveWhere(p => nrs.Contains(p.PunktNr));
+            var schluessel = neupunktTreffer.Select(p => (p.PunktNr, p.StandpunktNr)).ToHashSet();
+            gelNeu = NeupunkteManager.RemoveWhere(p => schluessel.Contains((p.PunktNr, p.StandpunktNr)));
             BaueNeupunkteOverlay();
         }
         if (importTreffer.Count > 0)

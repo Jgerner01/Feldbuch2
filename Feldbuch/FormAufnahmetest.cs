@@ -95,6 +95,7 @@ public partial class FormAufnahmetest : Form
     public FormAufnahmetest()
     {
         InitializeComponent();
+        LiveWinkelSperre.Binden(this);     // keine Winkelabfragen des DXF-Viewers während der Messung hier
 
         BaueTabelle();
         dgvPunkte.DataSource = _tabelle;

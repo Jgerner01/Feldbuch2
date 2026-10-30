@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.9.8</Version>
+    <Version>1.9.9</Version>
     <ApplicationIcon>icons\feldbuch.ico</ApplicationIcon>
     <Authors>Johann Gerner</Authors>
     <Company>Johann Gerner</Company>
@@ -41,6 +41,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="FreieStationierung_Protokoll.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Polarpunkte_Protokoll.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="KoordTransformation_Protokoll.xml">

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Protokollsteuerdatei: Polarpunkte
+  Wird vom RtfProtokollGenerator gelesen (Aufbau wie FreieStationierung_Protokoll.xml).
+
+  Abschnitt-Typen:  Titel | Zeile | Monoblock | Tabelle | Leerzeile | Trennlinie
+  Schrift:          0 = Arial Narrow  1 = Courier New
+  zeigenWenn="K":   Abschnitt nur, wenn felder["K"] = "1"
+
+  Felder:   Bearbeiter, Zeitpunkt, Standpunktnr, IH, Quelle, R, H, Hoehe, Orientierung,
+            Massstab, S0Info, Gewichtung, Hinweise (mehrzeilig), Zusammenfassung,
+            HatAnschluss, HatHinweise (je "1" oder "0")
+  Tabelle "Anschluss": PunktNr, StreckeH, vWinkel, vQuer, vLaengs, vHoehe, Gewicht
+  Tabelle "Polar":     PunktNr, HZ, V, Strecke, Zielhoehe, ExzL, ExzQ, R, H, Hoehe, Status, dR, dH
+-->
+<Protokoll modul="Polarpunkte">
+
+  <Seite breite="297" hoehe="210" randLinks="15" randRechts="15" randOben="18" randUnten="18" querformat="true"/>
+
+  <Schriften>
+    <Schrift id="0" name="Arial Narrow" typ="swiss"/>
+    <Schrift id="1" name="Courier New"  typ="modern"/>
+  </Schriften>
+
+  <Inhalt>
+
+    <!-- ── Titelzeile ─────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Titel" schrift="0" groesse="13" fett="true" unterlinie="true" abstandNach="80">
+      <Feld text="Polarpunkte"/>
+      <Feld text="     Beobachter: "/>
+      <Feld var="Bearbeiter"/>
+      <Feld text="     Datum/Uhrzeit:  "/>
+      <Feld var="Zeitpunkt"/>
+    </Abschnitt>
+
+    <!-- ── Standpunkt + Instrumentenhöhe + Quelle der Orientierung ────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Standpunktnr" label="Standpunktnr.:  "/>
+      <Feld text="     Instrumentenhoehe:  "/>
+      <Feld var="IH" einheit=" m"/>
+      <Feld text="     Orientierung aus:  "/>
+      <Feld var="Quelle"/>
+    </Abschnitt>
+
+    <!-- ── Standpunktkoordinaten + Orientierung + Maßstab ─────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" fett="true" abstandNach="40">
+      <Feld var="R"     label="Rechtswert:  " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="H"     label="Hochwert:    " einheit=" m"/>
+      <Feld text="    "/>
+      <Feld var="Hoehe" label="Hoehe: "       einheit=" m"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="Orientierung" label="Orientierung:  " einheit=" gon"/>
+      <Feld text="     "/>
+      <Feld var="Massstab"     label="Massstab:  "/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" abstandNach="40">
+      <Feld var="S0Info"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" unterlinie="true" abstandNach="80">
+      <Feld var="Gewichtung" label="Gewichtung bei nahen Zielen:  "/>
+    </Abschnitt>
+
+    <!-- ── Hinweise ───────────────────────────────────────────────────────── -->
+    <Abschnitt typ="Monoblock" var="Hinweise" zeigenWenn="HatHinweise" schrift="1" groesse="9" fett="true" abstandNach="0"/>
+    <Abschnitt typ="Leerzeile" zeigenWenn="HatHinweise" schrift="1" groesse="8"/>
+
+    <!-- ── Anschlusspunkte (Orientierung) ─────────────────────────────────── -->
+    <Abschnitt typ="Zeile" zeigenWenn="HatAnschluss" schrift="1" groesse="9" fett="true" abstandNach="20">
+      <Feld text="Anschlusspunkte (* = Beobachtung abgeschaltet)"/>
+    </Abschnitt>
+    <Abschnitt typ="Tabelle" name="Anschluss" zeigenWenn="HatAnschluss" schrift="1" groesse="8" kopfFett="true">
+      <Spalte var="PunktNr"  header="Punkt"     breite="10" ausrichtung="L"/>
+      <Spalte var="StreckeH" header="Sh[m]"     breite="9"  ausrichtung="R"/>
+      <Spalte var="vWinkel"  header="vW[cc]"    breite="8"  ausrichtung="R"/>
+      <Spalte var="vQuer"    header="vQ[mm]"    breite="8"  ausrichtung="R"/>
+      <Spalte var="vLaengs"  header="vL[mm]"    breite="8"  ausrichtung="R"/>
+      <Spalte var="vHoehe"   header="vH[mm]"    breite="8"  ausrichtung="R"/>
+      <Spalte var="Gewicht"  header="Gewicht"   breite="8"  ausrichtung="R"/>
+    </Abschnitt>
+    <Abschnitt typ="Leerzeile" zeigenWenn="HatAnschluss" schrift="1" groesse="8"/>
+
+    <!-- ── Berechnete Polarpunkte ─────────────────────────────────────────── -->
+    <Abschnitt typ="Zeile" schrift="1" groesse="9" fett="true" abstandNach="20">
+      <Feld text="Polarpunkte  (eL/eQ: Exzentrizitaet laengs/quer; Status: Vergleich mit Neupunkte.json)"/>
+    </Abschnitt>
+    <Abschnitt typ="Tabelle" name="Polar" schrift="1" groesse="8" kopfFett="true">
+      <Spalte var="PunktNr"   header="Punkt"     breite="10" ausrichtung="L"/>
+      <Spalte var="HZ"        header="HZ[gon]"   breite="9"  ausrichtung="R"/>
+      <Spalte var="V"         header="V[gon]"    breite="9"  ausrichtung="R"/>
+      <Spalte var="Strecke"   header="S[m]"      breite="8"  ausrichtung="R"/>
+      <Spalte var="Zielhoehe" header="ZH[m]"     breite="6"  ausrichtung="R"/>
+      <Spalte var="ExzL"      header="eL[m]"     breite="6"  ausrichtung="R"/>
+      <Spalte var="ExzQ"      header="eQ[m]"     breite="6"  ausrichtung="R"/>
+      <Spalte var="R"         header="R [m]"     breite="12" ausrichtung="R"/>
+      <Spalte var="H"         header="H [m]"     breite="12" ausrichtung="R"/>
+      <Spalte var="Hoehe"     header="Hoehe[m]"  breite="9"  ausrichtung="R"/>
+      <Spalte var="Status"    header="Status"    breite="8"  ausrichtung="L"/>
+      <Spalte var="dR"        header="dR[m]"     breite="8"  ausrichtung="R"/>
+      <Spalte var="dH"        header="dH[m]"     breite="8"  ausrichtung="R"/>
+    </Abschnitt>
+
+    <Abschnitt typ="Leerzeile" schrift="1" groesse="10"/>
+
+    <Abschnitt typ="Zeile" schrift="1" groesse="10" unterlinie="true" abstandNach="80">
+      <Feld var="Zusammenfassung"/>
+    </Abschnitt>
+
+  </Inhalt>
+
+</Protokoll>

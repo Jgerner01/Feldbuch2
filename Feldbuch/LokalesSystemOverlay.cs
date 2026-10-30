@@ -79,6 +79,13 @@ public class OverlayZielrichtung : DxfEntity
     /// <summary>Aktueller Horizontalwinkel [gon]; null = keine Anzeige.</summary>
     public double? HzGon { get; set; }
 
+    /// <summary>Standpunkt (Ursprung der Linie); im lokalen System 0 / 0.</summary>
+    public double StandpunktR { get; set; }
+    public double StandpunktH { get; set; }
+
+    /// <summary>Orientierungsunbekannte [gon]; Richtungswinkel t = Hz + Orientierung.</summary>
+    public double OrientierungGon { get; set; }
+
     public OverlayZielrichtung()
     {
         Layer = "Zielrichtung";
@@ -94,16 +101,19 @@ public class OverlayZielrichtung : DxfEntity
     public override (double x, double y) GetSnapPoint(double wx, double wy) => (0, 0);
 
     public override string GetInfo() =>
-        HzGon.HasValue ? $"Zielrichtung  Hz={HzGon.Value:F4} gon" : "Zielrichtung";
+        HzGon.HasValue ? $"Zielrichtung  Hz={HzGon.Value:F4} gon  t={Richtungswinkel(HzGon.Value):F4} gon" : "Zielrichtung";
+
+    private double Richtungswinkel(double hz) => ((hz + OrientierungGon) % 400.0 + 400.0) % 400.0;
 
     public override void Draw(Graphics g, Pen _pen,
         Func<double, double, PointF> ts, double scale)
     {
         if (!HzGon.HasValue || scale <= 0) return;
 
-        double hz = HzGon.Value * GON2RAD;
-        var p0 = ts(0, 0);
-        var pr = ts(Math.Sin(hz) / scale, Math.Cos(hz) / scale);   // 1 Pixel entlang der Richtung
+        double t  = Richtungswinkel(HzGon.Value);
+        double hz = t * GON2RAD;
+        var p0 = ts(StandpunktR, StandpunktH);
+        var pr = ts(StandpunktR + Math.Sin(hz) / scale, StandpunktH + Math.Cos(hz) / scale);   // 1 Pixel entlang der Richtung
         double dx = pr.X - p0.X, dy = pr.Y - p0.Y;
         double dl = Math.Sqrt(dx * dx + dy * dy);
         if (dl < 1e-9) return;
@@ -138,7 +148,10 @@ public class OverlayZielrichtung : DxfEntity
         float ty = (float)(p0.Y + dy * tText);
         using var fnt   = new Font("Consolas", SchriftPx, FontStyle.Bold, GraphicsUnit.Pixel);
         using var brush = new SolidBrush(Farbe);
-        g.DrawString($"Hz {HzGon.Value:F4}", fnt, brush, tx + 4f, ty - SchriftPx - 2f);
+        string text = OrientierungGon == 0.0
+            ? $"Hz {HzGon.Value:F4}"
+            : $"Hz {HzGon.Value:F4}  t {t:F4}";
+        g.DrawString(text, fnt, brush, tx + 4f, ty - SchriftPx - 2f);
     }
 
     // Liang-Barsky für eine Achse: schränkt [t0,t1] auf p + d*t ∈ [min,max] ein

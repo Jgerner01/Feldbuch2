@@ -49,6 +49,15 @@ public static class PolarpunktRechner
     public static bool ExzentrizitaetGross(double eLaengs, double eQuer)
         => Math.Abs(eLaengs) > EXZ_INFO_GRENZE_M || Math.Abs(eQuer) > EXZ_INFO_GRENZE_M;
 
+    /// <summary>Abweichung beim Überschreiben eines vorhandenen Polarpunkts, ab der nachgefragt wird [m].</summary>
+    public const double UEBERSCHREIBEN_RUECKFRAGE_M = 0.05;
+
+    /// <summary>Abweichung zu einem Festpunkt gleicher Nummer, ab der ein Hinweis erscheint [m].</summary>
+    public const double FESTPUNKT_ABWEICHUNG_INFO_M = 0.05;
+
+    /// <summary>Horizontaler Abstand aus Koordinatendifferenzen [m].</summary>
+    public static double Abstand(double dR, double dH) => Math.Sqrt(dR * dR + dH * dH);
+
     // ── Lage ──────────────────────────────────────────────────────────────────
 
     /// <summary>
