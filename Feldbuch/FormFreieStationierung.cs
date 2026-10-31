@@ -157,11 +157,11 @@ public partial class FormFreieStationierung : Form
         try
         {
             var zeilen = GridZeilen();
-            File.WriteAllLines(FormDxfViewer.AnschlusspunktePfad, zeilen, System.Text.Encoding.UTF8);
+            DateiSpeicher.SchreibeZeilen(FormDxfViewer.AnschlusspunktePfad, zeilen, System.Text.Encoding.UTF8);
 
             string spPfad = StandpunktCsvPfad();
             if (File.Exists(spPfad))
-                File.WriteAllLines(spPfad, zeilen, System.Text.Encoding.UTF8);
+                DateiSpeicher.SchreibeZeilen(spPfad, zeilen, System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
@@ -230,7 +230,7 @@ public partial class FormFreieStationierung : Form
 
         try
         {
-            File.WriteAllLines(pfad, zeilen, System.Text.Encoding.UTF8);
+            DateiSpeicher.SchreibeZeilen(pfad, zeilen, System.Text.Encoding.UTF8);
             MessageBox.Show($"Gespeichert: {zeilen.Count - 1} Punkte\n{pfad}",
                 "Gespeichert", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -288,6 +288,7 @@ public partial class FormFreieStationierung : Form
                                     berechnung3D:         par.Berechnung3D,
                                     fehlergrenzeMM_Hoehe: par.FehlergrenzeMM_Hoehe);
 
+            StationierungsQualitaet.Pruefe(ergebnis);
             // Ergebnis in Projektdaten protokollieren
             string standpunkt = txtStandpunkt.Text;
             ProjektdatenManager.SetValue("Freie Stationierung", "Standpunkt",         standpunkt);

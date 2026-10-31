@@ -11,18 +11,18 @@ using System.Xml;
 public static class ProjektManager
 {
     private static readonly string EinstellungenPfad =
-        AppPfade.Get("Einstellungen.xml");
+        AppPfade.BenutzerGet("Einstellungen.xml");
 
     // ── Eigenschaften ─────────────────────────────────────────────────────────
     public static string ProjektName        { get; private set; } = "";
-    public static string ProjektVerzeichnis { get; private set; } = AppPfade.Basis;
+    public static string ProjektVerzeichnis { get; private set; } = AppPfade.BenutzerBasis;
 
     public static bool IstGeladen => !string.IsNullOrEmpty(ProjektName);
 
     // ── Optionen (5 Checkboxen im Hauptfenster) ───────────────────────────────
     /// <summary>Protokollierung in Protokoll_YYYY-MM-DD.txt aktivieren.</summary>
     public static bool ProtokollAktiv          { get; set; } = true;
-    /// <summary>Vor dem Speichern eine Sicherungskopie anlegen (Platzhalter).</summary>
+    /// <summary>Vor dem Ersetzen einer Datei die vorherige Version im Ordner Backup sichern.</summary>
     public static bool AutoBackup              { get; set; } = false;
     /// <summary>Koordinaten-Tooltip im DXF-Viewer anzeigen (Platzhalter).</summary>
     public static bool KoordinatenTooltip      { get; set; } = true;
@@ -119,10 +119,21 @@ public static class ProjektManager
     // ── Aktives Projekt setzen ────────────────────────────────────────────────
     public static void SetProjekt(string name, string verzeichnis)
     {
-        ProjektName        = name.Trim();
-        ProjektVerzeichnis = verzeichnis.TrimEnd('\\', '/');
-        Directory.CreateDirectory(ProjektVerzeichnis);
-        Speichern();
+        name = name.Trim();
+        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new ArgumentException("Bitte einen gültigen Projektnamen eingeben.", nameof(name));
+        string pfad = Path.GetFullPath(verzeichnis);
+        Directory.CreateDirectory(pfad);
+        var vorher = (ProjektName, ProjektVerzeichnis);
+        ProjektName = name;
+        ProjektVerzeichnis = pfad;
+        try { Speichern(); }
+        catch
+        {
+            (ProjektName, ProjektVerzeichnis) = vorher;
+            throw;
+        }
+        StationsdatenManager.Zuruecksetzen();
     }
 
     // ── Leeres neues Projekt anlegen ──────────────────────────────────────────
@@ -154,6 +165,8 @@ public static class ProjektManager
             var doc  = new XmlDocument();
             doc.Load(EinstellungenPfad);
             var root = doc.DocumentElement!;
+            if (root == null || root.Name != "FeldbuchEinstellungen")
+                throw new XmlException("Ungültige Einstellungsdatei.");
 
             string name = root.SelectSingleNode("LetztesProjektName")?.InnerText?.Trim() ?? "";
             string verz = root.SelectSingleNode("LetztesProjektVerzeichnis")?.InnerText?.Trim() ?? "";
@@ -225,8 +238,9 @@ public static class ProjektManager
             double.TryParse(root.SelectSingleNode("DxfZoomPanY")?.InnerText,
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out _zoomPanY);
+            DateiSpeicher.LadenErfolgreich(EinstellungenPfad);
         }
-        catch (Exception ex) { ErrorLogger.Log("ProjektManager.Laden", ex); }
+        catch (Exception ex) { DateiSpeicher.MeldeLadefehler(EinstellungenPfad, ex); }
     }
 
     // ── Nur Optionen speichern (ohne Projektpfad zu ändern) ──────────────────
@@ -275,9 +289,12 @@ public static class ProjektManager
             Append(doc, root, "DxfZoomPanX",   _zoomPanX .ToString("R", System.Globalization.CultureInfo.InvariantCulture));
             Append(doc, root, "DxfZoomPanY",   _zoomPanY .ToString("R", System.Globalization.CultureInfo.InvariantCulture));
 
-            doc.Save(EinstellungenPfad);
+            using var buffer = new MemoryStream();
+            doc.Save(buffer);
+            DateiSpeicher.SchreibeText(EinstellungenPfad, System.Text.Encoding.UTF8.GetString(buffer.ToArray())
+                .TrimStart('\uFEFF'));
         }
-        catch (Exception ex) { ErrorLogger.Log("ProjektManager.Speichern", ex); }
+        catch (Exception ex) { ErrorLogger.Log("ProjektManager.Speichern", ex); throw; }
     }
 
     static void Append(XmlDocument doc, XmlElement parent, string tag, string value)

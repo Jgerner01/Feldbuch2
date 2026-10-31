@@ -264,7 +264,7 @@ public partial class FormKonvertierung : Form
                 z.Strecke.ToString("F3", IC), z.Zielhoehe.ToString("F3", IC),
                 z.Punktcode, z.Bemerkung));
 
-        File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(dlg.FileName, sb.ToString(), Encoding.UTF8);
         AktualisiereStatus($"CSV gespeichert: {Path.GetFileName(dlg.FileName)}");
         MessageBox.Show($"CSV gespeichert:\n{dlg.FileName}", "Export",
             MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -299,7 +299,7 @@ public partial class FormKonvertierung : Form
                 $"  {z.Bemerkung}");
         }
 
-        File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(dlg.FileName, sb.ToString(), Encoding.UTF8);
         AktualisiereStatus($"KOR gespeichert: {Path.GetFileName(dlg.FileName)}");
         MessageBox.Show($"KOR-Datei gespeichert:\n{dlg.FileName}", "Export",
             MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -346,7 +346,7 @@ public partial class FormKonvertierung : Form
                 $"  {z.Typ}");
         }
 
-        File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(dlg.FileName, sb.ToString(), Encoding.UTF8);
 
         string hinweis = stp == null
             ? "\n\nHinweis: Kein Standpunkt gefunden – Standardwerte verwendet (STP1 / 0.000 / 005)."

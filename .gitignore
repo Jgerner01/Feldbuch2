@@ -1,5 +1,6 @@
 bin/
 obj/
+TestResults/
 .vs/
 *.user
 *.suo
@@ -18,3 +19,7 @@ Feldbuch_v*.zip
 # Release-Archive (beide Schreibweisen)
 Feldbuch-v*.zip
 *.zip
+
+# Lokale Claude-Einstellungen
+.claude/settings.local.json
+*.proj.Backup.tmp

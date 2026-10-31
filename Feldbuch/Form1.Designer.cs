@@ -15,6 +15,8 @@ partial class Form1
         pnlHeader             = new Panel();
         lblTitel              = new Label();
         lblProjektInfo        = new Label();
+        lblVersion            = new Label();
+        lblBuild              = new Label();
         pnlBody               = new Panel();
         lblSekProjekt         = new Label();
         btnProjekt            = new Button();
@@ -75,8 +77,22 @@ partial class Form1
         lblProjektInfo.Location  = new Point(14, 44);
         lblProjektInfo.Size      = new Size(432, 18);
 
+        lblVersion.Font      = new Font("Segoe UI", 8F);
+        lblVersion.ForeColor = Color.White;
+        lblVersion.Location  = new Point(286, 6);
+        lblVersion.Size      = new Size(160, 18);
+        lblVersion.TextAlign = ContentAlignment.TopRight;
+
+        lblBuild.Font      = new Font("Segoe UI", 8F);
+        lblBuild.ForeColor = Color.FromArgb(190, 210, 240);
+        lblBuild.Location  = new Point(286, 24);
+        lblBuild.Size      = new Size(160, 18);
+        lblBuild.TextAlign = ContentAlignment.TopRight;
+
         pnlHeader.Controls.Add(lblTitel);
         pnlHeader.Controls.Add(lblProjektInfo);
+        pnlHeader.Controls.Add(lblVersion);
+        pnlHeader.Controls.Add(lblBuild);
 
         // ── Body-Panel ────────────────────────────────────────────────────────
         pnlBody.Location  = new Point(0, 68);
@@ -308,6 +324,8 @@ partial class Form1
     private Panel     pnlBody                     = null!;
     private Label     lblTitel                    = null!;
     private Label     lblProjektInfo              = null!;
+    private Label     lblVersion                  = null!;
+    private Label     lblBuild                    = null!;
     private Label     lblSekProjekt               = null!;
     private Label     lblSekFeldarbeit            = null!;
     private Label     lblSekDaten                 = null!;

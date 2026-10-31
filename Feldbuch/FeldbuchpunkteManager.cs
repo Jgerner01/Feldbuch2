@@ -24,6 +24,7 @@ public class FeldbuchPunkt
 
 public class FeldbuchDaten
 {
+    [JsonRequired]
     public List<FeldbuchPunkt> Punkte { get; set; } = new();
 }
 
@@ -38,6 +39,8 @@ public static class FeldbuchpunkteManager
     public static void Initialize(string pfad)
     {
         _pfad = pfad;
+        _punkte = new();
+        if (!File.Exists(pfad)) DateiSpeicher.LadenErfolgreich(pfad);
         if (File.Exists(pfad)) Load();
         else _punkte = new();
     }
@@ -45,26 +48,35 @@ public static class FeldbuchpunkteManager
     // ── Punkt hinzufügen oder aktualisieren ───────────────────────────────────
     public static void AddOrUpdate(FeldbuchPunkt punkt)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = new List<FeldbuchPunkt>(_punkte);
         int idx = _punkte.FindIndex(p =>
             string.Equals(p.PunktNr, punkt.PunktNr, StringComparison.Ordinal) &&
             string.Equals(p.Typ,     punkt.Typ,     StringComparison.Ordinal));
         if (idx >= 0) _punkte[idx] = punkt;
         else          _punkte.Add(punkt);
-        Save();
+        try { Save(); }
+        catch { _punkte = vorher; throw; }
     }
 
     public static void Remove(string punktNr, string typ = "")
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = new List<FeldbuchPunkt>(_punkte);
         _punkte.RemoveAll(p => p.PunktNr == punktNr &&
                                (string.IsNullOrEmpty(typ) || p.Typ == typ));
-        Save();
+        try { Save(); }
+        catch { _punkte = vorher; throw; }
     }
 
     /// <summary>Löscht alle Punkte die das Prädikat erfüllen. Gibt Anzahl zurück.</summary>
     public static int RemoveWhere(Func<FeldbuchPunkt, bool> predicate)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = new List<FeldbuchPunkt>(_punkte);
         int count = _punkte.RemoveAll(p => predicate(p));
-        if (count > 0) Save();
+        try { if (count > 0) Save(); }
+        catch { _punkte = vorher; throw; }
         return count;
     }
 
@@ -75,10 +87,12 @@ public static class FeldbuchpunkteManager
         {
             string json = File.ReadAllText(_pfad, Encoding.UTF8);
             var data = JsonSerializer.Deserialize<FeldbuchDaten>(json,
-                           new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            _punkte = data?.Punkte ?? new();
+                           DateiSpeicher.JsonOptionen);
+            _punkte = data?.Punkte ?? throw new JsonException("Fehlende Punktliste.");
+            if (_punkte.Any(p => p == null)) throw new JsonException("Ungültiger Punkteintrag.");
+            DateiSpeicher.LadenErfolgreich(_pfad);
         }
-        catch (Exception ex) { ErrorLogger.Log("FeldbuchpunkteManager.Load", ex); _punkte = new(); }
+        catch (Exception ex) { DateiSpeicher.MeldeLadefehler(_pfad, ex); _punkte = new(); }
     }
 
     public static void Save()
@@ -86,10 +100,10 @@ public static class FeldbuchpunkteManager
         if (string.IsNullOrEmpty(_pfad)) return;
         try
         {
-            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var opts = DateiSpeicher.JsonOptionen;
             string json = JsonSerializer.Serialize(new FeldbuchDaten { Punkte = _punkte }, opts);
-            File.WriteAllText(_pfad, json, Encoding.UTF8);
+            DateiSpeicher.SchreibeText(_pfad, json, Encoding.UTF8);
         }
-        catch (Exception ex) { ErrorLogger.Log("FeldbuchpunkteManager.Save", ex); }
+        catch (Exception ex) { ErrorLogger.Log("FeldbuchpunkteManager.Save", ex); throw; }
     }
 }

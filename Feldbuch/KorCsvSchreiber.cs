@@ -94,7 +94,7 @@ public static class KorCsvSchreiber
             else        ergebnis.Add(p);
         }
 
-        File.WriteAllText(pfad,
+        DateiSpeicher.SchreibeText(pfad,
             Erzeuge(projekt, sensor, DateTime.Today.ToString("yyyy-MM-dd"), ergebnis),
             Encoding.UTF8);
         return ergebnis.Count;

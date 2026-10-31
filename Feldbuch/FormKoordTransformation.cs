@@ -633,7 +633,7 @@ public partial class FormKoordTransformation : Form
                 string z = p.Z.ToString("F3", IC);
                 sb.AppendLine($"{p.PunktNr,-8}{x,16}{y,16}{z,10}    {code}");
             }
-            File.WriteAllText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
+            DateiSpeicher.SchreibeText(dlg.FileName, sb.ToString(), System.Text.Encoding.UTF8);
 
             // Begleit-CSV
             string csvPfad = Path.Combine(
@@ -655,7 +655,7 @@ public partial class FormKoordTransformation : Form
                 string code = _identischePunktNr.Contains(p.PunktNr) ? "T" : "";
                 csv.AppendLine($"{p.PunktNr}; {p.X.ToString("F3",IC)}; {p.Y.ToString("F3",IC)}; {p.Z.ToString("F3",IC)}; {code}");
             }
-            File.WriteAllText(csvPfad, csv.ToString(), System.Text.Encoding.UTF8);
+            DateiSpeicher.SchreibeText(csvPfad, csv.ToString(), System.Text.Encoding.UTF8);
 
             MessageBox.Show($"Exportiert:\n{dlg.FileName}\n{csvPfad}",
                 "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);

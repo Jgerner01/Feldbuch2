@@ -23,6 +23,7 @@ public class ImportPunkt
 
 public class ImportPunkteDaten
 {
+    [JsonRequired]
     public List<ImportPunkt> Punkte { get; set; } = new();
 }
 
@@ -41,6 +42,8 @@ public static class ImportPunkteManager
     {
         _pfad = pfad;
         _punkte = new();
+        if (!File.Exists(pfad)) DateiSpeicher.LadenErfolgreich(pfad);
+        _punkte = new();
         if (File.Exists(pfad)) Load();
     }
 
@@ -48,6 +51,8 @@ public static class ImportPunkteManager
     public static (int hinzugefuegt, int doppelt) AddRange(
         IEnumerable<ImportPunkt> neu)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = new List<ImportPunkt>(_punkte);
         int added = 0, dupl = 0;
         foreach (var p in neu)
         {
@@ -55,21 +60,28 @@ public static class ImportPunkteManager
             _punkte.Add(p);
             added++;
         }
-        if (added > 0) Save();
+        try { if (added > 0) Save(); }
+        catch { _punkte = vorher; throw; }
         return (added, dupl);
     }
 
     public static void Clear()
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = new List<ImportPunkt>(_punkte);
         _punkte.Clear();
-        Save();
+        try { Save(); }
+        catch { _punkte = vorher; throw; }
     }
 
     /// <summary>Löscht alle Punkte die das Prädikat erfüllen. Gibt Anzahl zurück.</summary>
     public static int RemoveWhere(Func<ImportPunkt, bool> predicate)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = new List<ImportPunkt>(_punkte);
         int count = _punkte.RemoveAll(p => predicate(p));
-        if (count > 0) Save();
+        try { if (count > 0) Save(); }
+        catch { _punkte = vorher; throw; }
         return count;
     }
 
@@ -203,7 +215,7 @@ public static class ImportPunkteManager
         var result  = new List<ImportPunkt>();
         string json = File.ReadAllText(path, Encoding.UTF8);
         string quelle = Path.GetFileName(path);
-        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var opts = DateiSpeicher.JsonOptionen;
 
         // Versuche zuerst ImportPunkteDaten
         try
@@ -251,11 +263,13 @@ public static class ImportPunkteManager
         try
         {
             string json = File.ReadAllText(_pfad, Encoding.UTF8);
-            var opts    = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var opts    = DateiSpeicher.JsonOptionen;
             var data    = JsonSerializer.Deserialize<ImportPunkteDaten>(json, opts);
-            _punkte     = data?.Punkte ?? new();
+            _punkte     = data?.Punkte ?? throw new JsonException("Fehlende Punktliste.");
+            if (_punkte.Any(p => p == null)) throw new JsonException("Ungültiger Punkteintrag.");
+            DateiSpeicher.LadenErfolgreich(_pfad);
         }
-        catch (Exception ex) { ErrorLogger.Log("ImportPunkteManager.Load", ex); _punkte = new(); }
+        catch (Exception ex) { DateiSpeicher.MeldeLadefehler(_pfad, ex); _punkte = new(); }
     }
 
     public static void Save()
@@ -263,12 +277,12 @@ public static class ImportPunkteManager
         if (string.IsNullOrEmpty(_pfad)) return;
         try
         {
-            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var opts = DateiSpeicher.JsonOptionen;
             string json = JsonSerializer.Serialize(
                 new ImportPunkteDaten { Punkte = _punkte }, opts);
-            File.WriteAllText(_pfad, json, Encoding.UTF8);
+            DateiSpeicher.SchreibeText(_pfad, json, Encoding.UTF8);
         }
-        catch (Exception ex) { ErrorLogger.Log("ImportPunkteManager.Save", ex); }
+        catch (Exception ex) { ErrorLogger.Log("ImportPunkteManager.Save", ex); throw; }
     }
 
     // ── Duplikat-Prüfung ──────────────────────────────────────────────────────

@@ -740,7 +740,7 @@ public class AbsteckungMapPanel : UserControl
                 };
                 if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
                 _digKorPfad = dlg.FileName;
-                File.WriteAllText(_digKorPfad,
+                DateiSpeicher.SchreibeText(_digKorPfad,
                     $"% Digitalisierte Punkte  {DateTime.Now:yyyy-MM-dd HH:mm}\n",
                     Encoding.UTF8);
                 var csv = new StringBuilder();
@@ -750,7 +750,7 @@ public class AbsteckungMapPanel : UserControl
                 csv.AppendLine($"Datum: {DateTime.Now:yyyy-MM-dd}");
                 csv.AppendLine("---"); csv.AppendLine("# DATENTYP"); csv.AppendLine("Koordinaten");
                 csv.AppendLine("# DATEN"); csv.AppendLine("PunktNr; X; Y; Z; Code");
-                File.WriteAllText(GetKorCsvPfad(_digKorPfad), csv.ToString(), Encoding.UTF8);
+                DateiSpeicher.SchreibeText(GetKorCsvPfad(_digKorPfad), csv.ToString(), Encoding.UTF8);
                 _digZaehler = 1;
                 _digLayer   = null;
             }

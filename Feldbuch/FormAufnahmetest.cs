@@ -167,7 +167,7 @@ public partial class FormAufnahmetest : Form
                     Hz      = (double)r["Hz_gon"],
                     V       = (double)r["V_gon"]
                 });
-            File.WriteAllText(DateiPfad,
+            DateiSpeicher.SchreibeText(DateiPfad,
                 JsonSerializer.Serialize(liste, JsonOpt), Encoding.UTF8);
         }
         catch { /* Speicherfehler still ignorieren */ }
@@ -641,7 +641,7 @@ public partial class FormAufnahmetest : Form
                 r["Code"]));
         }
 
-        File.WriteAllText(pfad, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, sb.ToString(), Encoding.UTF8);
     }
 
     private void SchreibeDat(string pfad)
@@ -678,7 +678,7 @@ public partial class FormAufnahmetest : Form
                 zeitstempel));
         }
 
-        File.WriteAllText(pfad, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, sb.ToString(), Encoding.UTF8);
     }
 
     // ── Aufräumen ─────────────────────────────────────────────────────────────

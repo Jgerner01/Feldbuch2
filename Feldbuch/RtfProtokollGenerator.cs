@@ -221,7 +221,7 @@ public static class RtfProtokollGenerator
         }
 
         sb.Append('}');
-        File.WriteAllText(zielPfad, sb.ToString(), System.Text.Encoding.ASCII);
+        DateiSpeicher.SchreibeText(zielPfad, sb.ToString(), System.Text.Encoding.ASCII);
     }
 
     // ── Feld-Wert auflösen ────────────────────────────────────────────────────

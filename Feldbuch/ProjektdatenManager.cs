@@ -20,8 +20,10 @@ public static class ProjektdatenManager
     public static void Initialize(string path)
     {
         _path = path;
+        _eintraege = new();
         if (!File.Exists(path))
         {
+            DateiSpeicher.LadenErfolgreich(path);
             _eintraege = new();
             Intern_Add("System", "Erstellt", "Projekt angelegt");
             Save();
@@ -45,15 +47,30 @@ public static class ProjektdatenManager
     // ── Schreiben ─────────────────────────────────────────────────────────────
     public static void SetValue(string kategorie, string parameter, string wert)
     {
-        Intern_Add(kategorie, parameter, wert);
-        Save();
+        SetValues(kategorie, new Dictionary<string, string> { [parameter] = wert });
+    }
+
+    /// <summary>Schreibt zusammengehörige Parameter in einem Dateivorgang.</summary>
+    public static void SetValues(string kategorie, IReadOnlyDictionary<string, string> werte)
+    {
+        DateiSpeicher.PruefeSchreibzugriff(_path);
+        var vorher = new List<ProjektEintrag>(_eintraege);
+        try
+        {
+            foreach (var (parameter, wert) in werte) Intern_Add(kategorie, parameter, wert);
+            Save();
+        }
+        catch { _eintraege = vorher; throw; }
     }
 
     // Ersetzt alle Einträge (für den Editor)
     public static void ReplaceAll(List<ProjektEintrag> list)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_path);
+        var vorher = _eintraege;
         _eintraege = new List<ProjektEintrag>(list);
-        Save();
+        try { Save(); }
+        catch { _eintraege = vorher; throw; }
     }
 
     // ── Interne Hilfsmethoden ─────────────────────────────────────────────────
@@ -70,33 +87,50 @@ public static class ProjektdatenManager
         _eintraege = new();
         if (!File.Exists(_path)) return;
 
-        var lines = File.ReadAllLines(_path, System.Text.Encoding.UTF8);
-        foreach (var line in lines.Skip(1))   // erste Zeile = Kopfzeile
+        try
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            // Wert-Feld darf Kommas enthalten → alle Felder ab Index 5 zusammenführen
-            var parts = line.Split(',');
-            if (parts.Length < 6) continue;
-            _eintraege.Add(new ProjektEintrag(
-                parts[0].Trim(), parts[1].Trim(), parts[2].Trim(),
-                parts[3].Trim(), parts[4].Trim(),
-                string.Join(",", parts.Skip(5)).Trim()));
+            using var parser = new Microsoft.VisualBasic.FileIO.TextFieldParser(_path, System.Text.Encoding.UTF8)
+            {
+                TextFieldType = Microsoft.VisualBasic.FileIO.FieldType.Delimited,
+                HasFieldsEnclosedInQuotes = true,
+                TrimWhiteSpace = false
+            };
+            parser.SetDelimiters(",");
+            var kopf = parser.ReadFields();
+            if (kopf == null || !kopf.SequenceEqual(new[] { "Datum", "Uhrzeit", "Bearbeiter", "Kategorie", "Parameter", "Wert" }))
+                throw new FormatException("Ungültige Kopfzeile in Projektdaten.csv.");
+            var eintraege = new List<ProjektEintrag>();
+            while (!parser.EndOfData)
+            {
+                var parts = parser.ReadFields();
+                if (parts == null) continue;
+                if (parts.Length < 6) throw new FormatException("Unvollständiger Projektdatensatz.");
+                // Ältere Dateien konnten ein unquotiertes Komma im letzten Feld enthalten.
+                eintraege.Add(new ProjektEintrag(parts[0], parts[1], parts[2], parts[3], parts[4],
+                    string.Join(",", parts.Skip(5))));
+            }
+            _eintraege = eintraege;
+            DateiSpeicher.LadenErfolgreich(_path);
         }
+        catch (Exception ex) { DateiSpeicher.MeldeLadefehler(_path, ex); }
     }
 
     public static void Save()
     {
         if (string.IsNullOrEmpty(_path)) return;
+        DateiSpeicher.PruefeSchreibzugriff(_path);
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("Datum,Uhrzeit,Bearbeiter,Kategorie,Parameter,Wert");
         foreach (var e in _eintraege)
         {
-            // Kommas im Wert-Feld in Anführungszeichen einschließen
-            string wert = e.Wert.Contains(',') ? $"\"{e.Wert}\"" : e.Wert;
-            sb.AppendLine($"{e.Datum},{e.Uhrzeit},{e.Bearbeiter},{e.Kategorie},{e.Parameter},{wert}");
+            sb.AppendLine(string.Join(",", new[] { e.Datum, e.Uhrzeit, e.Bearbeiter, e.Kategorie, e.Parameter, e.Wert }
+                .Select(Quote)));
         }
-        File.WriteAllText(_path, sb.ToString(), System.Text.Encoding.UTF8);
+        DateiSpeicher.SchreibeText(_path, sb.ToString(), System.Text.Encoding.UTF8);
     }
+
+    private static string Quote(string text) => text.IndexOfAny([',', '"', '\r', '\n']) >= 0
+        ? "\"" + text.Replace("\"", "\"\"") + "\"" : text;
 }
 
 // ── Datensatz ─────────────────────────────────────────────────────────────────

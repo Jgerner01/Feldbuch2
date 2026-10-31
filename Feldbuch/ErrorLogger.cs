@@ -12,7 +12,7 @@ using System.Diagnostics;
 internal static class ErrorLogger
 {
     private static readonly string FehlerLogPfad =
-        Path.Combine(AppPfade.Basis, "Fehler.log");
+        Path.Combine(AppPfade.BenutzerBasis, "Fehler.log");
 
     /// <summary>
     /// Protokolliert eine unerwartete Exception mit Kontext-Information.

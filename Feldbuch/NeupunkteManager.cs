@@ -20,7 +20,9 @@ using System.Text.Json;
 
 public class NeupunkteDatei
 {
+    [System.Text.Json.Serialization.JsonRequired]
     public List<NeupunktRohdaten>  Rohdaten    { get; set; } = new();
+    [System.Text.Json.Serialization.JsonRequired]
     public List<NeupunktErgebnis>  Koordinaten { get; set; } = new();
 }
 
@@ -40,6 +42,8 @@ public static class NeupunkteManager
     public static void Initialize(string pfad)
     {
         _pfad = pfad;
+        _daten = new();
+        if (!File.Exists(pfad)) DateiSpeicher.LadenErfolgreich(pfad);
         if (File.Exists(pfad)) Laden();
         else _daten = new NeupunkteDatei();
     }
@@ -50,12 +54,16 @@ public static class NeupunkteManager
         {
             string json = File.ReadAllText(_pfad, Encoding.UTF8);
             var data = JsonSerializer.Deserialize<NeupunkteDatei>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            _daten = data ?? new NeupunkteDatei();
+                DateiSpeicher.JsonOptionen);
+            _daten = data ?? throw new JsonException("Leere Neupunktdatei.");
+            if (_daten.Rohdaten == null || _daten.Koordinaten == null) throw new JsonException("Fehlende Punktlisten.");
+            if (_daten.Rohdaten.Any(p => p == null) || _daten.Koordinaten.Any(p => p == null))
+                throw new JsonException("Ungültiger Punkteintrag.");
+            DateiSpeicher.LadenErfolgreich(_pfad);
         }
         catch (Exception ex)
         {
-            ErrorLogger.Log("NeupunkteManager.Laden", ex);
+            DateiSpeicher.MeldeLadefehler(_pfad, ex);
             _daten = new NeupunkteDatei();
         }
     }
@@ -70,6 +78,8 @@ public static class NeupunkteManager
         NeupunktRohdaten  rohdaten,
         NeupunktErgebnis  ergebnis)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = Kopie();
         // Eindeutig ist ein Punkt erst mit Nummer und Standpunkt
         int ri = _daten.Rohdaten.FindIndex(r =>
             r.PunktNr == rohdaten.PunktNr && r.StandpunktNr == rohdaten.StandpunktNr);
@@ -81,7 +91,8 @@ public static class NeupunkteManager
         if (ei >= 0) _daten.Koordinaten[ei] = ergebnis;
         else          _daten.Koordinaten.Add(ergebnis);
 
-        Speichern();
+        try { Speichern(); }
+        catch { _daten = vorher; throw; }
     }
 
     /// <summary>Berechnete Koordinaten eines Punktes von einem bestimmten Standpunkt oder null.</summary>
@@ -98,7 +109,10 @@ public static class NeupunkteManager
         StationierungsErgebnis station,
         string                 standpunktNr)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
         // Im Polarmodul berechnete Punkte (Quelle = Polar) behalten ihre gewichtete Orientierung
+        StationierungsQualitaet.Pruefe(station);
+        var vorher = Kopie();
         var polarNr = _daten.Koordinaten
             .Where(e => e.StandpunktNr == standpunktNr && e.Quelle == QUELLE_POLAR)
             .Select(e => e.PunktNr)
@@ -111,7 +125,8 @@ public static class NeupunkteManager
         _daten.Koordinaten.RemoveAll(e => e.StandpunktNr == standpunktNr && e.Quelle != QUELLE_POLAR);
         _daten.Koordinaten.AddRange(neueKoords);
 
-        Speichern();
+        try { Speichern(); }
+        catch { _daten = vorher; throw; }
     }
 
     // ── Löschen ───────────────────────────────────────────────────────────────
@@ -119,6 +134,8 @@ public static class NeupunkteManager
     /// <summary>Löscht alle Punkte die das Prädikat erfüllen.  Gibt Anzahl zurück.</summary>
     public static int RemoveWhere(Func<NeupunktRohdaten, bool> predicate)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        var vorher = Kopie();
         var schluessel = _daten.Rohdaten
             .Where(predicate)
             .Select(r => (r.PunktNr, r.StandpunktNr))
@@ -127,21 +144,28 @@ public static class NeupunkteManager
         int removed = _daten.Rohdaten.RemoveAll(r => schluessel.Contains((r.PunktNr, r.StandpunktNr)));
         _daten.Koordinaten.RemoveAll(e => schluessel.Contains((e.PunktNr, e.StandpunktNr)));
 
-        if (removed > 0) Speichern();
+        try { if (removed > 0) Speichern(); }
+        catch { _daten = vorher; throw; }
         return removed;
     }
 
     // ── Persistenz ────────────────────────────────────────────────────────────
+
+    private static NeupunkteDatei Kopie() => new()
+    {
+        Rohdaten = new(_daten.Rohdaten),
+        Koordinaten = new(_daten.Koordinaten)
+    };
 
     public static void Speichern()
     {
         if (string.IsNullOrEmpty(_pfad)) return;
         try
         {
-            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var opts = DateiSpeicher.JsonOptionen;
             string json = JsonSerializer.Serialize(_daten, opts);
-            File.WriteAllText(_pfad, json, Encoding.UTF8);
+            DateiSpeicher.SchreibeText(_pfad, json, Encoding.UTF8);
         }
-        catch (Exception ex) { ErrorLogger.Log("NeupunkteManager.Speichern", ex); }
+        catch (Exception ex) { ErrorLogger.Log("NeupunkteManager.Speichern", ex); throw; }
     }
 }

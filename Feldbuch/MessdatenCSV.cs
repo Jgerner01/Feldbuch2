@@ -211,7 +211,7 @@ public static class MessdatenCSV
         sb.AppendLine("# DATEN");
         sb.Append(Spaltenzeile);   // kein AppendLine – AppendZeile hängt \r\n an
 
-        File.WriteAllText(pfad, sb.ToString() + Environment.NewLine, Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, sb.ToString() + Environment.NewLine, Encoding.UTF8);
     }
 
     // ── Migration / Rückschreiben ─────────────────────────────────────────────
@@ -241,7 +241,7 @@ public static class MessdatenCSV
                 if (string.IsNullOrWhiteSpace(z) || z.TrimStart().StartsWith('#')) continue;
                 zeilen[i] = z.TrimEnd() + ZusatzwerteAlteZeile;
             }
-            File.WriteAllLines(pfad, zeilen, Encoding.UTF8);
+            DateiSpeicher.SchreibeZeilen(pfad, zeilen, Encoding.UTF8);
             return true;
         }
         catch (Exception ex)
@@ -270,7 +270,7 @@ public static class MessdatenCSV
             teile[SPALTE_EXZ_QUER]   = eQ.ToString("F3", IC);
             zeilen[index] = string.Join("; ", teile);
         }
-        File.WriteAllLines(pfad, zeilen, Encoding.UTF8);
+        DateiSpeicher.SchreibeZeilen(pfad, zeilen, Encoding.UTF8);
     }
 
     private static void AppendZeile(string zeile)

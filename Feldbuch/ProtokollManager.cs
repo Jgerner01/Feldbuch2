@@ -24,7 +24,7 @@ public static class ProtokollManager
         {
             string verzeichnis = ProjektManager.IstGeladen
                 ? ProjektManager.ProjektVerzeichnis
-                : AppPfade.Basis;
+                : AppPfade.BenutzerBasis;
 
             string datum = DateTime.Now.ToString("yyyy-MM-dd");
             string pfad  = Path.Combine(verzeichnis, $"Protokoll_{datum}.txt");

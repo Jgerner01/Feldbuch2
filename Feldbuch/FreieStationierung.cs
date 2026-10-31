@@ -257,6 +257,8 @@ public static class FreieStationierungRechner
                 double vH_mm = (hStation_i[i] - hMittel) * 1000.0;
                 if (Math.Abs(vH_mm) > grenze)
                 {
+                    warnHoehe = $"Höhenabweichung an Punkt {punkte[i].PunktNr}: {vH_mm:F1} mm "
+                        + $"überschreitet {grenze:F1} mm. Ergebnis nur in 2D; Höhe nicht bestimmt.";
                     ist3D   = false;
                     hMittel = 0;
                     break;

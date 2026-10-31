@@ -220,7 +220,7 @@ public static class DxfExporter
         G(sb, 0, "ENDSEC");
         G(sb, 0, "EOF");
 
-        File.WriteAllText(zielPfad, sb.ToString(), Encoding.ASCII);
+        DateiSpeicher.SchreibeText(zielPfad, sb.ToString(), Encoding.ASCII);
     }
 
     // ── Hilfsfunktionen ───────────────────────────────────────────────────────

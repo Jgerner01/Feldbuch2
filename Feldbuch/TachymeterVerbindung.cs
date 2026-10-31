@@ -34,6 +34,9 @@ public static class TachymeterVerbindung
 
     // ── Verbindung ────────────────────────────────────────────────────────────
     private static SerialPort? _port;
+    private static readonly SemaphoreSlim AnfrageSperre = new(1, 1);
+    private static event EventHandler<string>? AntwortZeile;
+    private static int _healthCheckAktiv;
     public  static bool IstVerbunden => _port?.IsOpen ?? false;
 
     // ── Ereignis: Rohdaten empfangen (für Testmessungen-Fenster) ─────────────
@@ -78,6 +81,7 @@ public static class TachymeterVerbindung
             }
         };
 
+        var zeilen = new SerielleZeilen();
         neu.DataReceived += (s, e) =>
         {
             try
@@ -85,6 +89,8 @@ public static class TachymeterVerbindung
                 if (s is SerialPort sp && sp.IsOpen)
                 {
                     var daten = sp.ReadExisting();
+                    foreach (string zeile in zeilen.Empfange(daten))
+                        AntwortZeile?.Invoke(sp, zeile);
                     if (!string.IsNullOrEmpty(daten))
                         DatenEmpfangen?.Invoke(null, daten);
                 }
@@ -122,9 +128,14 @@ public static class TachymeterVerbindung
     public static void Trennen()
     {
         StoppeVerbindungsueberwachung();
-        _port?.Close();
-        _port?.Dispose();
+        var port = _port;
         _port = null;
+        try { port?.Close(); }
+        finally
+        {
+            port?.Dispose();
+            if (port != null) VerbindungGetrennt?.Invoke(null, EventArgs.Empty);
+        }
     }
 
     /// <summary>
@@ -133,10 +144,18 @@ public static class TachymeterVerbindung
     /// </summary>
     public static void GeoCOM_Senden(string befehl)
     {
+        AnfrageSperre.Wait();
+        try { SendenOhneAntwort(befehl); }
+        finally { AnfrageSperre.Release(); }
+    }
+
+    private static void SendenOhneAntwort(string befehl)
+    {
         if (!IstVerbunden)
             throw new InvalidOperationException("Kein COM-Port verbunden.");
 
         var daten = befehl + "\r\n";
+        var port = _port!;
         Exception? letzterFehler = null;
 
         for (int versuch = 1; versuch <= MaxRetries; versuch++)
@@ -144,7 +163,7 @@ public static class TachymeterVerbindung
             try
             {
                 // SerialPort.Write() verwendet den WriteTimeout korrekt
-                _port!.Write(daten);
+                port.Write(daten);
                 return; // Erfolgreich gesendet
             }
             catch (TimeoutException)
@@ -188,88 +207,50 @@ public static class TachymeterVerbindung
         int timeoutMs = 5000,
         string? antwortFilter = null)
     {
-        if (!IstVerbunden)
-            throw new InvalidOperationException("Kein COM-Port verbunden.");
-
-        var filter = antwortFilter ?? "%R1P";
-        Exception? letzterFehler = null;
-
-        for (int versuch = 1; versuch <= MaxRetries; versuch++)
+        if (timeoutMs <= 0) throw new ArgumentOutOfRangeException(nameof(timeoutMs));
+        await AnfrageSperre.WaitAsync().ConfigureAwait(false);
+        try
         {
-            var cts = new CancellationTokenSource(timeoutMs);
-            var empfangen = new TaskCompletionSource<string>();
-            var daten = befehl + "\r\n";
-
-            // Temporärer Handler für Antwort
-            void OnAntwort(object? s, SerialDataReceivedEventArgs e)
+            var port = _port;
+            if (port == null || !port.IsOpen)
+                throw new InvalidOperationException("Kein COM-Port verbunden.");
+            string filter = antwortFilter ?? "%R1P";
+            Exception? letzterFehler = null;
+            for (int versuch = 1; versuch <= MaxRetries; versuch++)
             {
+                var antwort = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+                void OnAntwort(object? sender, string zeile)
+                {
+                    if (ReferenceEquals(sender, port) && zeile.Contains(filter, StringComparison.Ordinal))
+                        antwort.TrySetResult(zeile);
+                }
+                void OnGetrennt(object? sender, EventArgs e)
+                    => antwort.TrySetException(new IOException("Verbindung zum Tachymeter getrennt."));
+                AntwortZeile += OnAntwort;
+                VerbindungGetrennt += OnGetrennt;
                 try
                 {
-                    if (s is SerialPort sp && sp.IsOpen)
-                    {
-                        var antwort = sp.ReadExisting();
-                        if (!string.IsNullOrEmpty(antwort) && antwort.Contains(filter))
-                        {
-                            empfangen.TrySetResult(antwort);
-                        }
-                    }
+                    // Ein lokaler Port bleibt auch beim Trennen das richtige Ziel für diesen Versuch.
+                    // WriteTimeout begrenzt den synchronen Treiberaufruf; WaitAsync die Antwortzeit.
+                    await Task.Run(() => port.Write(befehl + "\r\n")).ConfigureAwait(false);
+                    return await antwort.Task.WaitAsync(TimeSpan.FromMilliseconds(timeoutMs)).ConfigureAwait(false);
                 }
-                catch (TimeoutException) { }
-                catch (InvalidOperationException) { }
-                catch (Exception ex)
+                catch (TimeoutException ex)
                 {
-                    empfangen.TrySetException(ex);
+                    letzterFehler = ex;
+                    if (versuch < MaxRetries) await Task.Delay(300).ConfigureAwait(false);
+                }
+                finally
+                {
+                    AntwortZeile -= OnAntwort;
+                    VerbindungGetrennt -= OnGetrennt;
                 }
             }
-
-            _port!.DataReceived += OnAntwort;
-
-            try
-            {
-                // Write in einem Task mit Timeout – da SerialPort kein WriteAsync hat
-                var bytes = System.Text.Encoding.ASCII.GetBytes(daten);
-                var writeTask = Task.Run(() => _port.Write(bytes, 0, bytes.Length), cts.Token);
-                await writeTask;
-
-                // Auf Antwort warten (mit Timeout)
-                using var reg = cts.Token.Register(() =>
-                    empfangen.TrySetException(new TimeoutException(
-                        $"Keine Antwort vom Tachymeter innerhalb von {timeoutMs} ms.")));
-
-                return await empfangen.Task;
-            }
-            catch (TimeoutException)
-            {
-                letzterFehler = new TimeoutException(
-                    $"Keine Antwort vom Tachymeter innerhalb von {timeoutMs} ms (Versuch {versuch}/{MaxRetries}).");
-                await Task.Delay(300);
-            }
-            catch (OperationCanceledException)
-            {
-                letzterFehler = new TimeoutException(
-                    $"Schreibvorgang abgebrochen (Versuch {versuch}/{MaxRetries}).");
-                await Task.Delay(300);
-            }
-            catch (IOException)
-            {
-                VerbindungVerloren();
-                throw;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                VerbindungVerloren();
-                throw;
-            }
-            finally
-            {
-                _port.DataReceived -= OnAntwort;
-            }
+            if (ReferenceEquals(_port, port)) VerbindungVerloren();
+            throw letzterFehler!;
         }
-
-        VerbindungVerloren();
-        throw letzterFehler!;
+        finally { AnfrageSperre.Release(); }
     }
-
     // ── Verbindungsüberwachung (Health Check) ─────────────────────────────────
 
     /// <summary>
@@ -303,7 +284,7 @@ public static class TachymeterVerbindung
 
     private static async Task HealthCheckTickAsync()
     {
-        if (!IstVerbunden) return;
+        if (!IstVerbunden || Interlocked.Exchange(ref _healthCheckAktiv, 1) != 0) return;
 
         try
         {
@@ -333,6 +314,7 @@ public static class TachymeterVerbindung
         {
             VerbindungVerloren();
         }
+        finally { Volatile.Write(ref _healthCheckAktiv, 0); }
     }
 
     private static void VerbindungVerloren()
@@ -340,7 +322,6 @@ public static class TachymeterVerbindung
         if (!IstVerbunden) return; // Bereits getrennt
 
         Trennen();
-        VerbindungGetrennt?.Invoke(null, EventArgs.Empty);
     }
 
     /// <summary>

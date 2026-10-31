@@ -22,6 +22,7 @@ public static class RechenparameterManager
         _path = path;
         if (!File.Exists(path))
         {
+            DateiSpeicher.LadenErfolgreich(path);
             _params = new Rechenparameter();
             Save();
         }
@@ -39,6 +40,8 @@ public static class RechenparameterManager
             var doc = new XmlDocument();
             doc.Load(_path);
             var root = doc.DocumentElement!;
+            if (root == null || root.Name != "RechenparameterFreieStationierung")
+                throw new XmlException("Ungültige Rechenparameterdatei.");
 
             _params = new Rechenparameter
             {
@@ -56,10 +59,11 @@ public static class RechenparameterManager
                 ZentrierfehlerZiel_mm      = ReadDouble(root, "ZentrierfehlerZiel_mm",      Rechenparameter.ZENTRIERFEHLER_ZIEL_STANDARD_MM),
                 ZentrierfehlerStandpunkt_mm = ReadDouble(root, "ZentrierfehlerStandpunkt_mm", Rechenparameter.ZENTRIERFEHLER_STANDPUNKT_STANDARD_MM)
             };
+            DateiSpeicher.LadenErfolgreich(_path);
         }
         catch (Exception ex)
         {
-            ErrorLogger.Log("RechenparameterManager.Load", ex);
+            DateiSpeicher.MeldeLadefehler(_path, ex);
             _params = new Rechenparameter();   // Standardwerte bei Fehler
         }
     }
@@ -91,7 +95,9 @@ public static class RechenparameterManager
         AppendElem(doc, root, "ZentrierfehlerZiel_mm",     _params.ZentrierfehlerZiel_mm.ToString("F1", ic));
         AppendElem(doc, root, "ZentrierfehlerStandpunkt_mm", _params.ZentrierfehlerStandpunkt_mm.ToString("F1", ic));
 
-        doc.Save(_path);
+        using var buffer = new MemoryStream();
+        doc.Save(buffer);
+        DateiSpeicher.SchreibeText(_path, System.Text.Encoding.UTF8.GetString(buffer.ToArray()).TrimStart('\uFEFF'));
     }
 
     // ── Ausgabe der Standardabweichung als 1-, 2- oder 3-fache s0 ─────────────

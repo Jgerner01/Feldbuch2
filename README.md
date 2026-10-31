@@ -95,6 +95,26 @@
 
 ## Technologie
 
+### Build und Tests
+
+Für die Windows-Anwendung steht eine eigene Solution ohne MAUI-Workloads zur Verfügung:
+
+```powershell
+dotnet restore "Feldbuch Desktop.slnx"
+dotnet build "Feldbuch Desktop.slnx" --configuration Release --no-restore
+dotnet test Feldbuch.Tests/Feldbuch.Tests.csproj --configuration Release --no-build --no-restore
+```
+
+Voraussetzungen: Windows und .NET 10 SDK. Die Formular-Smoke-Tests benötigen eine Umgebung, die WinForms-Fenster und GDI+ zulässt. Der GitHub-Workflow `desktop.yml` baut und testet das Desktop-Projekt unabhängig vom experimentellen Universal-Projekt.
+
+### Speicherung und Wiederherstellung
+
+- Einstellungen und Rechenparameter liegen beim Programmstart unter `%LOCALAPPDATA%\Feldbuch`. Vorhandene Dateien neben der EXE werden beim ersten Start einmalig übernommen; vorhandene Benutzereinstellungen bleiben erhalten. Vorlagen und mitgelieferte Ressourcen bleiben neben der EXE.
+- Projektdateien werden zunächst vollständig in eine temporäre Datei im Zielordner geschrieben und anschließend ersetzt. Bei einem Schreibfehler bleibt die ursprüngliche Datei erhalten und der Vorgang meldet einen Fehler.
+- Bei aktiviertem **Auto-Backup** wird vor jeder Ersetzung die vorherige Dateiversion im Unterordner `Backup` des jeweiligen Zielordners gesichert. Die Option muss im Hauptfenster eingeschaltet werden. Die Sicherungen werden nicht automatisch gelöscht.
+- Kann eine Datei nicht geladen werden, erscheint eine Fehlermeldung und Schreibzugriffe auf diese Datei werden gesperrt. Zur Wiederherstellung die Anwendung schließen, die Originaldatei separat sichern und eine intakte Sicherung unter dem ursprünglichen Namen zurückkopieren. Anschließend die Anwendung bzw. das Projekt erneut öffnen.
+- Nicht bestimmte Stationsresiduen werden im JSON-Format als Zeichenfolge `"NaN"` gespeichert und beim Laden wieder als nicht bestimmt erkannt. Ungültige Stationskoordinaten gelten dadurch nicht als verwendbar.
+
 | | |
 |---|---|
 | **Plattform** | Windows (.NET 10, WinForms) |

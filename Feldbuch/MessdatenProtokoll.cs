@@ -162,7 +162,7 @@ public static class MessdatenProtokoll
         sb.AppendLine("# All measurements are recorded without gaps.");
         sb.Append(Spaltenzeile);
 
-        File.WriteAllText(pfad, sb.ToString() + Environment.NewLine, Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, sb.ToString() + Environment.NewLine, Encoding.UTF8);
     }
 
     // ── Formatierungshilfen ───────────────────────────────────────────────────

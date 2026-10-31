@@ -6,6 +6,9 @@ public partial class Form1 : Form
     {
         InitializeComponent();
 
+        lblVersion.Text = $"Version {ProgrammVersion.Version}";
+        lblBuild.Text   = $"Build {ProgrammVersion.BuildNummer}";
+
         // Programmicon aus der EXE übernehmen (Fenster und Taskleiste)
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
@@ -29,7 +32,7 @@ public partial class Form1 : Form
 
         // Rechenparameter bleiben global (Geräteeinstellungen)
         RechenparameterManager.Initialize(
-            AppPfade.Get("Freie-Stationierung.xml"));
+            AppPfade.BenutzerGet("Freie-Stationierung.xml"));
 
         // Checkboxen aus Einstellungen befüllen (nach ProjektManager.Laden())
         LadeOptionen();
@@ -119,6 +122,7 @@ public partial class Form1 : Form
         if (form.ShowDialog(this) != DialogResult.OK) return;
 
         // Manager im neuen Verzeichnis neu initialisieren
+        StationsdatenManager.Zuruecksetzen();
         ProjektdatenManager.Initialize(
             ProjektManager.GetPfad("Projektdaten.csv"));
         FeldbuchpunkteManager.Initialize(

@@ -75,12 +75,19 @@ public class FormPolarpunkteSmokeTests : IDisposable
         Exception? fehler = null;
         var thread = new Thread(() =>
         {
-            try { ergebnis = aktion(); }
+            try
+            {
+                // WinForms darf Testfehler nicht in einem modalen Fehlerdialog verstecken.
+                Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException, threadScope: true);
+                ergebnis = aktion();
+            }
             catch (Exception ex) { fehler = ex; }
         });
+        thread.IsBackground = true;
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        thread.Join();
+        if (!thread.Join(TimeSpan.FromSeconds(15)))
+            throw new TimeoutException("Der Formular-Test hat nach 15 Sekunden nicht geantwortet.");
         if (fehler != null) throw new Exception("Fehler im STA-Thread: " + fehler, fehler);
         return ergebnis!;
     }

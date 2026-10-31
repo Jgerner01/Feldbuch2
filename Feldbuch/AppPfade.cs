@@ -19,4 +19,22 @@ public static class AppPfade
 
     /// <summary>Gibt den Pfad zu einer Datei neben der EXE zurück.</summary>
     public static string Get(string dateiname) => Path.Combine(Basis, dateiname);
+
+    /// <summary>Beschreibbare Nutzerdaten; bei Bibliotheksnutzung zunächst das bisherige Verzeichnis.</summary>
+    public static string BenutzerBasis { get; private set; } = Basis;
+
+    public static string BenutzerGet(string dateiname) => Path.Combine(BenutzerBasis, dateiname);
+
+    /// <summary>Vor dem Start der Manager aufrufen. Bestehende Einstellungen einmalig übernehmen.</summary>
+    public static void InitialisiereBenutzerdaten()
+    {
+        string ziel = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Feldbuch");
+        Directory.CreateDirectory(ziel);
+        foreach (string name in new[] { "Einstellungen.xml", "Freie-Stationierung.xml" })
+        {
+            string quelle = Get(name), neu = Path.Combine(ziel, name);
+            if (!File.Exists(neu) && File.Exists(quelle)) File.Copy(quelle, neu, overwrite: false);
+        }
+        BenutzerBasis = ziel;
+    }
 }

@@ -20,6 +20,7 @@ public class StationsdatenDatei
     public string                    StandpunktNr      { get; set; } = "";
     public double                    InstrumentenHoehe { get; set; }
     public string                    Datum             { get; set; } = "";
+    [System.Text.Json.Serialization.JsonRequired]
     public List<StationierungsPunkt> Messungen         { get; set; } = new();
     public StationierungsErgebnis?   Ergebnis          { get; set; }
 }
@@ -34,14 +35,16 @@ public static class StationsdatenManager
     public static double             InstrumentenHoehe
     {
         get => _aktiv.InstrumentenHoehe;
-        set { _aktiv.InstrumentenHoehe = value; Speichern(); }
+        set { DateiSpeicher.PruefeSchreibzugriff(_pfad); _aktiv.InstrumentenHoehe = value; Speichern(); }
     }
 
     /// <summary>
-    /// Gültige Stationierung: Ergebnis vorhanden + mindestens 2 Anschlusspunkte.
+    /// Konvergierte, endliche Stationierung mit mindestens zwei unterschiedlichen Anschlusspunkten.
     /// </summary>
     public static bool HatGueltigeStation =>
-        _aktiv.Ergebnis != null && _aktiv.Messungen.Count >= 2;
+        StationierungsQualitaet.IstVerwendbar(_aktiv.Ergebnis)
+        && _aktiv.Messungen.Select(p => p.PunktNr).Where(nr => !string.IsNullOrWhiteSpace(nr))
+            .Distinct(StringComparer.Ordinal).Count() >= 2;
 
     public static StationierungsErgebnis? AktuellesErgebnis => _aktiv.Ergebnis;
 
@@ -52,25 +55,30 @@ public static class StationsdatenManager
     {
         string pfad = ProjektManager.GetPfad($"Station-{standpunktNr}.json");
         _pfad = pfad;
+        _aktiv = Neu(standpunktNr);
         if (File.Exists(pfad))
         {
             try
             {
                 string json = File.ReadAllText(pfad, Encoding.UTF8);
                 var data = JsonSerializer.Deserialize<StationsdatenDatei>(json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                _aktiv = data ?? Neu(standpunktNr);
+                    DateiSpeicher.JsonOptionen);
+                _aktiv = data ?? throw new JsonException("Leere Stationsdatei.");
+                if (_aktiv.Messungen == null) throw new JsonException("Fehlende Messungen.");
+                if (_aktiv.Messungen.Any(p => p == null)) throw new JsonException("Ungültige Messung.");
+                DateiSpeicher.LadenErfolgreich(pfad);
                 _aktiv.StandpunktNr = standpunktNr;   // Sicherheit
             }
             catch (Exception ex)
             {
-                ErrorLogger.Log("StationsdatenManager.Laden", ex);
+                DateiSpeicher.MeldeLadefehler(pfad, ex);
                 _aktiv = Neu(standpunktNr);
             }
         }
         else
         {
             _aktiv = Neu(standpunktNr);
+            DateiSpeicher.LadenErfolgreich(pfad);
         }
     }
 
@@ -80,6 +88,7 @@ public static class StationsdatenManager
     /// </summary>
     public static void LadeAktuellenStandpunkt()
     {
+        Zuruecksetzen();
         string? nr = ProjektdatenManager.GetValue("Freie Stationierung", "Standpunkt");
         if (!string.IsNullOrEmpty(nr))
         {
@@ -97,6 +106,12 @@ public static class StationsdatenManager
         }
     }
 
+    public static void Zuruecksetzen()
+    {
+        _aktiv = new();
+        _pfad = "";
+    }
+
     /// <summary>
     /// Liest die Stationsdatei eines Standpunkts, ohne den aktiven Stand zu verändern
     /// (für das Polarmodul). Gibt null zurück, wenn keine Datei vorhanden oder lesbar ist.
@@ -110,13 +125,16 @@ public static class StationsdatenManager
         {
             var data = JsonSerializer.Deserialize<StationsdatenDatei>(
                 File.ReadAllText(pfad, Encoding.UTF8),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (data != null) data.StandpunktNr = standpunktNr;
+                DateiSpeicher.JsonOptionen);
+            if (data == null || data.Messungen == null || data.Messungen.Any(p => p == null))
+                throw new JsonException("Ungültige Stationsdatei.");
+            data.StandpunktNr = standpunktNr;
+            DateiSpeicher.LadenErfolgreich(pfad);
             return data;
         }
         catch (Exception ex)
         {
-            ErrorLogger.Log("StationsdatenManager.LeseDatei", ex);
+            DateiSpeicher.MeldeLadefehler(pfad, ex);
             return null;
         }
     }
@@ -132,6 +150,8 @@ public static class StationsdatenManager
     public static StationierungsErgebnis? HinzufuegenUndBerechnen(
         StationierungsPunkt punkt)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        _aktiv.Ergebnis = null;
         _aktiv.Messungen.Add(punkt);
         return Neuberechnen();
     }
@@ -154,18 +174,22 @@ public static class StationsdatenManager
 
         _aktiv.Ergebnis = ergebnis;
         Speichern();
+        if (!HatGueltigeStation) return ergebnis;
 
         // ProjektdatenManager synchronisieren
         var ic = System.Globalization.CultureInfo.InvariantCulture;
-        ProjektdatenManager.SetValue("Freie Stationierung", "Standpunkt",            _aktiv.StandpunktNr);
-        ProjektdatenManager.SetValue("Freie Stationierung", "R [m]",                 ergebnis.R.ToString("F3", ic));
-        ProjektdatenManager.SetValue("Freie Stationierung", "H [m]",                 ergebnis.H.ToString("F3", ic));
-        ProjektdatenManager.SetValue("Freie Stationierung", "Hoehe [m]",             ergebnis.Hoehe.ToString("F3", ic));
-        ProjektdatenManager.SetValue("Freie Stationierung", "Orientierung [gon]",    ergebnis.Orientierung_gon.ToString("F4", ic));
-        ProjektdatenManager.SetValue("Freie Stationierung", "s0 [mm]",               ergebnis.s0_mm.ToString("F2", ic));
+        ProjektdatenManager.SetValues("Freie Stationierung", new Dictionary<string, string>
+        {
+            ["Standpunkt"] = _aktiv.StandpunktNr,
+            ["R [m]"] = ergebnis.R.ToString("F3", ic),
+            ["H [m]"] = ergebnis.H.ToString("F3", ic),
+            ["Hoehe [m]"] = ergebnis.Hoehe.ToString("F3", ic),
+            ["Orientierung [gon]"] = ergebnis.Orientierung_gon.ToString("F4", ic),
+            ["s0 [mm]"] = ergebnis.s0_mm.ToString("F2", ic),
+            ["Massstab"] = ergebnis.Massstab.ToString("F6", ic),
+            ["Instrumentenhoehe [m]"] = _aktiv.InstrumentenHoehe.ToString("F3", ic)
+        });
         RechenparameterManager.SchreibeSigmaProjektdaten(ergebnis.s0_mm);
-        ProjektdatenManager.SetValue("Freie Stationierung", "Massstab",              ergebnis.Massstab.ToString("F6", ic));
-        ProjektdatenManager.SetValue("Freie Stationierung", "Instrumentenhoehe [m]", _aktiv.InstrumentenHoehe.ToString("F3", ic));
 
         // FeldbuchpunkteManager synchronisieren
         FeldbuchpunkteManager.AddOrUpdate(new FeldbuchPunkt
@@ -187,6 +211,8 @@ public static class StationsdatenManager
     /// <summary>Löscht einen Anschlusspunkt aus dem Stack und berechnet neu.</summary>
     public static StationierungsErgebnis? EntfernenUndBerechnen(string punktNr)
     {
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
+        _aktiv.Ergebnis = null;
         _aktiv.Messungen.RemoveAll(p => p.PunktNr == punktNr);
         if (_aktiv.Messungen.Count < 2)
         {
@@ -209,14 +235,17 @@ public static class StationsdatenManager
         List<StationierungsPunkt> punkte,
         StationierungsErgebnis ergebnis)
     {
+        string zielPfad = ProjektManager.GetPfad($"Station-{standpunktNr}.json");
+        StationierungsQualitaet.Pruefe(ergebnis);
+        if (File.Exists(zielPfad) && !string.Equals(_pfad, zielPfad, StringComparison.OrdinalIgnoreCase))
+            Laden(standpunktNr);
+        DateiSpeicher.PruefeSchreibzugriff(zielPfad);
         _aktiv.StandpunktNr      = standpunktNr;
         _aktiv.InstrumentenHoehe = instrHoehe;
         _aktiv.Messungen         = new List<StationierungsPunkt>(punkte);
         _aktiv.Ergebnis          = ergebnis;
         _aktiv.Datum             = DateTime.Today.ToString("yyyy-MM-dd");
-        _pfad = ProjektManager.IstGeladen
-            ? ProjektManager.GetPfad($"Station-{standpunktNr}.json")
-            : Path.Combine(AppPfade.Basis, $"Station-{standpunktNr}.json");
+        _pfad = zielPfad;
         Speichern();
     }
 
@@ -229,6 +258,7 @@ public static class StationsdatenManager
     public static void NeuerStandpunkt(string standpunktNr, double instrHoehe)
     {
         Laden(standpunktNr);
+        DateiSpeicher.PruefeSchreibzugriff(_pfad);
         _aktiv.InstrumentenHoehe = instrHoehe;
         _aktiv.Datum             = DateTime.Today.ToString("yyyy-MM-dd");
         Speichern();
@@ -241,11 +271,11 @@ public static class StationsdatenManager
         if (string.IsNullOrEmpty(_pfad)) return;
         try
         {
-            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var opts = DateiSpeicher.JsonOptionen;
             string json = JsonSerializer.Serialize(_aktiv, opts);
-            File.WriteAllText(_pfad, json, Encoding.UTF8);
+            DateiSpeicher.SchreibeText(_pfad, json, Encoding.UTF8);
         }
-        catch (Exception ex) { ErrorLogger.Log("StationsdatenManager.Speichern", ex); }
+        catch (Exception ex) { ErrorLogger.Log("StationsdatenManager.Speichern", ex); throw; }
     }
 
     // ── Hilfsmethoden ─────────────────────────────────────────────────────────

@@ -1114,6 +1114,12 @@ public partial class FormDxfViewer : Form
 
             if (ergebnis != null)
             {
+                if (!StationsdatenManager.HatGueltigeStation)
+                {
+                    lblStatus.Text = "Stationierung ungültig – Anschlusspunkte und Messungen prüfen.";
+                    canvas.Invalidate();
+                    return;
+                }
                 // Residual-Overlay aktualisieren
                 BaueResidualOverlay(ergebnis);
 
@@ -1126,6 +1132,7 @@ public partial class FormDxfViewer : Form
 
                 lblStatus.Text = $"Stationierung {spNr}: {RechenparameterManager.SigmaText(ergebnis.s0_mm)}  " +
                                  $"r={ergebnis.Redundanz}  n={StationsdatenManager.AktiveStation.Messungen.Count}";
+                if (!string.IsNullOrEmpty(ergebnis.WarnungHoehe)) lblStatus.Text += " | " + ergebnis.WarnungHoehe;
             }
             else
             {
@@ -1471,7 +1478,7 @@ public partial class FormDxfViewer : Form
                 _digitalisierKorPfad = dlg.FileName;
 
                 // KOR-Header-Kommentar schreiben (nur bei neuer Datei)
-                File.WriteAllText(_digitalisierKorPfad,
+                DateiSpeicher.SchreibeText(_digitalisierKorPfad,
                     $"% Digitalisierte Punkte  {DateTime.Now:yyyy-MM-dd HH:mm}\n",
                     System.Text.Encoding.UTF8);
 
@@ -1488,7 +1495,7 @@ public partial class FormDxfViewer : Form
                 csvHeader.AppendLine("Koordinaten");
                 csvHeader.AppendLine("# DATEN");
                 csvHeader.AppendLine("PunktNr; X; Y; Z; Code");
-                File.WriteAllText(csvPfad, csvHeader.ToString(), System.Text.Encoding.UTF8);
+                DateiSpeicher.SchreibeText(csvPfad, csvHeader.ToString(), System.Text.Encoding.UTF8);
 
                 _digitalisierZaehler = 1;
                 _digitalisierLayer   = null;
@@ -2090,7 +2097,7 @@ public partial class FormDxfViewer : Form
             p.Strecke  .ToString("F3", ic),
             p.Zielhoehe.ToString("F3", ic)
         }));
-        File.WriteAllLines(AnschlusspunktePfad,
+        DateiSpeicher.SchreibeZeilen(AnschlusspunktePfad,
             new[] { header }.Concat(zeilen),
             System.Text.Encoding.UTF8);
 

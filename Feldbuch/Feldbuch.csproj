@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.9.9</Version>
+    <Version>1.10.0</Version>
     <ApplicationIcon>icons\feldbuch.ico</ApplicationIcon>
     <Authors>Johann Gerner</Authors>
     <Company>Johann Gerner</Company>
@@ -20,6 +20,32 @@
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
+
+  <!-- Buildzähler: erhöht BuildNummer.txt nur, wenn sich Quellcode oder Projektdatei geändert haben -->
+  <Target Name="BuildNummerErhoehen"
+          Condition="'$(DesignTimeBuild)' != 'true'"
+          Inputs="@(Compile);$(MSBuildProjectFullPath)"
+          Outputs="$(IntermediateOutputPath)BuildNummer.stamp">
+    <PropertyGroup>
+      <_BuildNummerAlt Condition="Exists('BuildNummer.txt')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\BuildNummer.txt').Trim())</_BuildNummerAlt>
+      <_BuildNummerAlt Condition="'$(_BuildNummerAlt)' == ''">0</_BuildNummerAlt>
+      <_BuildNummerNeu>$([MSBuild]::Add($(_BuildNummerAlt), 1))</_BuildNummerNeu>
+    </PropertyGroup>
+    <WriteLinesToFile File="BuildNummer.txt" Lines="$(_BuildNummerNeu)" Overwrite="true" />
+    <Touch Files="$(IntermediateOutputPath)BuildNummer.stamp" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="BuildNummerEinbetten"
+          DependsOnTargets="BuildNummerErhoehen"
+          BeforeTargets="GetAssemblyAttributes">
+    <PropertyGroup>
+      <_BuildNummer Condition="Exists('BuildNummer.txt')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)\BuildNummer.txt').Trim())</_BuildNummer>
+      <_BuildNummer Condition="'$(_BuildNummer)' == ''">0</_BuildNummer>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyMetadata Include="BuildNummer" Value="$(_BuildNummer)" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="System.IO.Ports" Version="9.0.0" />

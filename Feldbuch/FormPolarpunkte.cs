@@ -328,6 +328,7 @@ public partial class FormPolarpunkte : Form
                     fehlergrenzeMM_Hoehe: par.FehlergrenzeMM_Hoehe,
                     zentrierfehlerZiel_mm:       par.GewichtungNaheZiele ? par.ZentrierfehlerZiel_mm : 0.0,
                     zentrierfehlerStandpunkt_mm: par.GewichtungNaheZiele ? par.ZentrierfehlerStandpunkt_mm : 0.0);
+                StationierungsQualitaet.Pruefe(erg);
                 _station = erg;
                 for (int i = 0; i < n && i < erg.Residuen.Count; i++) residuenJeZeile[i] = erg.Residuen[i];
             }
@@ -338,6 +339,7 @@ public partial class FormPolarpunkte : Form
         }
 
         _residuen = residuenJeZeile;
+        if (!string.IsNullOrEmpty(_station?.WarnungHoehe)) hinweise.Add(_station.WarnungHoehe);
         ZeigeResiduen(residuenJeZeile, par);
 
         // ── Informationen ─────────────────────────────────────────────────────

@@ -157,7 +157,7 @@ public class CsvDatenDatei
             string code = Zelle(row, iCode);
             sb.AppendLine($"{nr,-8}{x,16}{y,16}{z,10}    {code}");
         }
-        File.WriteAllText(pfad, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, sb.ToString(), Encoding.UTF8);
     }
 
     // ── DAT-Export ────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ public class CsvDatenDatei
             string code = Zelle(row, iCode);
             sb.AppendLine($" {nr,3}   {hz,9}   {v,9}   {str,9}   {zh,7}  {code}");
         }
-        File.WriteAllText(pfad, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, sb.ToString(), Encoding.UTF8);
     }
 
     // ── Hilfsmethoden ─────────────────────────────────────────────────────────
@@ -290,6 +290,6 @@ public class CsvDatenDatei
             while (cells.Count < Spalten.Count) cells.Add("");
             sb.AppendLine(string.Join("; ", cells));
         }
-        File.WriteAllText(Pfad, sb.ToString(), Encoding.UTF8);
+        DateiSpeicher.SchreibeText(Pfad, sb.ToString(), Encoding.UTF8);
     }
 }

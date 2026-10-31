@@ -33,6 +33,7 @@ public class AutoMatchPunkteDatei
 {
     public int                  Version      { get; set; } = 1;
     public string               StandpunktNr { get; set; } = "";
+    [JsonRequired]
     public List<AutoMatchPunkt> Punkte       { get; set; } = new();
 }
 
@@ -50,21 +51,33 @@ public static class AutoMatchPunkte
     public static AutoMatchPunkteDatei Laden()
     {
         string pfad = GetPfad();
-        if (!File.Exists(pfad)) return new AutoMatchPunkteDatei();
+        if (!File.Exists(pfad))
+        {
+            DateiSpeicher.LadenErfolgreich(pfad);
+            return new AutoMatchPunkteDatei();
+        }
         try
         {
             var json = File.ReadAllText(pfad, System.Text.Encoding.UTF8);
-            return JsonSerializer.Deserialize<AutoMatchPunkteDatei>(json, JsonOpts)
-                   ?? new AutoMatchPunkteDatei();
+            var datei = JsonSerializer.Deserialize<AutoMatchPunkteDatei>(json, JsonOpts)
+                   ?? throw new JsonException("Leere Auto-Match-Datei.");
+            if (datei.Punkte == null || datei.Punkte.Any(p => p == null))
+                throw new JsonException("Ungültige Auto-Match-Punktliste.");
+            DateiSpeicher.LadenErfolgreich(pfad);
+            return datei;
         }
-        catch { return new AutoMatchPunkteDatei(); }
+        catch (Exception ex)
+        {
+            DateiSpeicher.MeldeLadefehler(pfad, ex);
+            return new AutoMatchPunkteDatei();
+        }
     }
 
     public static void Speichern(AutoMatchPunkteDatei datei)
     {
         string pfad = GetPfad();
         string json = JsonSerializer.Serialize(datei, JsonOpts);
-        File.WriteAllText(pfad, json, System.Text.Encoding.UTF8);
+        DateiSpeicher.SchreibeText(pfad, json, System.Text.Encoding.UTF8);
     }
 
     /// <summary>Fügt einen Auto-Match-Treffer hinzu und speichert.</summary>

@@ -79,7 +79,10 @@ public partial class FormErgebnis : Form
         lblH.Text          = $"H  (Hochwert):           {erg.H:F3} m";
         lblHoehe.Text      = erg.Berechnung3D
             ? $"Höhe:                    {erg.Hoehe:F3} m"
-            : $"Höhe:                    –  (keine aktiven Höhenmessungen)";
+            : !string.IsNullOrEmpty(erg.WarnungHoehe)
+                ? "Höhe:                    –  (Höhenabweichung zu groß; Ergebnis nur 2D)"
+                : "Höhe:                    –  (keine aktiven Höhenmessungen)";
+        lblHoehe.ForeColor = string.IsNullOrEmpty(erg.WarnungHoehe) ? SystemColors.ControlText : Color.DarkRed;
         lblOrient.Text     = $"Orientierungsunbekannte: {erg.Orientierung_gon:F4} gon";
         lblMassstab.Text   = $"Maßstab (Helmert):       {erg.Massstab:F6}" +
                              (RechenparameterManager.Params.FreierMassstab
@@ -202,6 +205,7 @@ public partial class FormErgebnis : Form
                 berechnung3D:         par.Berechnung3D,
                 fehlergrenzeMM_Hoehe: par.FehlergrenzeMM_Hoehe);
 
+            StationierungsQualitaet.Pruefe(erg);
             FeldbuchpunkteManager.AddOrUpdate(new FeldbuchPunkt
             {
                 PunktNr          = _standpunkt,
@@ -250,6 +254,7 @@ public partial class FormErgebnis : Form
     /// </summary>
     public static bool IstGueltigeBerechnung(StationierungsErgebnis? erg)
     {
+        if (!StationierungsQualitaet.IstVerwendbar(erg)) return false;
         if (erg == null) return false;
         var par = RechenparameterManager.Params;
         int quer = 0, laengs = 0;

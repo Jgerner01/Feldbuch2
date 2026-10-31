@@ -28,15 +28,23 @@ public static class DxfPunktIndexManager
     /// </summary>
     public static List<PunktEintrag>? Laden(string projektPfad)
     {
-        if (!File.Exists(projektPfad)) return null;
+        if (!File.Exists(projektPfad))
+        {
+            DateiSpeicher.LadenErfolgreich(projektPfad);
+            return null;
+        }
         try
         {
             var json = File.ReadAllText(projektPfad);
-            return JsonSerializer.Deserialize<List<PunktEintrag>>(json, JsonOpts);
+            var daten = JsonSerializer.Deserialize<List<PunktEintrag>>(json, JsonOpts)
+                ?? throw new JsonException("Leerer Punktindex.");
+            DateiSpeicher.LadenErfolgreich(projektPfad);
+            return daten;
         }
-        catch
+        catch (Exception ex)
         {
-            return null;  // Bei Fehler: Neu aufbauen
+            DateiSpeicher.MeldeLadefehler(projektPfad, ex);
+            return null;
         }
     }
 
@@ -46,7 +54,7 @@ public static class DxfPunktIndexManager
     public static void Speichern(List<PunktEintrag> eintraege, string projektPfad)
     {
         var json = JsonSerializer.Serialize(eintraege, JsonOpts);
-        File.WriteAllText(projektPfad, json, System.Text.Encoding.UTF8);
+        DateiSpeicher.SchreibeText(projektPfad, json, System.Text.Encoding.UTF8);
     }
 
     /// <summary>
@@ -55,6 +63,7 @@ public static class DxfPunktIndexManager
     public static void Loeschen(string projektPfad)
     {
         if (File.Exists(projektPfad)) File.Delete(projektPfad);
+        DateiSpeicher.LadenErfolgreich(projektPfad);
     }
 
     /// <summary>
