@@ -61,6 +61,20 @@ public static class RechenparameterManager
             };
             DateiSpeicher.LadenErfolgreich(_path);
         }
+        catch (XmlException ex)
+        {
+            _params = new Rechenparameter();
+            try
+            {
+                DateiSpeicher.LegeDefekteDateiBeiseite(_path, ex,
+                    "Es gelten die Standardwerte. Bitte vor dem Berechnen Fehlergrenzen, Maßstab, "
+                    + "Gewichtung und Zentrierfehler in den Rechenparametern prüfen.");
+            }
+            catch (Exception ex2) when (ex2 is IOException or UnauthorizedAccessException)
+            {
+                DateiSpeicher.MeldeLadefehler(_path, ex2);
+            }
+        }
         catch (Exception ex)
         {
             DateiSpeicher.MeldeLadefehler(_path, ex);

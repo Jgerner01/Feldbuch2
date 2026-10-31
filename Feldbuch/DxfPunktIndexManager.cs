@@ -24,7 +24,9 @@ public static class DxfPunktIndexManager
 
     /// <summary>
     /// Lädt den gespeicherten Punkt-Index aus dem Projektverzeichnis.
-    /// Gibt null zurück wenn keine Datei existiert.
+    /// Gibt null zurück wenn keine Datei existiert. Eine inhaltlich defekte Datei wird
+    /// beiseitegelegt, damit der Index neu aufgebaut werden kann; ist sie nur nicht
+    /// lesbar, bleibt sie erhalten und für Schreibzugriffe gesperrt.
     /// </summary>
     public static List<PunktEintrag>? Laden(string projektPfad)
     {
@@ -38,8 +40,23 @@ public static class DxfPunktIndexManager
             var json = File.ReadAllText(projektPfad);
             var daten = JsonSerializer.Deserialize<List<PunktEintrag>>(json, JsonOpts)
                 ?? throw new JsonException("Leerer Punktindex.");
+            if (daten.Any(p => p?.PunktNr == null))
+                throw new JsonException("Ungültiger Eintrag im Punktindex.");
             DateiSpeicher.LadenErfolgreich(projektPfad);
             return daten;
+        }
+        catch (JsonException ex)
+        {
+            try
+            {
+                DateiSpeicher.LegeDefekteDateiBeiseite(projektPfad, ex,
+                    "Punktnummern können sich dadurch ändern. Bitte prüfen.");
+            }
+            catch (Exception ex2) when (ex2 is IOException or UnauthorizedAccessException)
+            {
+                DateiSpeicher.MeldeLadefehler(projektPfad, ex2);
+            }
+            return null;
         }
         catch (Exception ex)
         {

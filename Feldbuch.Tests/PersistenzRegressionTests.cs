@@ -49,6 +49,107 @@ public sealed class PersistenzRegressionTests : IDisposable
         Assert.True(double.IsNaN(StationsdatenManager.AktuellesErgebnis.Residuen[0].vHoehe_mm));
     }
 
+    [Theory]
+    [InlineData("{ kein json")]
+    [InlineData("null")]
+    [InlineData("[null]")]
+    [InlineData("[{\"R\":1,\"H\":2}]")]
+    public void DefekterPunktIndex_WirdBeiseitegelegtUndNeuGeschrieben(string inhalt)
+    {
+        string pfad = Pfad("Test-PunktIndex.json");
+        File.WriteAllText(pfad, inhalt);
+
+        Assert.Null(DxfPunktIndexManager.Laden(pfad));
+
+        string sicherung = Assert.Single(Directory.GetFiles(ordner, "Test-PunktIndex.json.defekt-*"));
+        Assert.Equal(inhalt, File.ReadAllText(sicherung));
+
+        DxfPunktIndexManager.Speichern([new PunktEintrag("1", 10, 20)], pfad);
+        Assert.Equal("1", Assert.Single(DxfPunktIndexManager.Laden(pfad)!).PunktNr);
+    }
+
+    [Fact]
+    public void NichtLesbarerPunktIndex_BleibtErhaltenUndGesperrt()
+    {
+        string pfad = Pfad("Test-PunktIndex.json");
+        DxfPunktIndexManager.Speichern([new PunktEintrag("7", 1, 2)], pfad);
+
+        using (new FileStream(pfad, FileMode.Open, FileAccess.Read, FileShare.None))
+            Assert.Null(DxfPunktIndexManager.Laden(pfad));
+
+        Assert.Throws<IOException>(() => DxfPunktIndexManager.Speichern([], pfad));
+        Assert.Empty(Directory.GetFiles(ordner, "*.defekt-*"));
+        Assert.Equal("7", Assert.Single(DxfPunktIndexManager.Laden(pfad)!).PunktNr);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("<FeldbuchEinstellungen><abgebrochen")]
+    [InlineData("<AndereDatei />")]
+    public void DefekteEinstellungen_WerdenBeiseitegelegtUndSpeichernBleibtMoeglich(string inhalt)
+    {
+        string pfad = Pfad("Einstellungen.xml");
+        File.WriteAllText(pfad, inhalt);
+
+        ProjektManager.Laden(pfad);
+
+        Assert.False(File.Exists(pfad));
+        string sicherung = Assert.Single(Directory.GetFiles(ordner, "Einstellungen.xml.defekt-*"));
+        Assert.Equal(inhalt, File.ReadAllText(sicherung));
+        DateiSpeicher.SchreibeText(pfad, "<FeldbuchEinstellungen />");
+        Assert.True(File.Exists(pfad));
+    }
+
+    [Fact]
+    public void NichtLesbareEinstellungen_BleibenErhaltenUndGesperrtBisZumNeuenLaden()
+    {
+        string pfad = Pfad("Einstellungen.xml");
+        File.WriteAllText(pfad, "kein xml");
+
+        using (new FileStream(pfad, FileMode.Open, FileAccess.Read, FileShare.None))
+            ProjektManager.Laden(pfad);
+
+        Assert.Equal("kein xml", File.ReadAllText(pfad));
+        Assert.Throws<IOException>(() => DateiSpeicher.SchreibeText(pfad, "neu"));
+
+        ProjektManager.Laden(pfad);
+        DateiSpeicher.SchreibeText(pfad, "neu");
+        Assert.Equal("neu", File.ReadAllText(pfad));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("<RechenparameterFreieStationierung><abgebrochen")]
+    [InlineData("<AndereDatei />")]
+    public void DefekteRechenparameter_WerdenBeiseitegelegtUndNeuAngelegt(string inhalt)
+    {
+        var typ = typeof(RechenparameterManager);
+        var feldPfad = typ.GetField("_path", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var feldParams = typ.GetField("_params", BindingFlags.NonPublic | BindingFlags.Static)!;
+        object? alterPfad = feldPfad.GetValue(null), alteParams = feldParams.GetValue(null);
+        try
+        {
+            string pfad = Pfad("Freie-Stationierung.xml");
+            File.WriteAllText(pfad, inhalt);
+
+            RechenparameterManager.Initialize(pfad);
+
+            Assert.Equal(new Rechenparameter().FehlergrenzCC_Winkel, RechenparameterManager.Params.FehlergrenzCC_Winkel);
+            string sicherung = Assert.Single(Directory.GetFiles(ordner, "Freie-Stationierung.xml.defekt-*"));
+            Assert.Equal(inhalt, File.ReadAllText(sicherung));
+
+            RechenparameterManager.Params.FehlergrenzCC_Winkel = 33;
+            RechenparameterManager.Save();
+            RechenparameterManager.Initialize(pfad);
+            Assert.Equal(33, RechenparameterManager.Params.FehlergrenzCC_Winkel);
+        }
+        finally
+        {
+            feldPfad.SetValue(null, alterPfad);
+            feldParams.SetValue(null, alteParams);
+        }
+    }
+
     [Fact]
     public void Projektwechsel_OhneStandpunkt_VerwirftAlteStationUndAltenSchreibpfad()
     {
@@ -146,9 +247,10 @@ public sealed class PersistenzRegressionTests : IDisposable
         ProjektdatenManager.Initialize(csv);
         Assert.Throws<IOException>(() => ProjektdatenManager.SetValue("Test", "Wert", "neu"));
         RechenparameterManager.Initialize(xml);
-        Assert.Throws<IOException>(() => RechenparameterManager.Save());
+        RechenparameterManager.Save();
         Assert.Equal(originalCsv, File.ReadAllText(csv));
-        Assert.Equal("<defekt", File.ReadAllText(xml));
+        string sicherung = Assert.Single(Directory.GetFiles(ordner, "Rechenparameter.xml.defekt-*"));
+        Assert.Equal("<defekt", File.ReadAllText(sicherung));
     }
 
     [Fact]

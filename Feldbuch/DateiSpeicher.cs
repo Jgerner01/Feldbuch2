@@ -26,7 +26,19 @@ public static class DateiSpeicher
         ErrorLogger.Log("Laden: " + pfad, fehler);
         Ladefehler?.Invoke($"Die Datei konnte nicht geladen werden:\n{pfad}\n\n{fehler.Message}\n\n"
             + "Die Datei bleibt erhalten und ist für Schreibzugriffe gesperrt. "
-            + "Bitte eine intakte Datei wiederherstellen und das Projekt erneut öffnen.");
+            + "Bitte eine intakte Datei wiederherstellen und das Projekt erneut öffnen oder das Programm neu starten.");
+    }
+
+    /// <summary>Benennt eine neu aufbaubare, defekte Datei um und gibt ihren Pfad für Schreibzugriffe frei.</summary>
+    public static string LegeDefekteDateiBeiseite(string pfad, Exception fehler, string hinweis)
+    {
+        string sicherung = $"{Path.GetFullPath(pfad)}.defekt-{DateTime.Now:yyyyMMdd-HHmmss-fff}";
+        File.Move(pfad, sicherung);
+        LadenErfolgreich(pfad);
+        ErrorLogger.Log("Laden: " + pfad, fehler);
+        Ladefehler?.Invoke($"Die Datei war defekt und wird neu angelegt:\n{pfad}\n\n{fehler.Message}\n\n"
+            + $"Die defekte Datei wurde aufbewahrt:\n{sicherung}\n\n{hinweis}");
+        return sicherung;
     }
 
     public static void LadenErfolgreich(string pfad)
@@ -40,7 +52,7 @@ public static class DateiSpeicher
         lock (Sperre)
             if (GesperrtePfade.Contains(Path.GetFullPath(pfad)))
                 throw new IOException($"Schreiben gesperrt nach einem Ladefehler: {pfad}. "
-                    + "Bitte die Datei wiederherstellen und das Projekt erneut öffnen.");
+                    + "Bitte die Datei wiederherstellen und das Projekt erneut öffnen oder das Programm neu starten.");
     }
 
     public static void SchreibeText(string pfad, string text, Encoding? encoding = null)

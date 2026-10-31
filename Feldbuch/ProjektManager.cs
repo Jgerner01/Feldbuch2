@@ -157,13 +157,19 @@ public static class ProjektManager
     }
 
     // ── Letztes Projekt laden (beim Programmstart) ────────────────────────────
-    public static void Laden()
+    public static void Laden() => Laden(EinstellungenPfad);
+
+    /// <summary>
+    /// Eine inhaltlich defekte Datei wird beiseitegelegt und die Standardwerte bleiben aktiv;
+    /// ist sie nur nicht lesbar, bleibt sie erhalten und für Schreibzugriffe gesperrt.
+    /// </summary>
+    public static void Laden(string einstellungenPfad)
     {
-        if (!File.Exists(EinstellungenPfad)) return;
+        if (!File.Exists(einstellungenPfad)) return;
         try
         {
             var doc  = new XmlDocument();
-            doc.Load(EinstellungenPfad);
+            doc.Load(einstellungenPfad);
             var root = doc.DocumentElement!;
             if (root == null || root.Name != "FeldbuchEinstellungen")
                 throw new XmlException("Ungültige Einstellungsdatei.");
@@ -238,9 +244,22 @@ public static class ProjektManager
             double.TryParse(root.SelectSingleNode("DxfZoomPanY")?.InnerText,
                 System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out _zoomPanY);
-            DateiSpeicher.LadenErfolgreich(EinstellungenPfad);
+            DateiSpeicher.LadenErfolgreich(einstellungenPfad);
         }
-        catch (Exception ex) { DateiSpeicher.MeldeLadefehler(EinstellungenPfad, ex); }
+        catch (XmlException ex)
+        {
+            try
+            {
+                DateiSpeicher.LegeDefekteDateiBeiseite(einstellungenPfad, ex,
+                    "Es gelten die Standardeinstellungen. Bitte vor dem Messen Projekt, Tachymeter, "
+                    + "Messmodus und Prismenkonstante prüfen. Die Punktzähler beginnen wieder bei 1.");
+            }
+            catch (Exception ex2) when (ex2 is IOException or UnauthorizedAccessException)
+            {
+                DateiSpeicher.MeldeLadefehler(einstellungenPfad, ex2);
+            }
+        }
+        catch (Exception ex) { DateiSpeicher.MeldeLadefehler(einstellungenPfad, ex); }
     }
 
     // ── Nur Optionen speichern (ohne Projektpfad zu ändern) ──────────────────
