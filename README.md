@@ -107,6 +107,12 @@ dotnet test Feldbuch.Tests/Feldbuch.Tests.csproj --configuration Release --no-bu
 
 Voraussetzungen: Windows und .NET 10 SDK. Die Formular-Smoke-Tests benötigen eine Umgebung, die WinForms-Fenster und GDI+ zulässt. Der GitHub-Workflow `desktop.yml` baut und testet das Desktop-Projekt unabhängig vom experimentellen Universal-Projekt.
 
+### Updates
+
+Beim Start sucht die veröffentlichte Version im Hintergrund nach einem neueren GitHub-Release und fragt nach, bevor etwas installiert wird. Ohne Internet arbeitet das Programm normal weiter. Im Info-Fenster gibt es zusätzlich **Nach Updates suchen**. Ersetzt werden nur die Dateien aus dem Paket; die vorherige Version bleibt bis zum nächsten Update im Unterordner `_vorherige_Version` erhalten.
+
+Ein Release wird nur als Update angeboten, wenn es als „Latest“ markiert ist, nicht als Pre-release, und beide Dateien aus `tools/Release-Paket.ps1` enthält (`Feldbuch-v<Version>-win-x64.zip` und `.sha256`). Der Programmordner muss beschreibbar sein.
+
 ### Speicherung und Wiederherstellung
 
 - Einstellungen und Rechenparameter liegen beim Programmstart unter `%LOCALAPPDATA%\Feldbuch`. Vorhandene Dateien neben der EXE werden beim ersten Start einmalig übernommen; vorhandene Benutzereinstellungen bleiben erhalten. Vorlagen und mitgelieferte Ressourcen bleiben neben der EXE.

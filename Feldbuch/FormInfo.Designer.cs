@@ -22,6 +22,7 @@ partial class FormInfo
         lblHilfeText = new Label();
         lblTrenn2    = new Label();
         btnOK        = new Button();
+        btnUpdate    = new Button();
 
         ((System.ComponentModel.ISupportInitialize)picIcon).BeginInit();
         SuspendLayout();
@@ -133,13 +134,19 @@ partial class FormInfo
         btnOK.Font     = new Font("Segoe UI", 10F);
         btnOK.Click   += btnOK_Click;
 
+        btnUpdate.Text     = "Nach Updates suchen";
+        btnUpdate.Location = new Point(lx, y);
+        btnUpdate.Size     = new Size(170, 32);
+        btnUpdate.Font     = new Font("Segoe UI", 10F);
+        btnUpdate.Click   += btnUpdate_Click;
+
         Controls.AddRange(
         [
             picIcon, lblName, lblVersion,
             lblTrenn1, lblBeschreibung,
             lblAutor, lblCopyright,
             lblTrenn2, lblHilfe, lblHilfeText,
-            btnOK
+            btnUpdate, btnOK
         ]);
 
         AcceptButton = btnOK;
@@ -157,4 +164,5 @@ partial class FormInfo
     private Label      lblHilfeText;
     private Label      lblTrenn2;
     private Button     btnOK;
+    private Button     btnUpdate;
 }

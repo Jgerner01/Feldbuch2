@@ -6,11 +6,17 @@ static class Program
     ///  The main entry point for the application.
     /// </summary>
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
         // To customize application configuration such as set high DPI settings or default font,
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
+        if (args.Length == 4 && args[0] == UpdateInstallation.Argument)
+        {
+            AppPfade.InitialisiereBenutzerdaten();
+            UpdateInstallation.FuehreAus(args);
+            return;
+        }
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         DateiSpeicher.Ladefehler += nachricht => MessageBox.Show(nachricht,
             "Datei konnte nicht geladen werden", MessageBoxButtons.OK, MessageBoxIcon.Error);

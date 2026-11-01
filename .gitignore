@@ -23,3 +23,4 @@ Feldbuch-v*.zip
 # Lokale Claude-Einstellungen
 .claude/settings.local.json
 *.proj.Backup.tmp
+artifacts/

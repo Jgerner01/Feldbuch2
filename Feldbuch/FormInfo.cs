@@ -13,4 +13,11 @@ public partial class FormInfo : Form
     }
 
     private void btnOK_Click(object? sender, EventArgs e) => Close();
+
+    private async void btnUpdate_Click(object? sender, EventArgs e)
+    {
+        btnUpdate.Enabled = false;
+        await FormUpdate.PruefeManuellAsync(this);
+        if (!IsDisposed) btnUpdate.Enabled = true;
+    }
 }

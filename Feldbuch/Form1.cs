@@ -45,6 +45,8 @@ public partial class Form1 : Form
         // Tachymeter: gespeicherte Einstellungen laden und einmalig verbinden
         TachymeterVerbindung.LadeEinstellungen();
         VerbindeTachymeter(zeigeInfoMeldung: true);
+
+        Shown += async (_, _) => await FormUpdate.PruefeBeimStartAsync(this);
     }
 
     // ── Optionen laden / Handler ──────────────────────────────────────────────
